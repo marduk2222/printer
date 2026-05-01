@@ -1,0 +1,62 @@
+@model printer.Models.InvoicePrintViewModel
+@{ Layout = null; var primary = !string.IsNullOrEmpty(Model.Settings.PrimaryColor) ? Model.Settings.PrimaryColor : "#1a1a1a";
+   var partner = Model.Invoice.Partner;
+   var buyerName = !string.IsNullOrWhiteSpace(partner?.InvoiceTitle) ? partner!.InvoiceTitle : partner?.Name;
+   var buyerTaxId = !string.IsNullOrWhiteSpace(partner?.InvoiceTaxId) ? partner!.InvoiceTaxId : partner?.Vat; }
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8" /><title>合約帳單 - @Model.Invoice.InvoiceNumber</title>
+<style>:root{--p:@primary}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Noto Serif TC","DFKai-SB",serif;color:#1a1a1a;background:#fafaf9;font-size:13px;line-height:1.6}
+.no-print{display:flex;gap:8px;padding:12px;background:#fff;border-bottom:1px solid #d6d3d1}.no-print button{padding:8px 22px;border:1px solid var(--p);background:#fff;color:var(--p);cursor:pointer;font-size:14px}.btn-print{background:var(--p) !important;color:#fff !important}
+.page{max-width:780px;margin:24px auto;background:#fff;padding:50px 56px;border:2px solid var(--p)}
+.title{text-align:center;font-size:28px;font-weight:600;letter-spacing:18px;margin-bottom:12px;border-bottom:2px solid var(--p);padding-bottom:14px}
+.preamble{font-size:13px;line-height:2;text-align:justify;margin-bottom:18px;text-indent:2em}
+.party-row{display:grid;grid-template-columns:80px 1fr;gap:10px;margin-bottom:8px;font-family:"Noto Sans TC",sans-serif;font-size:12px}
+.party-row .lbl{color:var(--p);font-weight:600}
+table{width:100%;border-collapse:collapse;margin:18px 0;border:1px solid var(--p);font-family:"Noto Sans TC",sans-serif}
+th{padding:8px 10px;background:#f5f5f4;color:var(--p);border:1px solid var(--p);font-size:12px;text-align:center}
+td{padding:8px 10px;border:1px solid #d6d3d1;font-size:12px;text-align:center}
+td.left{text-align:left}td.right{text-align:right}
+.totals-row{display:flex;justify-content:flex-end;gap:14px;font-family:"Noto Sans TC",sans-serif;font-size:13px;padding:4px 6px}
+.totals-row .v{min-width:120px;text-align:right;font-weight:600}
+.totals-row.grand{background:var(--p);color:#fff;padding:10px 14px;font-size:15px;margin-top:6px}
+.terms{font-family:"Noto Sans TC",sans-serif;font-size:11px;color:#525252;margin-top:18px;padding:12px 14px;background:#f5f5f4;line-height:1.7}
+.terms strong{color:var(--p)}
+.sign-section{margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:36px;font-family:"Noto Sans TC",sans-serif}
+.sign-block{border-top:2px solid var(--p);padding-top:14px}
+.sign-block h6{font-size:12px;color:var(--p);font-weight:600;margin-bottom:8px;letter-spacing:2px}
+.sign-block .field{display:grid;grid-template-columns:60px 1fr;gap:6px;font-size:11px;margin-bottom:6px;align-items:center}
+.sign-block .field .lbl{color:#525252}
+.sign-block .field .v{border-bottom:1px solid #1a1a1a;min-height:22px;padding:0 4px}
+.sign-block .seal{margin-top:14px;height:80px;border:1px dashed #9ca3af;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:10px}
+@@media print{.no-print{display:none !important}.page{margin:0;max-width:none}}@@page{size:A4;margin:14mm}
+</style></head><body>
+<div class="no-print"><button class="btn-print" onclick="window.print()">列印</button><button onclick="history.back()">返回</button></div>
+<div class="page">
+<div class="title">帳　單　確　認　書</div>
+<div class="preamble">立帳單書人 <strong>@(Model.Settings.CompanyName ?? "公司")</strong> （以下簡稱「乙方」）依雙方協議與服務內容，茲開立帳單予 <strong>@buyerName</strong> （以下簡稱「甲方」），雙方同意按下列明細結算：</div>
+<div class="party-row"><div class="lbl">編　　號</div><div>@Model.Invoice.InvoiceNumber</div></div>
+<div class="party-row"><div class="lbl">開立日期</div><div>@Model.Invoice.CreatedAt.ToString("yyyy 年 MM 月 dd 日")</div></div>
+<div class="party-row"><div class="lbl">計費期間</div><div>@Model.Invoice.PeriodStart.ToString("yyyy/MM/dd") ~ @Model.Invoice.PeriodEnd.ToString("yyyy/MM/dd")</div></div>
+@if(!string.IsNullOrEmpty(buyerTaxId)){<div class="party-row"><div class="lbl">統一編號</div><div>@buyerTaxId</div></div>}
+@if(!string.IsNullOrEmpty(partner?.Address)){<div class="party-row"><div class="lbl">客戶地址</div><div>@partner.Address</div></div>}
+<table><thead><tr><th style="width:6%">項次</th><th style="width:30%">品名規格</th><th>黑白</th><th>彩色</th><th>大張</th><th>月租</th><th>張數費</th><th style="text-align:right;">小計</th></tr></thead><tbody>@{int i=1;}@foreach(var it in Model.Invoice.Items){<tr><td>@i</td><td class="left">@it.Description</td><td>@it.BlackPages.ToString("N0")</td><td>@it.ColorPages.ToString("N0")</td><td>@it.LargePages.ToString("N0")</td><td class="right">@it.MonthlyFee.ToString("N0")</td><td class="right">@it.PageFee.ToString("N0")</td><td class="right">$@it.Subtotal.ToString("N0")</td></tr>i++;}</tbody></table>
+<div class="totals-row"><span>未稅小計</span><span class="v">$@Model.Invoice.TotalAmount.ToString("N0")</span></div>
+<div class="totals-row"><span>營業稅 (5%)</span><span class="v">$@Model.Invoice.TaxAmount.ToString("N0")</span></div>
+<div class="totals-row grand"><span>含稅應付總額</span><span class="v">$@Model.Invoice.GrandTotal.ToString("N0")</span></div>
+<div class="terms"><strong>條款：</strong>@(Model.Settings.PaymentTerms ?? "甲方同意於收到本帳單後依雙方約定方式付款。")@if(!string.IsNullOrEmpty(Model.Settings.BankName)){<text>　匯款帳號：@Model.Settings.BankName @Model.Settings.BankBranch / @Model.Settings.BankAccount</text>}</div>
+<div class="sign-section">
+    <div class="sign-block">
+        <h6>甲　方（客　戶）</h6>
+        <div class="field"><div class="lbl">名稱</div><div class="v">@buyerName</div></div>
+        <div class="field"><div class="lbl">統編</div><div class="v">@(buyerTaxId ?? "")</div></div>
+        <div class="field"><div class="lbl">日期</div><div class="v">　　　/　　/　　</div></div>
+        <div class="seal">客戶簽章 / 公司印鑑</div>
+    </div>
+    <div class="sign-block">
+        <h6>乙　方（本　公　司）</h6>
+        <div class="field"><div class="lbl">名稱</div><div class="v">@(Model.Settings.CompanyName ?? "")</div></div>
+        <div class="field"><div class="lbl">承辦</div><div class="v"></div></div>
+        <div class="field"><div class="lbl">日期</div><div class="v">@Model.Invoice.CreatedAt.ToString("yyyy/MM/dd")</div></div>
+        <div class="seal">公司簽章 / 統一發票章</div>
+    </div>
+</div>
+</div></body></html>

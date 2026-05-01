@@ -1,0 +1,53 @@
+# Build output
+bin/
+obj/
+out/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+[Bb]uilds/
+
+# .NET / NuGet
+packages/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.binlog
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.iml
+
+# Rider / VS Code
+.idea/
+.vscode/
+*.swp
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+TestResults/
+
+# 日誌與本機資料夾
+*.log
+logs/
+
+# 編碼損毀備份（PS 5.1 corruption — 無價值，保留只是以防萬一未上 git）
+*.cshtml.bak
+
+# Misc
+.DS_Store
+Thumbs.db
+nul

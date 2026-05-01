@@ -1,0 +1,187 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - heading "編輯計費設定" [level=4] [ref=e34]
+      - link "返回列表" [ref=e35] [cursor=pointer]:
+        - /url: /BillingConfig
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: 事務機資訊
+          - generic [ref=e41]:
+            - term [ref=e42]: 事務機
+            - definition [ref=e43]:
+              - strong [ref=e44]: Printer-002
+              - text: (202604001)
+            - term [ref=e45]: 客戶
+            - definition [ref=e46]: 台積電
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: "1"
+              - text: 啟用設定
+            - generic [ref=e52]:
+              - checkbox "啟用計費" [checked] [ref=e53]
+              - generic [ref=e54]: 啟用計費
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - generic [ref=e58]: "2"
+              - text: 月租費
+            - generic [ref=e59]:
+              - checkbox "啟用" [ref=e60]
+              - generic [ref=e61]: 啟用
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]:
+                - generic [ref=e65]: "3"
+                - text: 張數計費
+              - generic [ref=e66]:
+                - checkbox "啟用" [checked] [active] [ref=e67]
+                - generic [ref=e68]: 啟用
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - generic [ref=e109]:
+                  - generic [ref=e110]: 計費週期
+                  - generic [ref=e111]:
+                    - spinbutton [ref=e112]: "1"
+                    - generic [ref=e113]: 個月
+                  - text: 1=每月, 3=每季, 6=半年
+                - generic [ref=e114]:
+                  - generic [ref=e115]: 起算日期
+                  - textbox [ref=e116]
+                - generic [ref=e117]:
+                  - generic [ref=e118]: 作帳日期
+                  - textbox [ref=e119]
+                  - text: 系統自動更新
+              - table [ref=e120]:
+                - rowgroup [ref=e121]:
+                  - row "彩色 黑白 大張" [ref=e122]:
+                    - columnheader [ref=e123]
+                    - columnheader "彩色" [ref=e124]
+                    - columnheader "黑白" [ref=e125]
+                    - columnheader "大張" [ref=e126]
+                - rowgroup [ref=e127]:
+                  - row "單價 $ 4.0000 $ 0.4000 $ 10.0000" [ref=e128]:
+                    - cell "單價" [ref=e129]
+                    - cell "$ 4.0000" [ref=e130]:
+                      - generic [ref=e131]:
+                        - generic [ref=e132]: $
+                        - spinbutton [ref=e133]: "4.0000"
+                    - cell "$ 0.4000" [ref=e134]:
+                      - generic [ref=e135]:
+                        - generic [ref=e136]: $
+                        - spinbutton [ref=e137]: "0.4000"
+                    - cell "$ 10.0000" [ref=e138]:
+                      - generic [ref=e139]:
+                        - generic [ref=e140]: $
+                        - spinbutton [ref=e141]: "10.0000"
+                  - row "誤印率 1.00 % 2.00 % 0.00 %" [ref=e142]:
+                    - cell "誤印率" [ref=e143]
+                    - cell "1.00 %" [ref=e144]:
+                      - generic [ref=e145]:
+                        - spinbutton [ref=e146]: "1.00"
+                        - generic [ref=e147]: "%"
+                    - cell "2.00 %" [ref=e148]:
+                      - generic [ref=e149]:
+                        - spinbutton [ref=e150]: "2.00"
+                        - generic [ref=e151]: "%"
+                    - cell "0.00 %" [ref=e152]:
+                      - generic [ref=e153]:
+                        - spinbutton [ref=e154]: "0.00"
+                        - generic [ref=e155]: "%"
+                  - row "贈送張數 1000 5000 0" [ref=e156]:
+                    - cell "贈送張數" [ref=e157]
+                    - cell "1000" [ref=e158]:
+                      - spinbutton [ref=e159]: "1000"
+                    - cell "5000" [ref=e160]:
+                      - spinbutton [ref=e161]: "5000"
+                    - cell "0" [ref=e162]:
+                      - spinbutton [ref=e163]: "0"
+              - generic [ref=e164]: 計費張數 = 實際張數 × (1 - 誤印率%) - 贈送張數
+              - generic [ref=e165]:
+                - heading "彩色 階梯定價" [level=2] [ref=e167]:
+                  - button "彩色 階梯定價" [ref=e168] [cursor=pointer]
+                - heading "黑白 階梯定價" [level=2] [ref=e170]:
+                  - button "黑白 階梯定價" [ref=e171] [cursor=pointer]
+                - heading "大張 階梯定價" [level=2] [ref=e173]:
+                  - button "大張 階梯定價" [ref=e174] [cursor=pointer]
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: "4"
+              - text: 備註
+            - textbox "計費相關備註..." [ref=e73]
+          - generic [ref=e74]:
+            - button "儲存" [ref=e75] [cursor=pointer]
+            - link "取消" [ref=e76] [cursor=pointer]:
+              - /url: /BillingConfig
+            - button "刪除" [ref=e77] [cursor=pointer]
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: 快速套用模板
+          - generic [ref=e82]:
+            - combobox [ref=e84]:
+              - option "選擇模板..." [selected]
+              - option "Template模板"
+            - button "套用模板" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - generic [ref=e87]: 計費方式說明
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - strong [ref=e90]: 目前使用：張數類型計費
+              - text: 依各類型張數 × 單價計算
+            - paragraph [ref=e91]:
+              - strong [ref=e92]: 張數類型計費流程：
+            - list [ref=e93]:
+              - listitem [ref=e94]: 設定各類型單價（左方）
+              - listitem [ref=e95]: 上傳抄表資料
+              - listitem [ref=e96]: 系統自動依驅動參數分類累加
+              - listitem [ref=e97]: 生成帳單時自動計算
+            - separator [ref=e98]
+            - paragraph [ref=e99]:
+              - strong [ref=e100]: 月租費
+              - text: ：固定金額 × 週期
+            - paragraph [ref=e101]:
+              - strong [ref=e102]: 單價計費
+              - text: ：張數 × 單價
+            - paragraph [ref=e103]:
+              - strong [ref=e104]: 合計
+              - text: = 月租費 + 張數費
+  - contentinfo [ref=e105]:
+    - generic [ref=e106]: © 2026 - 印表機雲端抄表系統

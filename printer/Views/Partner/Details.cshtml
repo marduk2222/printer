@@ -1,0 +1,632 @@
+@model printer.Data.Entities.Partner
+@{
+    ViewData["Title"] = "客戶詳情";
+}
+
+@{
+    var fieldChecks = new[] {
+        (Label: "名稱", Done: !string.IsNullOrEmpty(Model.Name)),
+        (Label: "統一編號", Done: !string.IsNullOrEmpty(Model.Vat)),
+        (Label: "電話", Done: !string.IsNullOrEmpty(Model.Phone)),
+        (Label: "公司傳真", Done: !string.IsNullOrEmpty(Model.Fax)),
+        (Label: "手機", Done: !string.IsNullOrEmpty(Model.Mobile)),
+        (Label: "Email", Done: !string.IsNullOrEmpty(Model.Email)),
+        (Label: "地址", Done: !string.IsNullOrEmpty(Model.Address)),
+    };
+    var filled = fieldChecks.Count(f => f.Done);
+    var totalFields = fieldChecks.Length;
+    var pct = (int)Math.Round((double)filled / totalFields * 100);
+    var pctClass = pct >= 80 ? "bg-success" : pct >= 50 ? "bg-warning" : "bg-danger";
+    var missing = fieldChecks.Where(f => !f.Done).Select(f => f.Label).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <h4 class="mb-0">客戶詳情</h4>
+        <div class="d-flex align-items-center gap-2" style="min-width:200px;">
+            <div class="progress flex-grow-1" style="height:12px;" title="已填 @filled / @totalFields 項">
+                <div class="progress-bar @pctClass" style="width:@pct%">@pct%</div>
+            </div>
+            @if (missing.Any())
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover" data-bs-trigger="focus"
+                        data-bs-html="true" data-bs-placement="bottom"
+                        data-bs-title="未填寫欄位 (@missing.Count)"
+                        data-bs-content="@string.Join("", missing.Select(m => "<span class='badge bg-danger me-1 mb-1'>" + m + "</span>"))">
+                    @filled/@totalFields
+                </button>
+            }
+            else
+            {
+                <span class="badge bg-success">完整</span>
+            }
+        </div>
+    </div>
+    <div id="viewActions" class="gap-2" style="display:flex;">
+        <button type="button" class="btn btn-warning btn-sm" onclick="toggleEdit(true)">編輯</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+    <div id="editActions" class="gap-2" style="display:none;">
+        <button type="submit" form="editForm" class="btn btn-success btn-sm">儲存變更</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleEdit(false)">取消</button>
+    </div>
+</div>
+
+<form asp-action="Edit" method="post" id="editForm">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" name="returnTo" value="Details" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">基本資料</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">代碼</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Code</span>
+                            <input asp-for="Code" class="form-control form-control-sm edit-mode" style="display:none" required />
+                        </dd>
+                        <dt class="col-sm-4">客戶編號</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.PartnerNumber</span>
+                            <input asp-for="PartnerNumber" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">公司名稱</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Name</span>
+                            <input asp-for="Name" class="form-control form-control-sm edit-mode" style="display:none" required />
+                        </dd>
+                        <dt class="col-sm-4">統一編號</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Vat</span>
+                            <input asp-for="Vat" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">啟用</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">
+                                <span class="badge @(Model.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(Model.IsActive ? "啟用" : "停用")
+                                </span>
+                            </span>
+                            <div class="form-check edit-mode" style="display:none">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label" asp-for="IsActive">啟用</label>
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">聯絡資訊</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">公司電話</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Phone</span>
+                            <input asp-for="Phone" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">公司傳真</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Fax</span>
+                            <input asp-for="Fax" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">手機</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Mobile</span>
+                            <input asp-for="Mobile" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Email</span>
+                            <input asp-for="Email" class="form-control form-control-sm edit-mode" style="display:none" type="email" />
+                        </dd>
+                        <dt class="col-sm-4">地址</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Address</span>
+                            <input asp-for="Address" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">備註</div>
+        <div class="card-body">
+            <span class="view-mode">@(string.IsNullOrEmpty(Model.Note) ? "無" : Model.Note)</span>
+            <textarea asp-for="Note" class="form-control edit-mode" rows="3" style="display:none"></textarea>
+        </div>
+    </div>
+
+    @{
+        var carrierTypeLabel = Model.InvoiceCarrierType switch
+        {
+            "mobile" => "手機條碼",
+            "citizen" => "自然人憑證",
+            "donate" => "捐贈",
+            _ => "紙本"
+        };
+        var defaultTaxTypeLabel = Model.InvoiceDefaultTaxType switch
+        {
+            "taxable" => "應稅",
+            "zero" => "零稅率",
+            "free" => "免稅",
+            _ => "未指定"
+        };
+    }
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>發票資訊</span>
+            <button type="button" id="toggleInvoiceAdvancedBtn" class="btn btn-sm btn-outline-secondary"
+                    onclick="toggleInvoiceAdvanced()" title="顯示/隱藏進階條件">+ 進階</button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3 view-mode">客戶開立電子發票時將以下列資訊作為預設值。</p>
+            <p class="text-muted small mb-3 edit-mode" style="display:none">留空則沿用基本資料的公司名稱與 Email。</p>
+            <dl class="row mb-0">
+                <dt class="col-sm-3">發票抬頭</dt>
+                <dd class="col-sm-9">
+                    <span class="view-mode">
+                        @{
+                            var effectiveTitle = string.IsNullOrEmpty(Model.InvoiceTitle) ? Model.Name : Model.InvoiceTitle;
+                        }
+                        @(string.IsNullOrEmpty(effectiveTitle) ? "未填" : effectiveTitle)
+                        @if (!string.IsNullOrEmpty(Model.InvoiceTitle) && Model.InvoiceTitle != Model.Name)
+                        {
+                            <small class="text-muted ms-2">（與基本資料 @Model.Name 不同）</small>
+                        }
+                    </span>
+                    <input asp-for="InvoiceTitle" class="form-control form-control-sm edit-mode" style="display:none" placeholder="留空則自動帶入基本資料公司名稱" />
+                </dd>
+                <dt class="col-sm-3">發票統編</dt>
+                <dd class="col-sm-9">
+                    <span class="view-mode">
+                        @{
+                            var effectiveTaxId = string.IsNullOrEmpty(Model.InvoiceTaxId) ? Model.Vat : Model.InvoiceTaxId;
+                        }
+                        @(string.IsNullOrEmpty(effectiveTaxId) ? "未填" : effectiveTaxId)
+                        @if (!string.IsNullOrEmpty(Model.InvoiceTaxId) && Model.InvoiceTaxId != Model.Vat)
+                        {
+                            <small class="text-muted ms-2">（與基本資料 @Model.Vat 不同）</small>
+                        }
+                    </span>
+                    <input asp-for="InvoiceTaxId" class="form-control form-control-sm edit-mode" style="display:none" placeholder="留空則自動帶入基本資料統編" />
+                </dd>
+                <dt class="col-sm-3">預設課稅別</dt>
+                <dd class="col-sm-9">
+                    <span class="view-mode">@defaultTaxTypeLabel</span>
+                    <select asp-for="InvoiceDefaultTaxType" class="form-select form-select-sm edit-mode" style="display:none">
+                        <option value="">未指定</option>
+                        <option value="taxable">應稅</option>
+                        <option value="zero">零稅率</option>
+                        <option value="free">免稅</option>
+                    </select>
+                </dd>
+                <dt class="col-sm-3 invoice-advanced" style="display:none">發票寄送 Email</dt>
+                <dd class="col-sm-9 invoice-advanced" style="display:none">
+                    <span class="view-mode">@(string.IsNullOrEmpty(Model.InvoiceEmail) ? (string.IsNullOrEmpty(Model.Email) ? "未填" : Model.Email + " (沿用)") : Model.InvoiceEmail)</span>
+                    <input asp-for="InvoiceEmail" class="form-control form-control-sm edit-mode" style="display:none" type="email" placeholder="留空則使用聯絡 Email" />
+                </dd>
+                <dt class="col-sm-3 invoice-advanced" style="display:none">載具類型</dt>
+                <dd class="col-sm-9 invoice-advanced" style="display:none">
+                    <span class="view-mode">@carrierTypeLabel</span>
+                    <select asp-for="InvoiceCarrierType" class="form-select form-select-sm edit-mode" style="display:none">
+                        <option value="">紙本</option>
+                        <option value="mobile">手機條碼</option>
+                        <option value="citizen">自然人憑證</option>
+                        <option value="donate">捐贈</option>
+                    </select>
+                </dd>
+                <dt class="col-sm-3 invoice-advanced" style="display:none">載具號碼</dt>
+                <dd class="col-sm-9 invoice-advanced" style="display:none">
+                    <span class="view-mode">@(string.IsNullOrEmpty(Model.InvoiceCarrierId) ? "—" : Model.InvoiceCarrierId)</span>
+                    <input asp-for="InvoiceCarrierId" class="form-control form-control-sm edit-mode" style="display:none" placeholder="如 /AB+12.3" />
+                </dd>
+                <dt class="col-sm-3 invoice-advanced" style="display:none">愛心碼</dt>
+                <dd class="col-sm-9 invoice-advanced" style="display:none">
+                    <span class="view-mode">@(string.IsNullOrEmpty(Model.InvoiceDonationCode) ? "—" : Model.InvoiceDonationCode)</span>
+                    <input asp-for="InvoiceDonationCode" class="form-control form-control-sm edit-mode" style="display:none" placeholder="3-7 位數字" />
+                </dd>
+                <dt class="col-sm-3 invoice-advanced" style="display:none">發票備註</dt>
+                <dd class="col-sm-9 invoice-advanced" style="display:none">
+                    <span class="view-mode">@(string.IsNullOrEmpty(Model.InvoiceNote) ? "—" : Model.InvoiceNote)</span>
+                    <input asp-for="InvoiceNote" class="form-control form-control-sm edit-mode" style="display:none" />
+                </dd>
+            </dl>
+        </div>
+    </div>
+</form>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>公司連絡人 (@Model.Contacts.Count)</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="showAddContactModal()">新增連絡人</button>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Contacts.Any())
+        {
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:30px"></th>
+                        <th>名稱</th>
+                        <th>電話</th>
+                        <th>手機</th>
+                        <th>Email</th>
+                        <th>地址</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="contactsBody" class="sortable-list">
+                    @foreach (var c in Model.Contacts)
+                    {
+                        <tr id="contact-@c.Id" data-id="@c.Id">
+                            <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                            <td>@c.Name</td>
+                            <td>@c.Phone</td>
+                            <td>@c.Mobile</td>
+                            <td>@c.Email</td>
+                            <td>@c.Address</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-warning"
+                                        data-id="@c.Id"
+                                        data-name="@c.Name"
+                                        data-phone="@c.Phone"
+                                        data-mobile="@c.Mobile"
+                                        data-email="@c.Email"
+                                        data-address="@c.Address"
+                                        onclick="editContactFromBtn(this)">編輯</button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteContact(@c.Id)">刪除</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted mb-0 p-3" id="noContacts">無連絡人</p>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>帳單資訊 (@Model.BillingInfos.Count)</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="showAddBillingInfoModal()">新增帳單資訊</button>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.BillingInfos.Any())
+        {
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:30px"></th>
+                        <th>Email</th>
+                        <th>地址</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="billingInfosBody" class="sortable-list">
+                    @foreach (var b in Model.BillingInfos)
+                    {
+                        <tr id="billing-@b.Id" data-id="@b.Id">
+                            <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                            <td>@b.Email</td>
+                            <td>@b.Address</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-warning"
+                                        data-id="@b.Id"
+                                        data-email="@b.Email"
+                                        data-address="@b.Address"
+                                        onclick="editBillingInfoFromBtn(this)">編輯</button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteBillingInfo(@b.Id)">刪除</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted mb-0 p-3" id="noBillingInfos">無帳單資訊</p>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">事務機列表 (@Model.Printers.Count)</div>
+    <div class="card-body">
+        @if (Model.Printers.Any())
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th style="width:30px"></th>
+                        <th>代碼</th>
+                        <th>名稱</th>
+                        <th>序號</th>
+                        <th>合約</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="printersBody" class="sortable-list">
+                    @foreach (var p in Model.Printers)
+                    {
+                        <tr data-id="@p.Id">
+                            <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                            <td>@p.Code</td>
+                            <td>@p.Name</td>
+                            <td>@p.SerialNumber</td>
+                            <td>
+                                @if (p.ContractStatus == "expired")
+                                {
+                                    <span class="badge bg-danger" title="到期日 @p.ContractEndDate?.ToString("yyyy-MM-dd")">已到期</span>
+                                }
+                                else if (p.ContractStatus == "expiring")
+                                {
+                                    var days = p.ContractEndDate!.Value.DayNumber - DateOnly.FromDateTime(DateTime.Today).DayNumber;
+                                    <span class="badge bg-warning text-dark" title="到期日 @p.ContractEndDate?.ToString("yyyy-MM-dd")">剩 @days 天</span>
+                                }
+                                else if (p.ContractEndDate.HasValue)
+                                {
+                                    <span class="badge bg-success" title="到期日 @p.ContractEndDate?.ToString("yyyy-MM-dd")">正常</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @(p.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(p.IsActive ? "啟用" : "停用")
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-controller="Printer" asp-action="Details" asp-route-id="@p.Id"
+                                   class="btn btn-sm btn-info">檢視</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted mb-0">無事務機</p>
+        }
+    </div>
+</div>
+
+<!-- 連絡人 Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactModalTitle">新增連絡人</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="contactId" />
+                <div class="mb-3">
+                    <label class="form-label">名稱 <span class="text-danger">*</span></label>
+                    <input type="text" id="contactName" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">電話</label>
+                    <input type="text" id="contactPhone" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">手機</label>
+                    <input type="text" id="contactMobile" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="contactEmail" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">地址</label>
+                    <input type="text" id="contactAddress" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" onclick="saveContact()">儲存變更</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 帳單資訊 Modal -->
+<div class="modal fade" id="billingInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="billingInfoModalTitle">新增帳單資訊</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="billingInfoId" />
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="billingInfoEmail" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">地址</label>
+                    <input type="text" id="billingInfoAddress" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" onclick="saveBillingInfo()">儲存變更</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    // 初始化 popover
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+        new bootstrap.Popover(el);
+    });
+
+    function toggleEdit(editing) {
+        document.querySelectorAll('.view-mode').forEach(function (el) { el.style.display = editing ? 'none' : ''; });
+        document.querySelectorAll('.edit-mode').forEach(function (el) { el.style.display = editing ? '' : 'none'; });
+        document.getElementById('viewActions').style.display = editing ? 'none' : 'flex';
+        document.getElementById('editActions').style.display = editing ? 'flex' : 'none';
+    }
+
+    // 發票資訊進階欄位顯示切換
+    var _invoiceAdvancedShown = false;
+    function toggleInvoiceAdvanced() {
+        _invoiceAdvancedShown = !_invoiceAdvancedShown;
+        document.querySelectorAll('.invoice-advanced').forEach(function (el) {
+            el.style.display = _invoiceAdvancedShown ? '' : 'none';
+        });
+        var btn = document.getElementById('toggleInvoiceAdvancedBtn');
+        if (btn) btn.textContent = _invoiceAdvancedShown ? '− 收起進階' : '+ 進階';
+    }
+
+    var partnerId = @Model.Id;
+
+    // 拖曳排序：3 個列表共用同一個初始化函式
+    function initSortable(tbodyId, url) {
+        var el = document.getElementById(tbodyId);
+        if (!el || typeof Sortable === 'undefined') return;
+        new Sortable(el, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'table-active',
+            onEnd: function () {
+                var ids = Array.from(el.querySelectorAll('tr[data-id]'))
+                               .map(function (tr) { return tr.dataset.id; });
+                var data = new FormData();
+                data.append('partnerId', partnerId);
+                ids.forEach(function (id) { data.append('ids', id); });
+                fetch(url, { method: 'POST', body: data })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d || !d.success) alert('排序儲存失敗，重新整理後可能恢復原順序');
+                    })
+                    .catch(function () { alert('排序儲存失敗'); });
+            }
+        });
+    }
+
+    initSortable('contactsBody',     '@Url.Action("ReorderContacts")');
+    initSortable('billingInfosBody', '@Url.Action("ReorderBillingInfos")');
+    initSortable('printersBody',     '@Url.Action("ReorderPrinters")');
+
+    function showAddContactModal() {
+        document.getElementById('contactModalTitle').textContent = '新增連絡人';
+        document.getElementById('contactId').value = '';
+        document.getElementById('contactName').value = '';
+        document.getElementById('contactPhone').value = '';
+        document.getElementById('contactMobile').value = '';
+        document.getElementById('contactEmail').value = '';
+        document.getElementById('contactAddress').value = '';
+        new bootstrap.Modal(document.getElementById('contactModal')).show();
+    }
+
+    function editContactFromBtn(btn) {
+        editContact(btn.dataset.id, btn.dataset.name, btn.dataset.phone, btn.dataset.mobile, btn.dataset.email, btn.dataset.address);
+    }
+
+    function editContact(id, name, phone, mobile, email, address) {
+        document.getElementById('contactModalTitle').textContent = '編輯連絡人';
+        document.getElementById('contactId').value = id;
+        document.getElementById('contactName').value = name || '';
+        document.getElementById('contactPhone').value = phone || '';
+        document.getElementById('contactMobile').value = mobile || '';
+        document.getElementById('contactEmail').value = email || '';
+        document.getElementById('contactAddress').value = address || '';
+        new bootstrap.Modal(document.getElementById('contactModal')).show();
+    }
+
+    function saveContact() {
+        var id = document.getElementById('contactId').value;
+        var data = new FormData();
+        data.append('Name', document.getElementById('contactName').value);
+        data.append('Phone', document.getElementById('contactPhone').value);
+        data.append('Mobile', document.getElementById('contactMobile').value);
+        data.append('Email', document.getElementById('contactEmail').value);
+        data.append('Address', document.getElementById('contactAddress').value);
+
+        var url = id
+            ? '@Url.Action("UpdateContact")' + '?id=' + id
+            : '@Url.Action("AddContact")' + '?partnerId=' + partnerId;
+
+        fetch(url, { method: 'POST', body: data })
+            .then(function(r) {
+                if (!r.ok) throw new Error('伺服器錯誤：' + r.status);
+                return r.json();
+            })
+            .then(function(d) { if (d.success) location.reload(); else alert('操作失敗'); })
+            .catch(function(err) { alert('儲存失敗：' + err.message); });
+    }
+
+    function deleteContact(id) {
+        if (!confirm('確定要刪除此連絡人嗎？')) return;
+        fetch('@Url.Action("DeleteContact")' + '?id=' + id, { method: 'POST' })
+            .then(function(r) {
+                if (!r.ok) throw new Error('伺服器錯誤：' + r.status);
+                return r.json();
+            })
+            .then(function(d) { if (d.success) location.reload(); else alert('操作失敗'); })
+            .catch(function(err) { alert('刪除失敗：' + err.message); });
+    }
+
+    function showAddBillingInfoModal() {
+        document.getElementById('billingInfoModalTitle').textContent = '新增帳單資訊';
+        document.getElementById('billingInfoId').value = '';
+        document.getElementById('billingInfoEmail').value = '';
+        document.getElementById('billingInfoAddress').value = '';
+        new bootstrap.Modal(document.getElementById('billingInfoModal')).show();
+    }
+
+    function editBillingInfoFromBtn(btn) {
+        editBillingInfo(btn.dataset.id, btn.dataset.email, btn.dataset.address);
+    }
+
+    function editBillingInfo(id, email, address) {
+        document.getElementById('billingInfoModalTitle').textContent = '編輯帳單資訊';
+        document.getElementById('billingInfoId').value = id;
+        document.getElementById('billingInfoEmail').value = email || '';
+        document.getElementById('billingInfoAddress').value = address || '';
+        new bootstrap.Modal(document.getElementById('billingInfoModal')).show();
+    }
+
+    function saveBillingInfo() {
+        var id = document.getElementById('billingInfoId').value;
+        var data = new FormData();
+        data.append('Email', document.getElementById('billingInfoEmail').value);
+        data.append('Address', document.getElementById('billingInfoAddress').value);
+
+        var url = id
+            ? '@Url.Action("UpdateBillingInfo")' + '?id=' + id
+            : '@Url.Action("AddBillingInfo")' + '?partnerId=' + partnerId;
+
+        fetch(url, { method: 'POST', body: data })
+            .then(function(r) {
+                if (!r.ok) throw new Error('伺服器錯誤：' + r.status);
+                return r.json();
+            })
+            .then(function(d) { if (d.success) location.reload(); else alert('操作失敗'); })
+            .catch(function(err) { alert('儲存失敗：' + err.message); });
+    }
+
+    function deleteBillingInfo(id) {
+        if (!confirm('確定要刪除此帳單資訊嗎？')) return;
+        fetch('@Url.Action("DeleteBillingInfo")' + '?id=' + id, { method: 'POST' })
+            .then(function(r) {
+                if (!r.ok) throw new Error('伺服器錯誤：' + r.status);
+                return r.json();
+            })
+            .then(function(d) { if (d.success) location.reload(); else alert('操作失敗'); })
+            .catch(function(err) { alert('刪除失敗：' + err.message); });
+    }
+</script>

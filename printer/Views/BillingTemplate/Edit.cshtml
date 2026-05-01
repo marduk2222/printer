@@ -1,0 +1,409 @@
+@model printer.Data.Entities.BillingTemplate
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "新增計費模板" : "編輯計費模板";
+    var allSheetTypesJson = ViewBag.AllSheetTypesJson as string ?? "[]";
+    var sheetPricesJson = ViewBag.SheetPricesJson as string ?? "[]";
+    var sheetTiersJson = ViewBag.SheetTiersJson as string ?? "[]";
+}
+
+<form asp-action="Save" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CreatedAt" />
+    <input type="hidden" asp-for="PageMethod" id="pageMethod" />
+    <input type="hidden" name="sheetTiersJson" id="sheetTiersJson" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>@ViewData["Title"]</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">@(isNew ? "建立模板" : "儲存變更")</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-8">
+
+            <!-- 基本資訊 -->
+            <div class="card mb-3">
+                <div class="card-header"><span class="badge bg-primary me-2">1</span>基本資訊</div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">模板名稱 <span class="text-danger">*</span></label>
+                            <input asp-for="Name" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label fw-bold" asp-for="IsActive">啟用此模板</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">說明</label>
+                        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 月租費 -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><span class="badge bg-primary me-2">2</span>月租費</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="monthlyToggle" />
+                        <label class="form-check-label" for="monthlyToggle">啟用</label>
+                    </div>
+                </div>
+                <div class="card-body" id="monthlyContent">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">月租費</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="MonthlyFee" type="number" class="form-control" step="1" min="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">計費週期</label>
+                            <div class="input-group">
+                                <input asp-for="MonthlyFeeCycle" type="number" class="form-control" min="1" max="60" />
+                                <span class="input-group-text">個月</span>
+                            </div>
+                            <small class="text-muted">1=每月, 3=每季, 6=半年</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 張數計費 -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><span class="badge bg-primary me-2">3</span>張數計費</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="pageToggle" />
+                        <label class="form-check-label" for="pageToggle">啟用</label>
+                    </div>
+                </div>
+                <div class="card-body" id="pageContent">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">計費週期</label>
+                            <div class="input-group">
+                                <input asp-for="PageFeeCycle" type="number" class="form-control" min="1" max="60" />
+                                <span class="input-group-text">個月</span>
+                            </div>
+                            <small class="text-muted">1=每月, 3=每季, 6=半年</small>
+                        </div>
+                    </div>
+
+                    <!-- 動態張數類型表格 -->
+                    <table class="table table-bordered table-sm align-middle mb-1" id="sheetPriceTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"></th>
+                                <th>張數類型</th>
+                                <th style="width:18%">單價</th>
+                                <th style="width:14%">誤印率</th>
+                                <th style="width:12%">贈送張數</th>
+                                <th style="width:14%" title="換算值：以最便宜類型為 1 為基準（例：黑白 1、彩色 5、彩色大張 10）。填 0 = 不參與互換">換算值</th>
+                                <th style="width:14%" title="折抵順序：小者優先享用折抵">折抵順序</th>
+                                <th style="width:8%" class="text-center">階梯</th>
+                                <th style="width:6%" class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="sheetPriceBody">
+                            <!-- JS 動態產生 -->
+                        </tbody>
+                    </table>
+                    <small class="text-muted d-block mb-2">
+                        計費張數 = 實際張數 × (1 - 誤印率%) - 贈送張數；剩餘贈送依「換算值 + 折抵順序」自動折抵其他類型超印
+                    </small>
+                    <div class="d-flex gap-2 align-items-center mt-2">
+                        <select id="addSheetTypeSelect" class="form-select form-select-sm" style="max-width:200px">
+                            <option value="">選擇張數類型...</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetPriceRow()">+ 新增</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">設定說明</div>
+                <div class="card-body small">
+                    <p class="mb-2"><span class="badge bg-primary">1</span> <strong>基本資訊</strong>：模板名稱與啟用狀態</p>
+                    <p class="mb-2"><span class="badge bg-primary">2</span> <strong>月租費</strong>：固定月租金額</p>
+                    <p class="mb-2"><span class="badge bg-primary">3</span> <strong>張數計費</strong>：依張數類型設定單價</p>
+                    <hr />
+                    <p class="mb-1"><strong>套用模板</strong>會將月租費與各張數類型單價一併複製至事務機計費設定</p>
+                    <hr />
+                    <p class="mb-1"><strong>誤印率</strong>：張數 × (1-誤印率%)</p>
+                    <p class="mb-1"><strong>贈送張數</strong>：扣除後才計費</p>
+                    <p class="mb-0"><strong>階梯</strong>：依張數匹配階梯單價</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    // ─── 資料初始化 ───────────────────────────────────────────
+    var allSheetTypes = @Html.Raw(allSheetTypesJson);
+    var initSheetPrices = @Html.Raw(sheetPricesJson);
+    var sheetTierSets = {};
+
+    (function() {
+        var raw = @Html.Raw(sheetTiersJson);
+        raw.forEach(function(t) {
+            if (!sheetTierSets[t.sheetTypeId]) sheetTierSets[t.sheetTypeId] = [];
+            sheetTierSets[t.sheetTypeId].push(t);
+        });
+    })();
+
+    var addedSheetTypeIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // 月租費開關
+        var monthlyToggle = document.getElementById('monthlyToggle');
+        var monthlyContent = document.getElementById('monthlyContent');
+        var hasMonthly = parseFloat(document.querySelector('[name="MonthlyFee"]').value) > 0;
+        monthlyToggle.checked = hasMonthly;
+        monthlyContent.style.display = hasMonthly ? '' : 'none';
+        monthlyToggle.addEventListener('change', function() {
+            monthlyContent.style.display = this.checked ? '' : 'none';
+            if (!this.checked) document.querySelector('[name="MonthlyFee"]').value = '0';
+        });
+
+        // 張數計費開關
+        var pageToggle = document.getElementById('pageToggle');
+        var pageContent = document.getElementById('pageContent');
+        var pageMethod = document.getElementById('pageMethod');
+        var hasPage = parseInt(pageMethod.value) > 0 || initSheetPrices.length > 0;
+        pageToggle.checked = hasPage;
+        pageContent.style.display = hasPage ? '' : 'none';
+        pageToggle.addEventListener('change', function() {
+            pageContent.style.display = this.checked ? '' : 'none';
+            pageMethod.value = this.checked ? '1' : '0';
+        });
+
+        // 初始化：渲染已設定的張數類型列
+        initSheetPrices.forEach(function(p) {
+            appendSheetPriceRow(p.sheetTypeId, p.sheetTypeName, p.unitPrice, p.discountPercent, p.freePages, p.weight, p.offsetOrder);
+        });
+
+        refreshAddDropdown();
+        addedSheetTypeIds.forEach(function(stId) { renderSheetTiers(stId); });
+        updateSheetTiersJson();
+        initSheetPriceSortable();
+    });
+
+    function initSheetPriceSortable() {
+        var tbody = document.getElementById('sheetPriceBody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            draggable: 'tr.sortable-main',
+            animation: 150,
+            ghostClass: 'table-active',
+            onEnd: function () {
+                tbody.querySelectorAll('tr.sortable-main').forEach(function (mainTr) {
+                    var stId = mainTr.dataset.stid;
+                    var tierTr = document.getElementById('sheetTier_' + stId);
+                    if (tierTr && mainTr.nextSibling !== tierTr) {
+                        tbody.insertBefore(tierTr, mainTr.nextSibling);
+                    }
+                });
+            }
+        });
+    }
+
+    // ─── 張數類型列 ──────────────────────────────────────────
+    function appendSheetPriceRow(stId, stName, unitPrice, discountPercent, freePages, weight, offsetOrder) {
+        addedSheetTypeIds.add(stId);
+        var tbody = document.getElementById('sheetPriceBody');
+        var tierId = 'sheetTier_' + stId;
+        var weightVal = (weight === null || weight === undefined) ? '' : weight;
+        var offsetVal = (offsetOrder === null || offsetOrder === undefined) ? '' : offsetOrder;
+        var weightPh = '預設 0';
+        var offsetPh = '預設 0';
+
+        var tr = document.createElement('tr');
+        tr.id = 'sheetPriceRow_' + stId;
+        tr.className = 'sortable-main';
+        tr.dataset.stid = stId;
+        tr.innerHTML = `
+            <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+            <td class="fw-bold">
+                ${stName}
+                <input type="hidden" name="sheetTypeIds" value="${stId}" />
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" name="unitPrices" class="form-control"
+                           value="${parseFloat(unitPrice).toFixed(4)}" step="0.0001" min="0" />
+                </div>
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="number" name="discountPercents" class="form-control"
+                           value="${parseFloat(discountPercent).toFixed(2)}" step="0.01" min="0" max="100" />
+                    <span class="input-group-text">%</span>
+                </div>
+            </td>
+            <td>
+                <input type="number" name="freePagesList" class="form-control form-control-sm"
+                       value="${freePages}" min="0" />
+            </td>
+            <td>
+                <input type="number" name="weights" class="form-control form-control-sm"
+                       value="${weightVal}" placeholder="${weightPh}" step="0.01" min="0" />
+            </td>
+            <td>
+                <input type="number" name="offsetOrders" class="form-control form-control-sm"
+                       value="${offsetVal}" placeholder="${offsetPh}" min="0" />
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        data-bs-toggle="collapse" data-bs-target="#${tierId}">&#8597;</button>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger py-0"
+                        onclick="removeSheetPriceRow(${stId})">×</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        var tierTr = document.createElement('tr');
+        tierTr.id = tierId;
+        tierTr.className = 'collapse sortable-tier';
+        tierTr.dataset.for = stId;
+        tierTr.innerHTML = `
+            <td colspan="9" class="p-2 bg-light">
+                <table class="table table-sm mb-2">
+                    <thead><tr><th>從 (張)</th><th>到 (張)</th><th>單價</th><th></th></tr></thead>
+                    <tbody id="sheetTierBody_${stId}"></tbody>
+                </table>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetTier(${stId})">+ 新增階梯</button>
+            </td>
+        `;
+        tbody.appendChild(tierTr);
+    }
+
+    function removeSheetPriceRow(stId) {
+        addedSheetTypeIds.delete(stId);
+        delete sheetTierSets[stId];
+        var row = document.getElementById('sheetPriceRow_' + stId);
+        var tierRow = document.getElementById('sheetTier_' + stId);
+        if (row) row.remove();
+        if (tierRow) tierRow.remove();
+        refreshAddDropdown();
+        updateSheetTiersJson();
+    }
+
+    function addSheetPriceRow() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        var stId = parseInt(sel.value);
+        if (!stId) return;
+        var st = allSheetTypes.find(function(s) { return s.id === stId; });
+        if (!st || addedSheetTypeIds.has(stId)) return;
+        appendSheetPriceRow(stId, st.name, 0, 0, 0, null, null);
+        renderSheetTiers(stId);
+        refreshAddDropdown();
+        sel.value = '';
+        // 自動啟用張數計費開關
+        var pageToggle = document.getElementById('pageToggle');
+        if (!pageToggle.checked) {
+            pageToggle.checked = true;
+            document.getElementById('pageContent').style.display = '';
+            document.getElementById('pageMethod').value = '1';
+        }
+    }
+
+    function refreshAddDropdown() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        sel.innerHTML = '<option value="">選擇張數類型...</option>';
+        allSheetTypes.forEach(function(st) {
+            if (!addedSheetTypeIds.has(st.id)) {
+                var opt = document.createElement('option');
+                opt.value = st.id;
+                opt.text = st.name;
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    // ─── 階梯計費 ─────────────────────────────────────────────
+    function renderSheetTiers(stId) {
+        var tbody = document.getElementById('sheetTierBody_' + stId);
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        var set = sheetTierSets[stId] || [];
+        set.forEach(function(tier, index) { addSheetTierRow(stId, tier, index); });
+    }
+
+    function addSheetTier(stId) {
+        if (!sheetTierSets[stId]) sheetTierSets[stId] = [];
+        var set = sheetTierSets[stId];
+        var last = set.length > 0 ? set[set.length - 1] : null;
+        var from = last && last.toPages ? last.toPages + 1 : (last ? last.fromPages + 500 : 1);
+        set.push({ sheetTypeId: stId, fromPages: from, toPages: null, price: 0 });
+        renderSheetTiers(stId);
+        updateSheetTiersJson();
+    }
+
+    function addSheetTierRow(stId, tier, index) {
+        var tbody = document.getElementById('sheetTierBody_' + stId);
+        var row = document.createElement('tr');
+        var toVal = tier.toPages != null ? tier.toPages : '';
+        row.innerHTML = `
+            <td><input type="number" class="form-control form-control-sm" value="${tier.fromPages}" min="1"
+                onchange="updateSheetTier(${stId}, ${index}, 'fromPages', this.value)" /></td>
+            <td><input type="number" class="form-control form-control-sm" value="${toVal}" min="0" placeholder="無上限"
+                onchange="updateSheetTier(${stId}, ${index}, 'toPages', this.value)" /></td>
+            <td><div class="input-group input-group-sm"><span class="input-group-text">$</span>
+                <input type="number" class="form-control" value="${tier.price}" step="0.0001" min="0"
+                onchange="updateSheetTier(${stId}, ${index}, 'price', this.value)" /></div></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger"
+                onclick="removeSheetTier(${stId}, ${index})">刪除</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function updateSheetTier(stId, index, field, value) {
+        if (field === 'toPages') sheetTierSets[stId][index][field] = value === '' ? null : parseInt(value);
+        else if (field === 'fromPages') sheetTierSets[stId][index][field] = parseInt(value);
+        else sheetTierSets[stId][index][field] = parseFloat(value);
+        updateSheetTiersJson();
+    }
+
+    function removeSheetTier(stId, index) {
+        sheetTierSets[stId].splice(index, 1);
+        renderSheetTiers(stId);
+        updateSheetTiersJson();
+    }
+
+    function updateSheetTiersJson() {
+        var all = [];
+        addedSheetTypeIds.forEach(function(stId) {
+            (sheetTierSets[stId] || []).forEach(function(t) { all.push(t); });
+        });
+        var el = document.getElementById('sheetTiersJson');
+        if (el) el.value = JSON.stringify(all);
+    }
+</script>
+}

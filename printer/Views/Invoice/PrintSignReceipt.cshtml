@@ -1,0 +1,49 @@
+@model printer.Models.InvoicePrintViewModel
+@{ Layout = null; var primary = !string.IsNullOrEmpty(Model.Settings.PrimaryColor) ? Model.Settings.PrimaryColor : "#7f1d1d";
+   var partner = Model.Invoice.Partner;
+   var buyerName = !string.IsNullOrWhiteSpace(partner?.InvoiceTitle) ? partner!.InvoiceTitle : partner?.Name;
+   var buyerTaxId = !string.IsNullOrWhiteSpace(partner?.InvoiceTaxId) ? partner!.InvoiceTaxId : partner?.Vat; }
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8" /><title>收據 - @Model.Invoice.InvoiceNumber</title>
+<style>:root{--p:@primary}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"DFKai-SB","Noto Serif TC",serif;color:#1a1a1a;background:#fafaf9;font-size:13px;line-height:1.6}
+.no-print{display:flex;gap:8px;padding:12px;background:#fff;border-bottom:2px solid var(--p)}.no-print button{padding:8px 22px;border:1px solid var(--p);background:#fff;color:var(--p);cursor:pointer;font-size:14px}.btn-print{background:var(--p) !important;color:#fff !important}
+.page{max-width:780px;margin:24px auto;background:#fff;padding:24px;border:3px solid var(--p)}
+.inner{border:1px solid var(--p);padding:30px 36px}
+.title{text-align:center;font-size:34px;color:var(--p);letter-spacing:24px;font-weight:600;padding-bottom:14px;border-bottom:3px double var(--p);margin-bottom:18px}
+.head-row{display:flex;justify-content:space-between;font-family:"Noto Sans TC",sans-serif;font-size:12px;margin-bottom:10px;padding:6px 0;border-bottom:1px solid #e5e5e5}
+.head-row .lbl{color:var(--p);font-weight:600;margin-right:8px}
+.body-text{font-family:"Noto Sans TC",sans-serif;font-size:14px;line-height:2.2;text-align:justify;padding:18px 0}
+.body-text .blank{display:inline-block;border-bottom:1px solid #1a1a1a;min-width:200px;padding:0 6px;font-weight:600;color:var(--p)}
+.body-text .amount{display:inline-block;border-bottom:2px solid var(--p);min-width:140px;padding:0 8px;font-weight:700;color:var(--p);font-size:18px;text-align:center}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-family:"Noto Sans TC",sans-serif;border:1px solid var(--p)}
+th{padding:8px 10px;background:#fef2f2;color:var(--p);border:1px solid var(--p);font-size:12px;text-align:center}
+td{padding:8px 10px;border:1px solid #fecaca;font-size:12px;text-align:center}
+td.left{text-align:left}td.right{text-align:right;color:var(--p);font-weight:600}
+.signature-area{margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:36px;font-family:"Noto Sans TC",sans-serif;padding-top:18px;border-top:2px solid var(--p)}
+.sig{padding:0 12px}
+.sig .lbl{font-size:13px;color:var(--p);font-weight:600;margin-bottom:14px;text-align:center;letter-spacing:4px}
+.sig .name-line{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center;margin-bottom:10px;font-size:12px}
+.sig .name-line .field{border-bottom:1px solid #1a1a1a;height:26px;padding:0 4px}
+.sig .stamp{margin-top:14px;height:90px;border:2px dotted var(--p);display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;border-radius:4px}
+@@media print{.no-print{display:none !important}.page{margin:0;max-width:none}}@@page{size:A4;margin:14mm}
+</style></head><body>
+<div class="no-print"><button class="btn-print" onclick="window.print()">列印</button><button onclick="history.back()">返回</button></div>
+<div class="page"><div class="inner">
+<div class="title">收　據</div>
+<div class="head-row"><div><span class="lbl">收據編號</span>@Model.Invoice.InvoiceNumber</div><div><span class="lbl">日期</span>@Model.Invoice.CreatedAt.ToString("yyyy 年 MM 月 dd 日")</div></div>
+<div class="body-text">茲收到 <span class="blank">@buyerName</span>@if(!string.IsNullOrEmpty(buyerTaxId)){<text>（統編 <span class="blank" style="min-width:120px">@buyerTaxId</span>）</text>} 交來新台幣 <span class="amount">$@Model.Invoice.GrandTotal.ToString("N0")</span> 元整，作為 @Model.Invoice.PeriodStart.ToString("yyyy/MM") ~ @Model.Invoice.PeriodEnd.ToString("yyyy/MM") 期間之服務費用，特此存證。</div>
+<table><thead><tr><th style="width:34%">項目</th><th>黑白</th><th>彩色</th><th>大張</th><th>月租</th><th>張數費</th><th style="text-align:right;">小計</th></tr></thead><tbody>@foreach(var it in Model.Invoice.Items){<tr><td class="left">@it.Description</td><td>@it.BlackPages.ToString("N0")</td><td>@it.ColorPages.ToString("N0")</td><td>@it.LargePages.ToString("N0")</td><td class="right">@it.MonthlyFee.ToString("N0")</td><td class="right">@it.PageFee.ToString("N0")</td><td class="right">$@it.Subtotal.ToString("N0")</td></tr>}</tbody><tfoot><tr><td colspan="6" style="text-align:right;background:var(--p);color:#fff;font-weight:700;">合　計</td><td style="text-align:right;background:var(--p);color:#fff;font-weight:700;">$@Model.Invoice.GrandTotal.ToString("N0")</td></tr></tfoot></table>
+<div class="signature-area">
+    <div class="sig">
+        <div class="lbl">付　款　人　簽　收</div>
+        <div class="name-line"><div>姓　　名</div><div class="field">@buyerName</div></div>
+        <div class="name-line"><div>日　　期</div><div class="field">　　　/　　/　　</div></div>
+        <div class="stamp">付款人簽章 / 公司大小章</div>
+    </div>
+    <div class="sig">
+        <div class="lbl">收　款　人　簽　收</div>
+        <div class="name-line"><div>單　　位</div><div class="field">@(Model.Settings.CompanyName ?? "")</div></div>
+        <div class="name-line"><div>承辦人</div><div class="field"></div></div>
+        <div class="stamp">公司簽章 / 統一發票章</div>
+    </div>
+</div>
+</div></div></body></html>

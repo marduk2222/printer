@@ -1,0 +1,98 @@
+@model printer.Data.Entities.WorkOrder
+@{
+    ViewData["Title"] = $"編輯派工單 {Model.OrderNumber}";
+    var allPrinters = ViewBag.AllPrinters as List<printer.Data.Entities.Printer> ?? new();
+    var allUsers = ViewBag.AllUsers as List<printer.Data.Entities.AppUser> ?? new();
+    var selectedPrinterIds = ViewBag.SelectedPrinterIds as List<int> ?? new();
+    var selectedUserIds = ViewBag.SelectedUserIds as List<int> ?? new();
+}
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>編輯派工單</h2>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存變更</button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header">基本資訊</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">標題 <span class="text-danger">*</span></label>
+                        <input asp-for="Title" class="form-control" required />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">問題描述</label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">處理備註</label>
+                        <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="row g-3 mb-0">
+                        <div class="col-md-6">
+                            <label class="form-label">預計到場時間</label>
+                            <input asp-for="ScheduledAt" type="datetime-local" class="form-control"
+                                   value="@(Model.ScheduledAt?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">預計處理天數</label>
+                            <div class="input-group">
+                                <input asp-for="ExpectedDays" type="number" min="0" step="1" class="form-control" placeholder="例如 3" />
+                                <span class="input-group-text">天</span>
+                            </div>
+                            <div class="form-text">自建立日起算，超過未完成將顯示逾期天數</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">指派資訊</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">客戶</label>
+                            <select asp-for="PartnerId" class="form-select ts-select" asp-items="ViewBag.Partners">
+                                <option value="">請選擇客戶</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">事務機（可多選）</label>
+                            <select name="printerIds" multiple class="form-select ts-multi"
+                                    data-placeholder="請選擇事務機">
+                                @foreach (var p in allPrinters)
+                                {
+                                    <option value="@p.Id" selected="@(selectedPrinterIds.Contains(p.Id) ? "selected" : null)">
+                                        @p.Name@(p.Partner != null ? $" ({p.Partner.Name})" : "")
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">指派人員（可多選）</label>
+                            <select name="userIds" multiple class="form-select ts-multi"
+                                    data-placeholder="請選擇人員">
+                                @foreach (var u in allUsers)
+                                {
+                                    <option value="@u.Id" selected="@(selectedUserIds.Contains(u.Id) ? "selected" : null)">
+                                        @u.DisplayName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</form>

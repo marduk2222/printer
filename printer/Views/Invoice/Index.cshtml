@@ -1,0 +1,288 @@
+@model List<printer.Data.Entities.Invoice>
+@{
+    ViewData["Title"] = "帳單管理";
+    var statusNames = new Dictionary<string, (string Name, string Class)>
+    {
+        ["draft"] = ("草稿", "bg-secondary"),
+        ["confirmed"] = ("已確認", "bg-primary"),
+        ["paid"] = ("已付款", "bg-success"),
+        ["cancelled"] = ("已取消", "bg-danger"),
+    };
+    var unpaidInvoices = ViewBag.UnpaidInvoices as List<printer.Data.Entities.Invoice> ?? new List<printer.Data.Entities.Invoice>();
+    var recentInvoices = ViewBag.RecentInvoices as List<printer.Data.Entities.Invoice> ?? new List<printer.Data.Entities.Invoice>();
+    var invoiceDays = (int)(ViewBag.InvoiceDays ?? 7);
+}
+
+@{
+    var billingStyleEnabled = (bool)(ViewBag.BillingStyleEnabled ?? false);
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>帳單管理</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">建立帳單</a>
+        @if (billingStyleEnabled)
+        {
+            <a asp-controller="InvoicePrintSettings" asp-action="Index"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-palette me-1"></i>帳單風格
+            </a>
+        }
+        else
+        {
+            <a asp-controller="InvoicePrintSettings" asp-action="Index"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-palette me-1"></i>帳單風格
+            </a>
+        }
+    </div>
+</div>
+
+<!-- 帳單統計區塊 -->
+<div class="row mb-4">
+    <!-- 未付帳單 -->
+    <div class="col-md-6 mb-3">
+        <div class="card h-100" style="border-color:#7c3aed;">
+            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#7c3aed;">
+                <strong>&#128181; 未付帳單 (@unpaidInvoices.Count)</strong>
+                @if (unpaidInvoices.Any())
+                {
+                    <span class="badge bg-white" style="color:#7c3aed;">待收款</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (unpaidInvoices.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>帳單編號</th>
+                                    <th>客戶</th>
+                                    <th class="text-end">金額</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in unpaidInvoices)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@inv.InvoiceNumber</strong><br />
+                                            <span class="text-muted">@inv.CreatedAt.ToString("yyyy-MM-dd")</span>
+                                        </td>
+                                        <td>@inv.Partner?.Name</td>
+                                        <td class="text-end">$@inv.GrandTotal.ToString("N0")</td>
+                                        <td>
+                                            @if (inv.Status == "draft")
+                                            {
+                                                <span class="badge bg-secondary">草稿</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-primary">已確認</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-action="Details" asp-route-id="@inv.Id" class="btn btn-sm btn-outline-secondary">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-3 text-muted">無未付帳單</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 近期帳單 -->
+    <div class="col-md-6 mb-3">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <strong>&#128203; 近期帳單（@recentInvoices.Count 筆，近 @invoiceDays 天）</strong>
+                <form method="get" class="d-flex align-items-center gap-1 mb-0">
+                    @if (ViewBag.PartnerId != null)
+                    {
+                        <input type="hidden" name="partnerId" value="@ViewBag.PartnerId" />
+                    }
+                    @if (ViewBag.Status != null)
+                    {
+                        <input type="hidden" name="status" value="@ViewBag.Status" />
+                    }
+                    <input type="number" name="invoiceDays" value="@invoiceDays" min="1" max="365"
+                           class="form-control form-control-sm" style="width:65px;" />
+                    <button type="submit" class="btn btn-sm btn-light">套用</button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                @if (recentInvoices.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>帳單編號</th>
+                                    <th>客戶</th>
+                                    <th class="text-end">金額</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in recentInvoices)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@inv.InvoiceNumber</strong><br />
+                                            <span class="text-muted">@inv.CreatedAt.ToString("yyyy-MM-dd")</span>
+                                        </td>
+                                        <td>@inv.Partner?.Name</td>
+                                        <td class="text-end">$@inv.GrandTotal.ToString("N0")</td>
+                                        <td>
+                                            @{
+                                                var s = statusNames.GetValueOrDefault(inv.Status, ("未知", "bg-secondary"));
+                                            }
+                                            <span class="badge @s.Item2">@s.Item1</span>
+                                        </td>
+                                        <td>
+                                            <a asp-action="Details" asp-route-id="@inv.Id" class="btn btn-sm btn-outline-success">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-3 text-muted">近 @invoiceDays 天內無帳單</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select">
+                    <option value="">全部客戶</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">狀態</label>
+                <select name="status" class="form-select">
+                    <option value="">全部狀態</option>
+                    <option value="draft" selected="@(ViewBag.Status == "draft")">草稿</option>
+                    <option value="confirmed" selected="@(ViewBag.Status == "confirmed")">已確認</option>
+                    <option value="paid" selected="@(ViewBag.Status == "paid")">已付款</option>
+                    <option value="cancelled" selected="@(ViewBag.Status == "cancelled")">已取消</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>帳單編號</th>
+                        <th>客戶</th>
+                        <th>期間</th>
+                        <th class="text-end">金額</th>
+                        <th>狀態</th>
+                        @if (ViewBag.EinvoiceEnabled == true)
+                        {
+                            <th>發票</th>
+                        }
+                        <th>建立時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var einvoiceMap = ViewBag.EinvoiceMap as Dictionary<int, printer.Data.Entities.Einvoice>;
+                        var einvStatusNames = new Dictionary<string, (string Name, string Class)>
+                        {
+                            ["draft"] = ("草稿", "bg-secondary"),
+                            ["issued"] = ("已開立", "bg-success"),
+                            ["void"] = ("已作廢", "bg-danger"),
+                        };
+                    }
+                    @foreach (var invoice in Model)
+                    {
+                        var status = statusNames.GetValueOrDefault(invoice.Status, ("未知", "bg-secondary"));
+                        printer.Data.Entities.Einvoice? einv = null;
+                        einvoiceMap?.TryGetValue(invoice.Id, out einv);
+                        <tr>
+                            <td><strong>@invoice.InvoiceNumber</strong></td>
+                            <td>@invoice.Partner?.Name</td>
+                            <td>@invoice.PeriodStart.ToString("yyyy/MM/dd") ~ @invoice.PeriodEnd.ToString("yyyy/MM/dd")</td>
+                            <td class="text-end">$@invoice.GrandTotal.ToString("N0")</td>
+                            <td><span class="badge @status.Item2">@status.Item1</span></td>
+                            @if (ViewBag.EinvoiceEnabled == true)
+                            {
+                                <td>
+                                    @if (einv != null)
+                                    {
+                                        var einvStatus = einvStatusNames.GetValueOrDefault(einv.Status, ("未知", "bg-secondary"));
+                                        <a asp-controller="Einvoice" asp-action="Details" asp-route-id="@einv.Id" class="badge @einvStatus.Item2 text-decoration-none">
+                                            @einv.InvoiceNumber (@einvStatus.Item1)
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">未開立</span>
+                                    }
+                                </td>
+                            }
+                            <td>@invoice.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@invoice.Id" class="btn btn-sm btn-outline-primary">檢視</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無帳單</p>
+            </div>
+        }
+    </div>
+</div>

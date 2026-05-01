@@ -1,0 +1,78 @@
+@{
+    ViewData["Title"] = "計費報表";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>計費報表</h4>
+    <a asp-action="Summary" class="btn btn-outline-primary">帳單統計</a>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header fw-bold">計費預覽</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">依抄表記錄 × 張數類型單價，即時計算（不需先生成帳單）</p>
+                <form asp-action="Preview" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">客戶</label>
+                        <select name="partnerId" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                            <option value="">全部客戶</option>
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">起始日 <span class="text-danger">*</span></label>
+                            <input type="date" name="startDate" class="form-control" value="@ViewBag.DefaultStart" required />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">結束日 <span class="text-danger">*</span></label>
+                            <input type="date" name="endDate" class="form-control" value="@ViewBag.DefaultEnd" required />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">產生計費預覽</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header fw-bold">帳單報表</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">查詢已生成的帳單明細</p>
+                <form asp-action="Generate" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">客戶</label>
+                        <select name="partnerId" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                            <option value="">全部客戶</option>
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">起始日 <span class="text-danger">*</span></label>
+                            <input type="date" name="startDate" class="form-control" value="@ViewBag.DefaultStart" required />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">結束日 <span class="text-danger">*</span></label>
+                            <input type="date" name="endDate" class="form-control" value="@ViewBag.DefaultEnd" required />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100">查詢帳單報表</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header">計費流程說明</div>
+    <div class="card-body">
+        <ol class="mb-0">
+            <li>至「張數類型管理」定義張數類型（如：黑白、彩色）並設定驅動參數對應</li>
+            <li>至「型號管理」將張數類型配置到事務機型號</li>
+            <li>至「計費設定」的「各張數類型單價」設定每台事務機的單價</li>
+            <li>上傳抄表資料（系統依驅動參數自動累加到對應張數類型）</li>
+            <li>使用「計費預覽」確認金額，再至「帳單管理」生成正式帳單</li>
+        </ol>
+    </div>
+</div>

@@ -1,0 +1,245 @@
+@model List<printer.Data.Entities.WorkOrder>
+@{
+    ViewData["Title"] = "派工管理";
+    var statusFilter = ViewBag.Status as string;
+    var partnerIdFilter = ViewBag.PartnerId as int?;
+    var dateFrom = ViewBag.DateFrom as DateTime?;
+    var dateTo = ViewBag.DateTo as DateTime?;
+    string fmtDate(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>派工管理</h2>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> 開立派工單
+        </a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<!-- 統計卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-status="open"
+           asp-route-partnerId="@partnerIdFilter"
+           asp-route-dateFrom="@fmtDate(dateFrom)"
+           asp-route-dateTo="@fmtDate(dateTo)"
+           class="text-decoration-none">
+            <div class="card text-bg-warning">
+                <div class="card-body text-center py-2">
+                    <div class="fs-4 fw-bold">@ViewBag.CountOpen</div>
+                    <small>待處理</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-status="in_progress"
+           asp-route-partnerId="@partnerIdFilter"
+           asp-route-dateFrom="@fmtDate(dateFrom)"
+           asp-route-dateTo="@fmtDate(dateTo)"
+           class="text-decoration-none">
+            <div class="card text-bg-primary">
+                <div class="card-body text-center py-2">
+                    <div class="fs-4 fw-bold">@ViewBag.CountInProgress</div>
+                    <small>處理中</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index" asp-route-status="completed"
+           asp-route-partnerId="@partnerIdFilter"
+           asp-route-dateFrom="@fmtDate(dateFrom)"
+           asp-route-dateTo="@fmtDate(dateTo)"
+           class="text-decoration-none">
+            <div class="card text-bg-success">
+                <div class="card-body text-center py-2">
+                    <div class="fs-4 fw-bold">@ViewBag.CountCompleted</div>
+                    <small>已完成</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a asp-action="Index"
+           asp-route-partnerId="@partnerIdFilter"
+           asp-route-dateFrom="@fmtDate(dateFrom)"
+           asp-route-dateTo="@fmtDate(dateTo)"
+           class="text-decoration-none">
+            <div class="card text-bg-secondary">
+                <div class="card-body text-center py-2">
+                    <div class="fs-4 fw-bold">@ViewBag.CountAll</div>
+                    <small>全部</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- 篩選 -->
+<form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-md-3">
+        <label class="form-label small text-muted">客戶</label>
+        <select name="partnerId" class="form-select form-select-sm ts-select" asp-items="ViewBag.Partners">
+            <option value="">全部客戶</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">狀態</label>
+        <select name="status" class="form-select form-select-sm">
+            <option value="">全部狀態</option>
+            <option value="open" selected="@("open" == statusFilter)">待處理</option>
+            <option value="in_progress" selected="@("in_progress" == statusFilter)">處理中</option>
+            <option value="completed" selected="@("completed" == statusFilter)">已完成</option>
+            <option value="cancelled" selected="@("cancelled" == statusFilter)">已取消</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">建立日期起</label>
+        <input type="date" name="dateFrom" class="form-control form-control-sm" value="@fmtDate(dateFrom)" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">建立日期迄</label>
+        <input type="date" name="dateTo" class="form-control form-control-sm" value="@fmtDate(dateTo)" />
+    </div>
+    <div class="col-md-auto">
+        <button type="submit" class="btn btn-outline-primary btn-sm">篩選</button>
+        <a asp-action="Index" asp-route-clearDates="true" class="btn btn-outline-secondary btn-sm">清除</a>
+    </div>
+</form>
+
+<!-- 列表 -->
+@if (!Model.Any())
+{
+    <div class="alert alert-info">目前無派工單記錄</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:36px;"><input type="checkbox" id="selectAll" /></th>
+                    <th>單號</th>
+                    <th>標題</th>
+                    <th>客戶</th>
+                    <th>事務機</th>
+                    <th>指派人員</th>
+
+                    <th>狀態</th>
+                    <th>建立時間</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var nowLocal = DateTime.Now;
+                }
+                @foreach (var wo in Model)
+                {
+                    var isPending = wo.Status is "open" or "in_progress";
+                    var createdLocal = wo.CreatedAt.ToLocalTime();
+                    int? overdueDays = null;
+                    if (isPending)
+                    {
+                        var expected = wo.ExpectedDays ?? 3;
+                        var deadline = createdLocal.Date.AddDays(expected);
+                        var diff = (nowLocal.Date - deadline).Days;
+                        if (diff > 0) overdueDays = diff;
+                    }
+                    var isOverdue = overdueDays.HasValue;
+                    <tr class="@(isOverdue ? "table-danger" : "")">
+                        <td><input type="checkbox" class="row-check" value="@wo.Id" /></td>
+                        <td><code class="small">@wo.OrderNumber</code></td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@wo.Id" class="text-decoration-none fw-medium">
+                                @wo.Title
+                            </a>
+                        </td>
+                        <td>@(wo.Partner?.Name ?? "-")</td>
+                        <td class="small">
+                            @if (wo.WorkOrderPrinters.Any())
+                            { @string.Join("、", wo.WorkOrderPrinters.Select(p => p.Printer?.Name ?? "-")) }
+                            else { <span class="text-muted">-</span> }
+                        </td>
+                        <td class="small">
+                            @if (wo.WorkOrderAssignees.Any())
+                            { @string.Join("、", wo.WorkOrderAssignees.Select(a => a.User?.DisplayName ?? "-")) }
+                            else { <span class="text-muted">-</span> }
+                        </td>
+                        <td>
+                            @{
+                                var (badge, label) = wo.Status switch
+                                {
+                                    "open" => ("bg-warning text-dark", "待處理"),
+                                    "in_progress" => ("bg-primary", "處理中"),
+                                    "completed" => ("bg-success", "已完成"),
+                                    "cancelled" => ("bg-secondary", "已取消"),
+                                    _ => ("bg-light text-dark", wo.Status)
+                                };
+                            }
+                            <span class="badge @badge">@label</span>
+                            @if (isOverdue)
+                            {
+                                <span class="badge bg-danger ms-1">逾期 @overdueDays 天</span>
+                            }
+                        </td>
+                        <td class="small text-muted">@createdLocal.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@wo.Id" class="btn btn-sm btn-outline-primary">查看</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "WorkOrder")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+</script>
+}

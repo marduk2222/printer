@@ -1,0 +1,260 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - heading "事務機詳情" [level=4] [ref=e33]
+        - generic [ref=e34]:
+          - generic "已填 10 / 11 項" [ref=e35]:
+            - generic [ref=e36]: 91%
+          - button "10/11" [ref=e37] [cursor=pointer]
+      - generic [ref=e38]:
+        - button "編輯" [ref=e39] [cursor=pointer]
+        - link "返回" [ref=e40] [cursor=pointer]:
+          - /url: /Printer
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: 基本資料
+          - generic [ref=e47]:
+            - term [ref=e48]: 代碼
+            - definition [ref=e49]: TEST-001
+            - term [ref=e50]: 名稱
+            - definition [ref=e51]: Printer-001
+            - term [ref=e52]: 客戶
+            - definition [ref=e53]: 台積電
+            - term [ref=e54]: 廠牌
+            - definition [ref=e55]: Ricoh
+            - term [ref=e56]: 型號
+            - definition [ref=e57]: Ricoh MC3504
+            - term [ref=e58]: 序號
+            - definition [ref=e59]: SN-TEST-20260302
+            - term [ref=e60]: 客戶編號
+            - definition [ref=e61]: A0001
+            - term [ref=e62]: 狀態
+            - definition [ref=e63]: 測試
+            - term [ref=e64]: 啟用
+            - definition [ref=e65]:
+              - generic [ref=e67]: 啟用
+        - generic [ref=e69]:
+          - generic [ref=e70]: 網路資訊
+          - generic [ref=e72]:
+            - term [ref=e73]: IP 位址
+            - definition [ref=e74]: 192.168.1.100
+            - term [ref=e75]: MAC 位址
+            - definition [ref=e76]: AA:BB:CC:DD:EE:FF
+            - term [ref=e77]: 印表機名稱
+            - definition [ref=e78]
+      - generic [ref=e79]:
+        - generic [ref=e80]: 合約資訊
+        - generic [ref=e82]:
+          - term [ref=e83]: 合約開始日期
+          - definition [ref=e84]: 2026-03-01
+          - term [ref=e85]: 合約結束日期
+          - definition [ref=e86]:
+            - generic [ref=e87]:
+              - text: 2026-04-01
+              - generic [ref=e88]: 已到期
+          - term [ref=e89]: 押金
+          - definition [ref=e90]: "100"
+          - term [ref=e91]: 到期前通知天數
+          - definition [ref=e92]: 7 天
+      - generic [ref=e93]:
+        - generic [ref=e94]: 說明
+        - generic [ref=e95]: Write test from Claude Code
+      - generic [ref=e96]:
+        - generic [ref=e98]: 耗材狀態
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - heading "碳粉" [level=6] [ref=e102]
+            - generic [ref=e103]:
+              - generic [ref=e104]: 黑色
+              - generic [ref=e106]: 85%
+              - generic [ref=e107]: 閾值 20%
+            - generic [ref=e108]:
+              - generic [ref=e109]: 青色
+              - generic [ref=e111]: 72%
+              - generic [ref=e112]: 閾值 20%
+            - generic [ref=e113]:
+              - generic [ref=e114]: 洋紅
+              - generic [ref=e116]: 68%
+              - generic [ref=e117]: 閾值 20%
+            - generic [ref=e118]:
+              - generic [ref=e119]: 黃色
+              - generic [ref=e121]: 90%
+              - generic [ref=e122]: 閾值 20%
+          - generic [ref=e123]:
+            - heading "感光鼓" [level=6] [ref=e124]
+            - generic [ref=e125]:
+              - generic [ref=e126]: 黑色
+              - generic [ref=e127]:
+                - generic: 0%
+              - generic [ref=e128]: 閾值 20%
+            - generic [ref=e129]:
+              - generic [ref=e130]: 青色
+              - generic [ref=e131]:
+                - generic: 0%
+              - generic [ref=e132]: 閾值 20%
+            - generic [ref=e133]:
+              - generic [ref=e134]: 洋紅
+              - generic [ref=e135]:
+                - generic: 0%
+              - generic [ref=e136]: 閾值 20%
+            - generic [ref=e137]:
+              - generic [ref=e138]: 黃色
+              - generic [ref=e139]:
+                - generic: 0%
+              - generic [ref=e140]: 閾值 20%
+    - generic [ref=e141]:
+      - generic [ref=e142]:
+        - generic [ref=e143]: 計費方式
+        - link "編輯計費" [ref=e144] [cursor=pointer]:
+          - /url: /BillingConfig/Edit?printerId=1
+      - generic [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e148]: 停用
+          - generic [ref=e149]:
+            - text: 月租費
+            - strong [ref=e150]: $1,000
+            - text: / 2 個月
+          - generic [ref=e151]:
+            - text: 張數週期
+            - strong [ref=e152]: 3 個月
+        - paragraph [ref=e153]: 尚未設定張數計費類型
+        - separator [ref=e154]
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - generic [ref=e157]: 月租起算
+            - text: "-"
+          - generic [ref=e158]:
+            - generic [ref=e159]: 月租作帳
+            - text: "-"
+          - generic [ref=e160]:
+            - generic [ref=e161]: 張數起算
+            - text: "-"
+          - generic [ref=e162]:
+            - generic [ref=e163]: 張數作帳
+            - text: "-"
+    - generic [ref=e164]:
+      - generic [ref=e165]: 帳單記錄
+      - table [ref=e168]:
+        - rowgroup [ref=e169]:
+          - row "帳單編號 計費期間 帳單日期 金額 狀態 操作" [ref=e170]:
+            - columnheader "帳單編號" [ref=e171]
+            - columnheader "計費期間" [ref=e172]
+            - columnheader "帳單日期" [ref=e173]
+            - columnheader "金額" [ref=e174]
+            - columnheader "狀態" [ref=e175]
+            - columnheader "操作" [ref=e176]
+        - rowgroup [ref=e177]:
+          - row "INV-202603-003 2026/03/01 ～ 2026/03/31 2026/03/23 $7,400 草稿 查看" [ref=e178]:
+            - cell "INV-202603-003" [ref=e179]:
+              - strong [ref=e180]: INV-202603-003
+            - cell "2026/03/01 ～ 2026/03/31" [ref=e181]
+            - cell "2026/03/23" [ref=e182]
+            - cell "$7,400" [ref=e183]
+            - cell "草稿" [ref=e184]:
+              - generic [ref=e185]: 草稿
+            - cell "查看" [ref=e186]:
+              - link "查看" [ref=e187] [cursor=pointer]:
+                - /url: /Invoice/Details/3
+          - row "INV-202603-002 2026/03/01 ～ 2026/03/31 2026/03/23 $1,000 已確認 查看" [ref=e188]:
+            - cell "INV-202603-002" [ref=e189]:
+              - strong [ref=e190]: INV-202603-002
+            - cell "2026/03/01 ～ 2026/03/31" [ref=e191]
+            - cell "2026/03/23" [ref=e192]
+            - cell "$1,000" [ref=e193]
+            - cell "已確認" [ref=e194]:
+              - generic [ref=e195]: 已確認
+            - cell "查看" [ref=e196]:
+              - link "查看" [ref=e197] [cursor=pointer]:
+                - /url: /Invoice/Details/2
+          - row "INV-202603-001 2026/03/01 ～ 2026/03/31 2026/03/23 $100 已取消 查看" [ref=e198]:
+            - cell "INV-202603-001" [ref=e199]:
+              - strong [ref=e200]: INV-202603-001
+            - cell "2026/03/01 ～ 2026/03/31" [ref=e201]
+            - cell "2026/03/23" [ref=e202]
+            - cell "$100" [ref=e203]
+            - cell "已取消" [ref=e204]:
+              - generic [ref=e205]: 已取消
+            - cell "查看" [ref=e206]:
+              - link "查看" [ref=e207] [cursor=pointer]:
+                - /url: /Invoice/Details/1
+    - generic [ref=e208]:
+      - generic [ref=e209]: 維護人員
+      - table [ref=e211]:
+        - rowgroup [ref=e212]:
+          - row "姓名 角色 操作" [ref=e213]:
+            - columnheader [ref=e214]
+            - columnheader "姓名" [ref=e215]
+            - columnheader "角色" [ref=e216]
+            - columnheader "操作" [ref=e217]
+        - rowgroup [ref=e218]:
+          - row "☰ 系統管員 主要維護 移除" [ref=e219]:
+            - cell "☰" [ref=e220]
+            - cell "系統管員" [ref=e221]
+            - cell "主要維護" [ref=e222]:
+              - generic [ref=e223]: 主要維護
+            - cell "移除" [ref=e224]:
+              - button "移除" [ref=e226] [cursor=pointer]
+          - row "☰ staff 支援 移除" [ref=e227]:
+            - cell "☰" [ref=e228]
+            - cell "staff" [ref=e229]
+            - cell "支援" [ref=e230]:
+              - generic [ref=e231]: 支援
+            - cell "移除" [ref=e232]:
+              - button "移除" [ref=e234] [cursor=pointer]
+    - generic [ref=e235]:
+      - generic [ref=e237]:
+        - generic [ref=e238]: 最近抄表記錄
+        - table [ref=e240]:
+          - rowgroup [ref=e241]:
+            - row "日期 黑白 彩色 大張" [ref=e242]:
+              - columnheader "日期" [ref=e243]
+              - columnheader "黑白" [ref=e244]
+              - columnheader "彩色" [ref=e245]
+              - columnheader "大張" [ref=e246]
+          - rowgroup [ref=e247]:
+            - row "2026-03-24 20,000 1,000 0" [ref=e248]:
+              - cell "2026-03-24" [ref=e249]
+              - cell "20,000" [ref=e250]
+              - cell "1,000" [ref=e251]
+              - cell "0" [ref=e252]
+      - generic [ref=e254]:
+        - generic [ref=e255]: 告警記錄
+        - paragraph [ref=e257]: 無告警
+  - contentinfo [ref=e258]:
+    - generic [ref=e259]: © 2026 - 印表機雲端抄表系統

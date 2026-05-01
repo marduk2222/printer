@@ -1,0 +1,91 @@
+@model IEnumerable<printer.Controllers.PrinterStatDto>
+@{
+    ViewData["Title"] = "依事務機統計";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>依事務機統計</h4>
+    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select">
+                    <option value="">全部</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.PartnerId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">起始日期</label>
+                <input type="date" name="startDate" class="form-control" value="@((ViewBag.StartDate as DateOnly?)?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">結束日期</label>
+                <input type="date" name="endDate" class="form-control" value="@((ViewBag.EndDate as DateOnly?)?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>事務機代碼</th>
+                        <th>事務機名稱</th>
+                        <th>客戶</th>
+                        <th class="text-end">記錄數</th>
+                        <th class="text-end">黑白張數</th>
+                        <th class="text-end">彩色張數</th>
+                        <th class="text-end">大張張數</th>
+                        <th class="text-end">合計</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.PrinterCode</td>
+                            <td>@item.PrinterName</td>
+                            <td>@item.PartnerName</td>
+                            <td class="text-end">@item.RecordCount.ToString("N0")</td>
+                            <td class="text-end">@item.TotalBlack.ToString("N0")</td>
+                            <td class="text-end">@item.TotalColor.ToString("N0")</td>
+                            <td class="text-end">@item.TotalLarge.ToString("N0")</td>
+                            <td class="text-end fw-bold">@item.Total.ToString("N0")</td>
+                            <td>
+                                <a asp-action="Index" asp-route-printerId="@item.PrinterId"
+                                   asp-route-startDate="@((ViewBag.StartDate as DateOnly?)?.ToString("yyyy-MM-dd"))"
+                                   asp-route-endDate="@((ViewBag.EndDate as DateOnly?)?.ToString("yyyy-MM-dd"))"
+                                   class="btn btn-sm btn-info">明細</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-dark">
+                        <td colspan="3"><strong>總計</strong></td>
+                        <td class="text-end"><strong>@Model.Sum(x => x.RecordCount).ToString("N0")</strong></td>
+                        <td class="text-end"><strong>@Model.Sum(x => x.TotalBlack).ToString("N0")</strong></td>
+                        <td class="text-end"><strong>@Model.Sum(x => x.TotalColor).ToString("N0")</strong></td>
+                        <td class="text-end"><strong>@Model.Sum(x => x.TotalLarge).ToString("N0")</strong></td>
+                        <td class="text-end"><strong>@Model.Sum(x => x.Total).ToString("N0")</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

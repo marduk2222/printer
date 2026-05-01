@@ -1,0 +1,135 @@
+@model printer.Data.Entities.WorkOrder
+@{
+    ViewData["Title"] = "開立派工單";
+    var allPrinters = ViewBag.AllPrinters as List<printer.Data.Entities.Printer> ?? new();
+    var allUsers = ViewBag.AllUsers as List<printer.Data.Entities.AppUser> ?? new();
+}
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>開立派工單</h2>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">建立派工單</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="row g-3">
+        <!-- 左欄：基本資訊 -->
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header">基本資訊</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">標題 <span class="text-danger">*</span></label>
+                        <input asp-for="Title" class="form-control" placeholder="請輸入派工標題" required />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">問題描述</label>
+                        <textarea asp-for="Description" class="form-control" rows="4"
+                                  placeholder="請詳細描述問題或需求..."></textarea>
+                    </div>
+                    <div class="row g-3 mb-0">
+                        <div class="col-md-6">
+                            <label class="form-label">預計到場時間</label>
+                            <input asp-for="ScheduledAt" type="datetime-local" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">預計處理天數</label>
+                            <div class="input-group">
+                                <input asp-for="ExpectedDays" type="number" min="0" step="1" class="form-control" placeholder="例如 3" />
+                                <span class="input-group-text">天</span>
+                            </div>
+                            <div class="form-text">自建立日起算，超過未完成將顯示逾期天數</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 指派資訊 -->
+            <div class="card mb-3">
+                <div class="card-header">指派資訊</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">客戶</label>
+                            <select asp-for="PartnerId" class="form-select ts-select" asp-items="ViewBag.Partners">
+                                <option value="">請選擇客戶</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">事務機（可多選）</label>
+                            <select name="printerIds" multiple class="form-select ts-multi"
+                                    data-placeholder="請選擇事務機">
+                                @foreach (var p in allPrinters)
+                                {
+                                    <option value="@p.Id">@p.Name@(p.Partner != null ? $" ({p.Partner.Name})" : "")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">指派人員（可多選）</label>
+                            <select name="userIds" multiple class="form-select ts-multi"
+                                    data-placeholder="請選擇人員">
+                                @foreach (var u in allUsers)
+                                {
+                                    <option value="@u.Id">@u.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右欄：上傳圖片 -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">上傳圖片</div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">支援 JPG、PNG、GIF、WebP 格式</p>
+
+                    <button type="button" class="btn btn-outline-primary w-100 mb-2"
+                            onclick="document.getElementById('imageInput').click()">
+                        📷 選擇或拍照上傳
+                    </button>
+                    <input type="file" id="imageInput" name="images" accept="image/*"
+                           multiple class="d-none" onchange="previewImages(this)" />
+
+                    <input type="text" name="imageCaption" class="form-control form-control-sm mb-2"
+                           placeholder="圖片說明（選填，套用到所有圖片）" />
+
+                    <div id="imagePreviewContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</form>
+
+@section Scripts {
+<script>
+    function previewImages(input) {
+        const container = document.getElementById('imagePreviewContainer');
+        container.innerHTML = '';
+        for (const file of input.files) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const div = document.createElement('div');
+                div.className = 'mb-1';
+                div.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" style="max-height:100px;object-fit:cover;width:100%"/>`;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+</script>
+}

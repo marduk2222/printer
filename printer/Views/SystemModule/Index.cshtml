@@ -1,0 +1,70 @@
+@model List<printer.Data.Entities.SystemModule>
+@{
+    ViewData["Title"] = "模組管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>模組管理</h4>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted mb-4">管理系統功能模組的啟用狀態。啟用的模組會在導覽列顯示對應的選單。</p>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">排序</th>
+                        <th>代碼</th>
+                        <th>名稱</th>
+                        <th>說明</th>
+                        <th style="width: 100px;">狀態</th>
+                        <th style="width: 120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var module in Model)
+                    {
+                        <tr>
+                            <td>@module.SortOrder</td>
+                            <td><code>@module.Code</code></td>
+                            <td><strong>@module.Name</strong></td>
+                            <td class="text-muted">@module.Description</td>
+                            <td>
+                                @if (module.IsEnabled)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                <form asp-action="Toggle" asp-route-id="@module.Id" method="post" class="d-inline">
+                                    @if (module.IsEnabled)
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">停用</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-success">啟用</button>
+                                    }
+                                </form>
+                                <a asp-action="Edit" asp-route-id="@module.Id" class="btn btn-sm btn-outline-secondary">設定</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無模組設定</p>
+            </div>
+        }
+    </div>
+</div>

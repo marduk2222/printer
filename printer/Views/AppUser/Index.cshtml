@@ -1,0 +1,176 @@
+@model List<printer.Data.Entities.AppUser>
+@{
+    ViewData["Title"] = "人員管理";
+    var roleNames = new Dictionary<string, (string Name, string Class)>
+    {
+        ["employee"] = ("員工", "bg-secondary"),
+        ["supervisor"] = ("主管", "bg-warning text-dark"),
+        ["admin"] = ("系統管理員", "bg-danger"),
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>人員管理</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">新增使用者</a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <select name="role" class="form-select">
+                    <option value="">全部角色</option>
+                    <option value="employee" selected="@(ViewBag.Role == "employee")">員工</option>
+                    <option value="supervisor" selected="@(ViewBag.Role == "supervisor")">主管</option>
+                    <option value="admin" selected="@(ViewBag.Role == "admin")">系統管理員</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px;"><input type="checkbox" id="selectAll" /></th>
+                        <th style="width:36px;"></th>
+                        <th>帳號</th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>Email</th>
+                        <th>電話</th>
+                        <th>狀態</th>
+                        <th>最後登入</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userSortable">
+                    @foreach (var user in Model)
+                    {
+                        var role = roleNames.GetValueOrDefault(user.Role, ("未知", "bg-secondary"));
+                        <tr data-id="@user.Id" class="@(!user.IsActive ? "table-secondary" : "")">
+                            <td><input type="checkbox" class="row-check" value="@user.Id" /></td>
+                            <td class="drag-handle text-center text-muted" style="cursor:grab">&#x2630;</td>
+                            <td><strong>@user.Username</strong></td>
+                            <td>@user.DisplayName</td>
+                            <td><span class="badge @role.Item2">@role.Item1</span></td>
+                            <td>@user.Email</td>
+                            <td>@user.Phone</td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.LastLoginAt.HasValue)
+                                {
+                                    @user.LastLoginAt.Value.ToString("yyyy/MM/dd HH:mm")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">未登入</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-warning">編輯</a>
+                                <form asp-action="Toggle" asp-route-id="@user.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-outline-secondary" : "btn-outline-success")">
+                                        @(user.IsActive ? "停用" : "啟用")
+                                    </button>
+                                </form>
+                                <form asp-action="Delete" asp-route-id="@user.Id" method="post" class="d-inline"
+                                      onsubmit="return confirm('確定要刪除此使用者嗎？');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無使用者</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('userSortable');
+    if (el) {
+        Sortable.create(el, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: function() {
+                var ids = Array.from(el.querySelectorAll('tr[data-id]'))
+                             .map(function(tr) { return parseInt(tr.dataset.id); });
+                fetch('@Url.Action("Reorder", "AppUser")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ids)
+                });
+            }
+        });
+    }
+
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "AppUser")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+</script>
+}

@@ -1,0 +1,83 @@
+@model List<printer.Data.Entities.EinvoicePlatform>
+@{
+    ViewData["Title"] = "發票平台設定";
+    var activePlatform = Model.FirstOrDefault(p => p.IsActive);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>發票平台設定</h4>
+    <a asp-action="Index" class="btn btn-secondary">返回發票</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="alert alert-info">
+    目前使用：<strong>@(activePlatform?.Name ?? "未啟用任何平台")</strong>
+    @if (activePlatform != null)
+    {
+        <span class="badge @(activePlatform.IsSandbox ? "bg-warning text-dark" : "bg-success") ms-2">
+            @(activePlatform.IsSandbox ? "測試模式" : "正式模式")
+        </span>
+    }
+</div>
+
+<div class="row">
+    @foreach (var platform in Model)
+    {
+        <div class="col-md-4 mb-3">
+            <div class="card @(platform.IsActive ? "border-primary" : "")">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>@platform.Name</strong>
+                    @if (platform.IsActive)
+                    {
+                        <span class="badge bg-primary">使用中</span>
+                    }
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">@platform.Description</p>
+
+                    <dl class="row mb-0 small">
+                        <dt class="col-5">商店代號</dt>
+                        <dd class="col-7">@(string.IsNullOrEmpty(platform.MerchantId) ? "未設定" : platform.MerchantId)</dd>
+                        <dt class="col-5">API Key</dt>
+                        <dd class="col-7">@(string.IsNullOrEmpty(platform.ApiKey) ? "未設定" : "已設定")</dd>
+                        <dt class="col-5">API Secret</dt>
+                        <dd class="col-7">@(string.IsNullOrEmpty(platform.ApiSecret) ? "未設定" : "已設定")</dd>
+                        <dt class="col-5">模式</dt>
+                        <dd class="col-7">
+                            @if (platform.IsSandbox)
+                            {
+                                <span class="badge bg-warning text-dark">測試</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">正式</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <a asp-action="EditPlatform" asp-route-id="@platform.Id" class="btn btn-sm btn-outline-primary">設定金鑰</a>
+                    @if (platform.IsActive)
+                    {
+                        <form asp-action="DeactivateAllPlatforms" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">停用</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="ActivatePlatform" asp-route-id="@platform.Id" method="post">
+                            <button type="submit" class="btn btn-sm btn-success">啟用此平台</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

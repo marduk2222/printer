@@ -1,0 +1,65 @@
+@{
+    ViewData["Title"] = "匯入廠牌資料";
+}
+
+<form asp-action="Import" method="post" enctype="multipart/form-data">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>匯入廠牌資料</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">匯入</button>
+            <a asp-action="DownloadSample" class="btn btn-outline-primary btn-sm">下載範本</a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">上傳 Excel 檔案</div>
+                <div class="card-body">
+                    <div class="mb-0">
+                        <label class="form-label">選擇 Excel 檔案 (.xlsx)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Excel 格式說明</div>
+                <div class="card-body small">
+                    <p>請使用以下欄位標題（第一列為標題列）：</p>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>欄位名稱</th>
+                                <th>必填</th>
+                                <th>說明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>名稱</td><td><span class="text-danger">*</span></td><td>廠牌名稱（唯一鍵）</td></tr>
+                            <tr><td>說明</td><td></td><td></td></tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted">重複名稱將以更新方式覆寫原資料。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

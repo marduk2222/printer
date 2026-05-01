@@ -1,0 +1,48 @@
+@{
+    ViewData["Title"] = "登入";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登入 - 印表機雲端抄表</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body { background-color: #f5f5f5; }
+        .login-card { max-width: 400px; margin: 100px auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h4 class="text-center mb-4">印表機雲端抄表</h4>
+
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger">@ViewBag.Error</div>
+                    }
+
+                    <form asp-action="Login" method="post">
+                        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                        <div class="mb-3">
+                            <label class="form-label">帳號</label>
+                            <input type="text" name="username" class="form-control" value="@ViewBag.Username" required autofocus />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">密碼</label>
+                            <input type="password" name="password" class="form-control" required />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">登入</button>
+                    </form>
+                </div>
+            </div>
+            <p class="text-center text-muted mt-3"><small>&copy; 2026 印表機雲端抄表系統</small></p>
+        </div>
+    </div>
+</body>
+</html>

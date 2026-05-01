@@ -1,0 +1,130 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "從帳單開立發票" [level=4] [ref=e32]
+      - link "返回帳單" [ref=e33] [cursor=pointer]:
+        - /url: /Invoice/Details/4
+    - generic [ref=e34]:
+      - generic [ref=e35]: 帳單資訊
+      - generic [ref=e37]:
+        - term [ref=e38]: 帳單編號
+        - definition [ref=e39]:
+          - strong [ref=e40]: INV-202601-001
+        - term [ref=e41]: 客戶
+        - definition [ref=e42]: 台積電
+        - term [ref=e43]: 期間
+        - definition [ref=e44]: 2026/01/01 ~ 2026/03/31
+        - term [ref=e45]: 帳單金額
+        - definition [ref=e46]:
+          - strong [ref=e47]: $13,000
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]: 發票資訊
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - generic [ref=e54]: 發票平台
+              - textbox [ref=e55]: 不指定
+            - generic [ref=e56]:
+              - generic [ref=e57]: 發票日期 *
+              - textbox [ref=e58]: 2026-04-14
+            - generic [ref=e59]:
+              - generic [ref=e60]: 買方統編
+              - textbox [ref=e61]: "123456789"
+            - generic [ref=e62]:
+              - generic [ref=e63]: 買方名稱
+              - textbox [ref=e64]: 台積電
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: 課稅類別
+              - combobox [ref=e68]:
+                - option "應稅" [selected]
+                - option "零稅率"
+                - option "免稅"
+            - generic [ref=e69]:
+              - generic [ref=e70]: 稅率 (%)
+              - spinbutton [ref=e71]: "5"
+            - generic [ref=e72]:
+              - generic [ref=e73]: 備註
+              - textbox [ref=e74]: 帳單 INV-202601-001
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - generic [ref=e77]: 發票明細
+          - button "新增明細" [ref=e78] [cursor=pointer]
+        - table [ref=e81]:
+          - rowgroup [ref=e82]:
+            - row "品名 數量 單價 小計" [ref=e83]:
+              - columnheader "品名" [ref=e84]
+              - columnheader "數量" [ref=e85]
+              - columnheader "單價" [ref=e86]
+              - columnheader "小計" [ref=e87]
+              - columnheader [ref=e88]
+          - rowgroup [ref=e89]:
+            - row "Printer-001 1 13000 13000 X" [ref=e90]:
+              - cell "Printer-001" [ref=e91]:
+                - textbox [ref=e92]: Printer-001
+              - cell "1" [ref=e93]:
+                - spinbutton [ref=e94]: "1"
+              - cell "13000" [ref=e95]:
+                - spinbutton [ref=e96]: "13000"
+              - cell "13000" [ref=e97]:
+                - spinbutton [ref=e98]: "13000"
+              - cell "X" [ref=e99]:
+                - button "X" [ref=e100] [cursor=pointer]
+          - rowgroup [ref=e101]:
+            - row "未稅合計 13,000" [ref=e102]:
+              - cell "未稅合計" [ref=e103]:
+                - strong [ref=e104]: 未稅合計
+              - cell "13,000" [ref=e105]:
+                - strong [ref=e106]: 13,000
+              - cell [ref=e107]
+            - row "稅額 650" [ref=e108]:
+              - cell "稅額" [ref=e109]
+              - cell "650" [ref=e110]
+              - cell [ref=e111]
+            - row "含稅總計 13,650" [ref=e112]:
+              - cell "含稅總計" [ref=e113]:
+                - strong [ref=e114]: 含稅總計
+              - cell "13,650" [ref=e115]:
+                - strong [ref=e116]: 13,650
+              - cell [ref=e117]
+      - generic [ref=e118]:
+        - button "建立發票" [ref=e119] [cursor=pointer]
+        - link "取消" [ref=e120] [cursor=pointer]:
+          - /url: /Invoice/Details/4
+  - contentinfo [ref=e121]:
+    - generic [ref=e122]: © 2026 - 印表機雲端抄表系統

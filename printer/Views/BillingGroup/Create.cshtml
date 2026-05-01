@@ -1,0 +1,57 @@
+@model printer.Data.Entities.PrinterBillingGroup
+@{
+    ViewData["Title"] = "新增計費群組";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>新增計費群組</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-3">
+                <div class="card-header">基本資料</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">群組名稱 <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control" placeholder="例如：A 集團共用合約" required />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">結帳客戶 <span class="text-danger">*</span></label>
+                        <select asp-for="BillingPartnerId" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                            <option value="">選擇結帳客戶...</option>
+                        </select>
+                        <small class="text-muted">群組合併費用與成員月租都掛在此客戶的帳單下。預設可選同 Partner，也可跨 Partner。</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">說明</label>
+                        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label">啟用</label>
+                    </div>
+                    <div class="form-check form-switch mt-2">
+                        <input asp-for="AutoAdjustGiftPool" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label" asp-for="AutoAdjustGiftPool">
+                            新增/移除成員時自動調整贈送張數共用池
+                        </label>
+                        <small class="text-muted d-block">
+                            打開時：加入成員 → 將該機台各類別贈送張數加進共用池；移除成員 → 從共用池扣抵（最低為 0）。
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">建立並繼續設定</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>

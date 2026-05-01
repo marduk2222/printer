@@ -1,0 +1,258 @@
+@model List<printer.Data.Entities.SheetType>
+@using printer.Data.Entities
+@{
+    ViewData["Title"] = "張數類型管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>張數類型管理</h4>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">新增類型</button>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">尚未建立任何張數類型</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px"><input type="checkbox" id="selectAll" /></th>
+                        <th style="width:36px"></th>
+                        <th>名稱</th>
+                        <th>驅動參數（多個累加）</th>
+                        <th>已配置機型</th>
+                        <th style="width:60px">啟用</th>
+                        <th style="width:120px"></th>
+                    </tr>
+                </thead>
+                <tbody id="sheetTypeSortable">
+                    @foreach (var st in Model)
+                    {
+                        <tr data-id="@st.Id">
+                            <td class="align-middle"><input type="checkbox" class="row-check" value="@st.Id" /></td>
+                            <td class="align-middle text-center text-muted drag-handle" style="cursor:grab">&#x2630;</td>
+                            <td class="align-middle fw-bold">@st.Name</td>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    @foreach (var key in st.Keys)
+                                    {
+                                        <span class="badge bg-secondary d-flex align-items-center gap-1">
+                                            @key.DriverKey
+                                            <form asp-action="DeleteKey" asp-route-id="@key.Id" method="post" class="d-inline">
+                                                <button type="submit" class="btn-close btn-close-white" style="font-size:0.6em"
+                                                        onclick="return confirm('刪除此驅動參數？')"></button>
+                                            </form>
+                                        </span>
+                                    }
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                            onclick="openAddKeyModal(@st.Id, '@st.Name')">+ 參數</button>
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                @if (st.PrinterModelSheetTypes.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var m in st.PrinterModelSheetTypes)
+                                        {
+                                            <span class="badge bg-light text-dark border">@m.PrinterModel?.Name</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">尚未配置</span>
+                                }
+                            </td>
+                            <td class="align-middle text-center">
+                                @if (st.IsActive)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td class="align-middle">
+                                <button class="btn btn-sm btn-warning"
+                                        onclick="openEditModal(@st.Id, '@st.Name', @st.SortOrder, @st.IsActive.ToString().ToLower())">編輯</button>
+                                <form asp-action="Delete" asp-route-id="@st.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('刪除「@st.Name」？')">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* 新增類型 Modal *@
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="Create" method="post" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增張數類型</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">名稱 <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="例：黑白、彩色、彩色A3" required />
+                </div>
+                <input type="hidden" name="sortOrder" value="@(Model.Count * 10)" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" class="btn btn-success">建立</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* 編輯類型 Modal *@
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="Edit" method="post" class="modal-content">
+            <input type="hidden" name="id" id="editId" />
+            <div class="modal-header">
+                <h5 class="modal-title">編輯張數類型</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">名稱 <span class="text-danger">*</span></label>
+                    <input type="text" name="name" id="editName" class="form-control" required />
+                </div>
+                <input type="hidden" name="sortOrder" id="editSortOrder" />
+                <div class="form-check">
+                    <input type="checkbox" name="isActive" id="editIsActive" class="form-check-input" value="true" />
+                    <label class="form-check-label" for="editIsActive">啟用</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" class="btn btn-success">儲存變更</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* 新增驅動參數 Modal *@
+<div class="modal fade" id="addKeyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="AddKey" method="post" class="modal-content">
+            <input type="hidden" name="sheetTypeId" id="keySheetTypeId" />
+            <div class="modal-header">
+                <h5 class="modal-title">新增驅動參數 — <span id="keySheetTypeName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">驅動參數名稱 <span class="text-danger">*</span></label>
+                    <input type="text" name="driverKey" class="form-control" placeholder="例：print_black、print_color_single" required />
+                    <div class="form-text">與驅動程式回傳的參數名稱一致</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" class="btn btn-success">建立</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var sortableEl = document.getElementById('sheetTypeSortable');
+    if (sortableEl) {
+        Sortable.create(sortableEl, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: function() {
+                var ids = Array.from(sortableEl.querySelectorAll('tr[data-id]'))
+                             .map(function(tr) { return parseInt(tr.dataset.id); });
+                fetch('@Url.Action("Reorder", "SheetType")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ids)
+                });
+            }
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "SheetType")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+
+function openEditModal(id, name, sortOrder, isActive) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editSortOrder').value = sortOrder;
+    document.getElementById('editIsActive').checked = isActive;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+function openAddKeyModal(sheetTypeId, name) {
+    document.getElementById('keySheetTypeId').value = sheetTypeId;
+    document.getElementById('keySheetTypeName').textContent = name;
+    new bootstrap.Modal(document.getElementById('addKeyModal')).show();
+}
+</script>
+}

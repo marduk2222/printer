@@ -1,0 +1,162 @@
+@model List<printer.Data.Entities.PrinterBillingConfig>
+@using printer.Data.Enums
+@{
+    ViewData["Title"] = "計費設定";
+    var printerGroups = ViewBag.PrinterGroups as Dictionary<int, printer.Data.Entities.PrinterBillingGroup?> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h4>計費設定</h4>
+    <a asp-action="SelectPrinter" class="btn btn-primary">新增計費設定</a>
+</div>
+
+@await Html.PartialAsync("_BillingTabs", "config")
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select" onchange="this.form.submit()">
+                    <option value="">全部客戶</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>事務機</th>
+                        <th>客戶</th>
+                        <th class="text-end">月租費</th>
+                        <th>所屬群組</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var config in Model)
+                    {
+                        var group = printerGroups.GetValueOrDefault(config.PrinterId);
+                        <tr>
+                            <td>
+                                <strong>@config.Printer?.Name</strong><br />
+                                <small class="text-muted">@config.Printer?.Code</small>
+                            </td>
+                            <td>@config.Printer?.Partner?.Name</td>
+                            <td class="text-end">
+                                @if (config.MonthlyFee > 0)
+                                {
+                                    <text>$@config.MonthlyFee.ToString("N0")</text>
+                                }
+                                else
+                                {
+                                    <text>-</text>
+                                }
+                            </td>
+                            <td>
+                                @if (group != null)
+                                {
+                                    <a asp-controller="BillingGroup" asp-action="Edit" asp-route-id="@group.Id"
+                                       class="badge bg-info text-dark text-decoration-none">@group.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">獨立計費</span>
+                                }
+                            </td>
+                            <td>
+                                @if (config.IsEnabled)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-printerId="@config.PrinterId" class="btn btn-sm btn-outline-primary">設定</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無計費設定</p>
+                <a asp-action="SelectPrinter" class="btn btn-primary">新增計費設定</a>
+            </div>
+        }
+    </div>
+</div>
+
+@{
+    var unconfiguredPrinters = ViewBag.UnconfiguredPrinters as List<printer.Data.Entities.Printer> ?? new();
+}
+@if (unconfiguredPrinters.Any())
+{
+    <div class="card mt-3 border-warning">
+        <div class="card-header bg-warning bg-opacity-25">
+            <strong>尚未設定計費的事務機（@unconfiguredPrinters.Count 台）</strong>
+            <small class="text-muted ms-2">點「設定計費」直接建立</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>事務機</th>
+                            <th>客戶</th>
+                            <th>所屬群組</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in unconfiguredPrinters)
+                        {
+                            <tr>
+                                <td><strong>@p.Name</strong> <small class="text-muted">@p.Code</small></td>
+                                <td>@p.Partner?.Name</td>
+                                <td>
+                                    @if (p.BillingGroup != null)
+                                    {
+                                        <span class="badge bg-info text-dark">@p.BillingGroup.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">獨立計費</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-printerId="@p.Id"
+                                       class="btn btn-sm btn-warning">設定計費</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

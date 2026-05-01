@@ -1,0 +1,196 @@
+@{
+    ViewData["Title"] = "帳單統計";
+    var monthlySummary = ViewBag.MonthlySummary as IEnumerable<dynamic>;
+    var partnerSummary = ViewBag.PartnerSummary as IEnumerable<dynamic>;
+    var monthlyPrintSummary = ViewBag.MonthlyPrintSummary as IEnumerable<dynamic>;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>帳單統計</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select">
+                    <option value="">全部客戶</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">總帳單數</h6>
+                <h3 class="mb-0">@ViewBag.TotalInvoices</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">已收金額</h6>
+                <h3 class="mb-0">@(((decimal)ViewBag.PaidAmount).ToString("N0"))</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">總金額</h6>
+                <h3 class="mb-0">@(((decimal)ViewBag.TotalAmount).ToString("N0"))</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">總列印張數</h6>
+                <h3 class="mb-0">@(((int)ViewBag.TotalBlackPages + (int)ViewBag.TotalColorPages + (int)ViewBag.TotalLargePages).ToString("N0"))</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">每月列印張數 (最近12個月)</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>月份</th>
+                        <th class="text-end">黑白張數</th>
+                        <th class="text-end">彩色張數</th>
+                        <th class="text-end">大張張數</th>
+                        <th class="text-end">合計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (monthlyPrintSummary != null)
+                    {
+                        @foreach (var item in monthlyPrintSummary)
+                        {
+                            <tr>
+                                <td>@item.Period</td>
+                                <td class="text-end">@(((int)item.BlackPages).ToString("N0"))</td>
+                                <td class="text-end">@(((int)item.ColorPages).ToString("N0"))</td>
+                                <td class="text-end">@(((int)item.LargePages).ToString("N0"))</td>
+                                <td class="text-end"><strong>@(((int)item.TotalPages).ToString("N0"))</strong></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+                <tfoot class="table-primary">
+                    <tr>
+                        <td><strong>合計</strong></td>
+                        <td class="text-end"><strong>@(((int)ViewBag.TotalBlackPages).ToString("N0"))</strong></td>
+                        <td class="text-end"><strong>@(((int)ViewBag.TotalColorPages).ToString("N0"))</strong></td>
+                        <td class="text-end"><strong>@(((int)ViewBag.TotalLargePages).ToString("N0"))</strong></td>
+                        <td class="text-end"><strong>@(((int)ViewBag.TotalBlackPages + (int)ViewBag.TotalColorPages + (int)ViewBag.TotalLargePages).ToString("N0"))</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        @if (monthlyPrintSummary == null || !monthlyPrintSummary.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無列印資料</p>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">月份帳單統計 (最近12個月)</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>期間</th>
+                                <th class="text-end">帳單數</th>
+                                <th class="text-end">總金額</th>
+                                <th class="text-end">已收</th>
+                                <th class="text-end">未收</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (monthlySummary != null)
+                            {
+                                @foreach (var item in monthlySummary)
+                                {
+                                    <tr>
+                                        <td>@item.Period</td>
+                                        <td class="text-end">@item.Count</td>
+                                        <td class="text-end">@(((decimal)item.TotalAmount).ToString("N0"))</td>
+                                        <td class="text-end text-success">@(((decimal)item.PaidAmount).ToString("N0"))</td>
+                                        <td class="text-end text-danger">@(((decimal)item.UnpaidAmount).ToString("N0"))</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (monthlySummary == null || !monthlySummary.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p>尚無帳單資料</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">客戶統計</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>客戶</th>
+                                <th class="text-end">帳單</th>
+                                <th class="text-end">金額</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (partnerSummary != null)
+                            {
+                                @foreach (var item in partnerSummary)
+                                {
+                                    <tr>
+                                        <td>@item.Partner</td>
+                                        <td class="text-end">@item.Count</td>
+                                        <td class="text-end">@(((decimal)item.TotalAmount).ToString("N0"))</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (partnerSummary == null || !partnerSummary.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p>尚無客戶資料</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

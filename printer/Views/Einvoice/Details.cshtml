@@ -1,0 +1,208 @@
+@model printer.Data.Entities.Einvoice
+@{
+    ViewData["Title"] = $"發票 {Model.InvoiceNumber}";
+    var statusNames = new Dictionary<string, (string Name, string Class)>
+    {
+        ["draft"] = ("草稿", "bg-secondary"),
+        ["issued"] = ("已開立", "bg-success"),
+        ["void"] = ("已作廢", "bg-danger"),
+    };
+    var taxTypeNames = new Dictionary<string, string>
+    {
+        ["taxable"] = "應稅",
+        ["zero"] = "零稅率",
+        ["free"] = "免稅",
+    };
+    var carrierNames = new Dictionary<string, string>
+    {
+        ["mobile"] = "手機條碼",
+        ["citizen"] = "自然人憑證",
+        ["donate"] = "捐贈",
+    };
+    var status = statusNames.GetValueOrDefault(Model.Status, ("未知", "bg-secondary"));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>發票詳情</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>發票資訊</span>
+                <span class="badge @status.Item2">@status.Item1</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">發票號碼</dt>
+                            <dd class="col-sm-8"><strong>@Model.InvoiceNumber</strong></dd>
+                            <dt class="col-sm-4">發票日期</dt>
+                            <dd class="col-sm-8">@Model.InvoiceDate.ToString("yyyy/MM/dd")</dd>
+                            <dt class="col-sm-4">客戶</dt>
+                            <dd class="col-sm-8">@Model.Partner?.Name</dd>
+                            <dt class="col-sm-4">買方名稱</dt>
+                            <dd class="col-sm-8">@Model.BuyerName</dd>
+                            <dt class="col-sm-4">買方統編</dt>
+                            <dd class="col-sm-8">@(Model.BuyerTaxId ?? "-")</dd>
+                            <dt class="col-sm-4">買方 Email</dt>
+                            <dd class="col-sm-8">@(Model.BuyerEmail ?? "-")</dd>
+                            <dt class="col-sm-4">課稅類別</dt>
+                            <dd class="col-sm-8">@(taxTypeNames.GetValueOrDefault(Model.TaxType, "未知")) (@Model.TaxRate%)</dd>
+                            <dt class="col-sm-4">載具</dt>
+                            <dd class="col-sm-8">
+                                @(string.IsNullOrEmpty(Model.CarrierType) ? "紙本" : carrierNames.GetValueOrDefault(Model.CarrierType, Model.CarrierType))
+                                @if (!string.IsNullOrEmpty(Model.CarrierId))
+                                {
+                                    <span class="text-muted">— @Model.CarrierId</span>
+                                }
+                            </dd>
+                            @if (!string.IsNullOrEmpty(Model.DonationCode))
+                            {
+                                <dt class="col-sm-4">愛心碼</dt>
+                                <dd class="col-sm-8">@Model.DonationCode</dd>
+                            }
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">平台</dt>
+                            <dd class="col-sm-8">@(Model.Platform?.Name ?? "未指定")</dd>
+                            <dt class="col-sm-4">建立時間</dt>
+                            <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy/MM/dd HH:mm")</dd>
+                            @if (Model.IssuedAt.HasValue)
+                            {
+                                <dt class="col-sm-4">開立時間</dt>
+                                <dd class="col-sm-8">@Model.IssuedAt.Value.ToString("yyyy/MM/dd HH:mm")</dd>
+                            }
+                            @if (Model.VoidAt.HasValue)
+                            {
+                                <dt class="col-sm-4">作廢時間</dt>
+                                <dd class="col-sm-8">@Model.VoidAt.Value.ToString("yyyy/MM/dd HH:mm")</dd>
+                                <dt class="col-sm-4">作廢原因</dt>
+                                <dd class="col-sm-8">@Model.VoidReason</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">發票明細</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>品名</th>
+                            <th class="text-end">數量</th>
+                            <th class="text-end">單價</th>
+                            <th class="text-end">小計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>@item.Description</td>
+                                <td class="text-end">@item.Quantity</td>
+                                <td class="text-end">@item.UnitPrice.ToString("N2")</td>
+                                <td class="text-end"><strong>@item.Subtotal.ToString("N0")</strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>未稅</strong></td>
+                            <td class="text-end"><strong>@Model.Amount.ToString("N0")</strong></td>
+                        </tr>
+                        @if (Model.TaxAmount > 0)
+                        {
+                            <tr>
+                                <td colspan="3" class="text-end">稅額</td>
+                                <td class="text-end">@Model.TaxAmount.ToString("N0")</td>
+                            </tr>
+                        }
+                        <tr class="table-primary">
+                            <td colspan="3" class="text-end"><strong>含稅總計</strong></td>
+                            <td class="text-end"><strong>@Model.TotalAmount.ToString("N0")</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Note))
+        {
+            <div class="card mb-3">
+                <div class="card-header">備註</div>
+                <div class="card-body">@Model.Note</div>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">操作</div>
+            <div class="card-body">
+                @if (Model.Status == "draft")
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning w-100 mb-2">編輯草稿</a>
+                    <form asp-action="Issue" asp-route-id="@Model.Id" method="post" class="mb-2">
+                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('確定要開立此發票嗎？開立後無法編輯。')">確認開立</button>
+                    </form>
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                        <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('確定要刪除嗎？')">刪除草稿</button>
+                    </form>
+                }
+                @if (Model.Status == "issued")
+                {
+                    <form asp-action="Void" asp-route-id="@Model.Id" method="post">
+                        <div class="mb-2">
+                            <input type="text" name="voidReason" class="form-control" placeholder="作廢原因" required />
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('確定要作廢此發票嗎？')">作廢發票</button>
+                    </form>
+                }
+                @if (Model.Status == "void")
+                {
+                    <p class="text-muted mb-0">此發票已作廢</p>
+                }
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">金額摘要</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-8">明細數</dt>
+                    <dd class="col-4 text-end">@Model.Items.Count 項</dd>
+                    <dt class="col-8">未稅</dt>
+                    <dd class="col-4 text-end">@Model.Amount.ToString("N0")</dd>
+                    <dt class="col-8">稅額</dt>
+                    <dd class="col-4 text-end">@Model.TaxAmount.ToString("N0")</dd>
+                    <dt class="col-8 fs-5">含稅總計</dt>
+                    <dd class="col-4 text-end fs-5"><strong>@Model.TotalAmount.ToString("N0")</strong></dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

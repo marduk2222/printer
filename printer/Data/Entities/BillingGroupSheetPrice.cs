@@ -1,0 +1,67 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+namespace printer.Data.Entities;
+
+/// <summary>
+/// 計費群組各張數類型的單價、誤印率、贈送張數（群組層級共用）
+/// </summary>
+[Table("billing_group_sheet_prices")]
+public class BillingGroupSheetPrice
+{
+    [Key]
+    [Column("id")]
+    public int Id { get; set; }
+
+    [Column("group_id")]
+    public int GroupId { get; set; }
+
+    [Column("sheet_type_id")]
+    public int SheetTypeId { get; set; }
+
+    [Column("unit_price")]
+    [Precision(10, 4)]
+    public decimal UnitPrice { get; set; } = 0;
+
+    /// <summary>
+    /// 誤印率 (%)，計費張數 = 合併實印 × (1 - DiscountPercent/100) - FreePages
+    /// </summary>
+    [Column("discount_percent")]
+    [Precision(5, 2)]
+    public decimal DiscountPercent { get; set; } = 0;
+
+    /// <summary>
+    /// 群組共用贈送張數（合併池）
+    /// </summary>
+    [Column("free_pages")]
+    public int FreePages { get; set; } = 0;
+
+    /// <summary>
+    /// 換算值（null 或 0 = 不參與互換）；例：黑白 1、彩色 5、彩色大張 10
+    /// </summary>
+    [Column("weight")]
+    [Precision(10, 4)]
+    public decimal? Weight { get; set; }
+
+    /// <summary>
+    /// 折抵順序（小者優先享用折抵）
+    /// </summary>
+    [Column("offset_order")]
+    public int? OffsetOrder { get; set; }
+
+    /// <summary>
+    /// 顯示排序（由小到大；於 BillingGroup Edit 拖曳調整）
+    /// </summary>
+    [Column("sort_order")]
+    public int SortOrder { get; set; } = 0;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey("GroupId")]
+    public virtual PrinterBillingGroup? Group { get; set; }
+
+    [ForeignKey("SheetTypeId")]
+    public virtual SheetType? SheetType { get; set; }
+}

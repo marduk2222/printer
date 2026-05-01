@@ -1,0 +1,54 @@
+@model printer.Data.Entities.AppUser
+@{
+    ViewData["Title"] = "新增人員";
+}
+
+<form asp-action="Create" method="post">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>新增人員</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">建立人員</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">帳號 <span class="text-danger">*</span></label>
+                    <input asp-for="Username" class="form-control" required />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">密碼 <span class="text-danger">*</span></label>
+                    <input type="password" name="password" class="form-control" required />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                    <input asp-for="DisplayName" class="form-control" required />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">角色 <span class="text-danger">*</span></label>
+                    <select asp-for="Role" class="form-select" asp-items="@ViewBag.Roles"></select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Email" type="email" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">電話</label>
+                    <input asp-for="Phone" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-0">
+                    <label class="form-label">備註</label>
+                    <input asp-for="Note" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

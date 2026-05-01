@@ -1,0 +1,49 @@
+@model List<printer.Data.Entities.SystemModule>
+
+@if (Model.Any())
+{
+    @foreach (var module in Model)
+    {
+        @if (module.Code == "billing")
+        {
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    計費系統
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" asp-controller="BillingConfig" asp-action="Index">計費設定</a></li>
+                    <li><a class="dropdown-item" asp-controller="BillingGroup" asp-action="Index">計費群組</a></li>
+                    <li><a class="dropdown-item" asp-controller="BillingTemplate" asp-action="Index">計費模板</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" asp-controller="Invoice" asp-action="Index">帳單管理</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" asp-controller="BillingReport" asp-action="Index">計費報表</a></li>
+                </ul>
+            </li>
+        }
+        else if (module.Code == "billingstyle")
+        {
+            // 僅保留帳單列表頁的「更改帳單風格」按鈕，不在選單顯示
+        }
+        else if (module.Code == "einvoice")
+        {
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="Einvoice" asp-action="Index">發票系統</a>
+            </li>
+        }
+        else if (module.Code == "workorder")
+        {
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="WorkOrder" asp-action="Index">派工管理</a>
+            </li>
+        }
+        else if (!string.IsNullOrEmpty(module.MenuController))
+        {
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="@module.MenuController" asp-action="@(module.MenuAction ?? "Index")">
+                    @module.Name
+                </a>
+            </li>
+        }
+    }
+}

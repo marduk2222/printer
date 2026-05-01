@@ -1,0 +1,226 @@
+@model printer.Data.Entities.WorkOrder
+@{
+    ViewData["Title"] = $"派工單 {Model.OrderNumber}";
+    var (statusBadge, statusLabel) = Model.Status switch
+    {
+        "open"        => ("bg-warning text-dark", "待處理"),
+        "in_progress" => ("bg-primary", "處理中"),
+        "completed"   => ("bg-success", "已完成"),
+        "cancelled"   => ("bg-secondary", "已取消"),
+        _             => ("bg-light text-dark", Model.Status)
+    };
+    bool isEditable = Model.Status is not ("completed" or "cancelled");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">@Model.Title</h2>
+        <small class="text-muted">派工單號：<code>@Model.OrderNumber</code></small>
+    </div>
+    <div class="d-flex gap-2">
+        @if (isEditable)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">編輯</a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="row g-3">
+    <!-- 左欄：資訊 -->
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>基本資訊</span>
+                <span class="badge @statusBadge">@statusLabel</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">客戶</dt>
+                    <dd class="col-sm-9">@(Model.Partner?.Name ?? "-")</dd>
+
+                    <dt class="col-sm-3">事務機</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.WorkOrderPrinters.Any())
+                        {
+                            @string.Join("、", Model.WorkOrderPrinters.Select(p => p.Printer?.Name ?? "-"))
+                        }
+                        else { <span class="text-muted">-</span> }
+                    </dd>
+
+                    <dt class="col-sm-3">指派人員</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.WorkOrderAssignees.Any())
+                        {
+                            @string.Join("、", Model.WorkOrderAssignees.Select(a => a.User?.DisplayName ?? "-"))
+                        }
+                        else { <span class="text-muted">-</span> }
+                    </dd>
+
+                    <dt class="col-sm-3">建立者</dt>
+                    <dd class="col-sm-9">@(Model.CreatedBy?.DisplayName ?? "-")</dd>
+
+                    <dt class="col-sm-3">預計到場</dt>
+                    <dd class="col-sm-9">@(Model.ScheduledAt.HasValue ? Model.ScheduledAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm") : "-")</dd>
+
+                    @{
+                        int? detailsOverdueDays = null;
+                        if (Model.Status is "open" or "in_progress")
+                        {
+                            var expectedDaysD = Model.ExpectedDays ?? 3;
+                            var deadline = Model.CreatedAt.ToLocalTime().Date.AddDays(expectedDaysD);
+                            var diff = (DateTime.Now.Date - deadline).Days;
+                            if (diff > 0) detailsOverdueDays = diff;
+                        }
+                    }
+                    <dt class="col-sm-3">預計處理天數</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ExpectedDays.HasValue)
+                        {
+                            <span>@Model.ExpectedDays 天</span>
+                            if (detailsOverdueDays.HasValue)
+                            {
+                                <span class="badge bg-danger ms-1">逾期 @detailsOverdueDays 天</span>
+                            }
+                        }
+                        else { <span class="text-muted">-</span> }
+                    </dd>
+
+                    <dt class="col-sm-3">完成時間</dt>
+                    <dd class="col-sm-9">@(Model.CompletedAt.HasValue ? Model.CompletedAt.Value.ToLocalTime().ToString("yyyy/MM/dd HH:mm") : "-")</dd>
+
+                    <dt class="col-sm-3">建立時間</dt>
+                    <dd class="col-sm-9">@Model.CreatedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <div class="card mb-3">
+                <div class="card-header">問題描述</div>
+                <div class="card-body"><p class="mb-0" style="white-space:pre-wrap">@Model.Description</p></div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.Note))
+        {
+            <div class="card mb-3">
+                <div class="card-header">處理備註</div>
+                <div class="card-body"><p class="mb-0" style="white-space:pre-wrap">@Model.Note</p></div>
+            </div>
+        }
+
+        <!-- 圖片 -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>附圖@(Model.Images.Any() ? $"（{Model.Images.Count} 張）" : "")</span>
+            </div>
+            <div class="card-body">
+                @if (Model.Images.Any())
+                {
+                    <div class="row g-2 mb-3">
+                        @foreach (var img in Model.Images)
+                        {
+                            <div class="col-6 col-md-4">
+                                <div class="border rounded overflow-hidden position-relative">
+                                    <a href="@img.FilePath" target="_blank">
+                                        <img src="@img.FilePath" class="img-fluid w-100"
+                                             style="height:160px;object-fit:cover;"
+                                             alt="@(img.Caption ?? img.FileName)" />
+                                    </a>
+                                    @if (!string.IsNullOrEmpty(img.Caption))
+                                    {
+                                        <div class="px-2 py-1 small bg-light">@img.Caption</div>
+                                    }
+                                    <form asp-action="DeleteImage" method="post"
+                                          onsubmit="return confirm('確認刪除此圖片？')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="imageId" value="@img.Id" />
+                                        <input type="hidden" name="workOrderId" value="@Model.Id" />
+                                        <button type="submit"
+                                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 py-0 px-1">✕</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- 上傳新圖片（唯一上傳區） -->
+                <form asp-action="UploadImage" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                onclick="document.getElementById('uploadInput').click()">
+                            📷 選擇或拍照上傳
+                        </button>
+                        <input type="text" name="caption" class="form-control form-control-sm"
+                               style="max-width:200px" placeholder="圖片說明（選填）" />
+                        <button type="submit" id="uploadBtn" class="btn btn-success btn-sm" disabled>上傳</button>
+                    </div>
+                    <input type="file" id="uploadInput" name="images" accept="image/*"
+                           multiple class="d-none"
+                           onchange="document.getElementById('uploadBtn').disabled = this.files.length === 0;
+                                     document.getElementById('uploadFileCount').textContent = this.files.length > 0 ? this.files.length + ' 個檔案' : '';" />
+                    <span id="uploadFileCount" class="small text-muted mt-1 d-block"></span>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右欄：操作 -->
+    <div class="col-lg-4">
+        @if (isEditable)
+        {
+            <div class="card mb-3">
+                <div class="card-header">更新狀態</div>
+                <div class="card-body">
+                    <form asp-action="UpdateStatus" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label small">狀態</label>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="open"        selected="@(Model.Status == "open")">待處理</option>
+                                <option value="in_progress" selected="@(Model.Status == "in_progress")">處理中</option>
+                                <option value="completed"   selected="@(Model.Status == "completed")">已完成</option>
+                                <option value="cancelled"   selected="@(Model.Status == "cancelled")">已取消</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">處理備註</label>
+                            <textarea name="note" class="form-control form-control-sm" rows="3"
+                                      placeholder="填寫處理結果或備註...">@Model.Note</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">更新狀態</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (User.IsInRole("admin") || User.IsInRole("supervisor"))
+        {
+            <div class="card border-danger">
+                <div class="card-body">
+                    <form asp-action="Delete" method="post"
+                          onsubmit="return confirm('確認刪除此派工單？此操作無法復原。')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm w-100">刪除派工單</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

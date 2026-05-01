@@ -1,0 +1,115 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "全部客戶 - 2026/04/01 ~ 2026/04/30 計費預覽" [level=4] [ref=e32]
+      - link "返回" [ref=e33] [cursor=pointer]:
+        - /url: /BillingReport
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: 客戶
+        - combobox [ref=e39]:
+          - option "全部客戶" [selected]
+          - option "台積電"
+        - generic [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: 全部客戶
+          - combobox [ref=e43]
+      - generic [ref=e44]:
+        - generic [ref=e45]: 起始日
+        - textbox [ref=e46]: 2026-04-01
+      - generic [ref=e47]:
+        - generic [ref=e48]: 結束日
+        - textbox [ref=e49]: 2026-04-30
+      - button "重新查詢" [ref=e51] [cursor=pointer]
+    - generic [ref=e52]:
+      - generic [ref=e55]:
+        - heading "計費事務機" [level=6] [ref=e56]
+        - heading "1" [level=3] [ref=e57]
+      - generic [ref=e60]:
+        - heading "月租費合計" [level=6] [ref=e61]
+        - heading "$1,000" [level=3] [ref=e62]
+      - generic [ref=e65]:
+        - heading "張數費合計" [level=6] [ref=e66]
+        - heading "$0" [level=3] [ref=e67]
+      - generic [ref=e70]:
+        - heading "預計總金額" [level=6] [ref=e71]
+        - heading "$1,000" [level=3] [ref=e72]
+    - table [ref=e75]:
+      - rowgroup [ref=e76]:
+        - row "事務機 張數計費明細 月租費 張數費 小計 筆數" [ref=e77]:
+          - columnheader "事務機" [ref=e78]
+          - columnheader "張數計費明細" [ref=e79]
+          - columnheader "月租費" [ref=e80]
+          - columnheader "張數費" [ref=e81]
+          - columnheader "小計" [ref=e82]
+          - columnheader "筆數" [ref=e83]
+      - rowgroup [ref=e84]:
+        - 'row "Printer-001 無抄表記錄 張數計費: 純張數 月租費: 1,000 $1,000 - $1,000 0" [ref=e85]':
+          - cell "Printer-001 無抄表記錄" [ref=e86]:
+            - strong [ref=e87]: Printer-001
+            - text: 無抄表記錄
+          - 'cell "張數計費: 純張數 月租費: 1,000" [ref=e88]':
+            - generic [ref=e89]: "張數計費: 純張數"
+            - generic [ref=e90]: "月租費: 1,000"
+          - cell "$1,000" [ref=e91]
+          - cell "-" [ref=e92]
+          - cell "$1,000" [ref=e93]:
+            - strong [ref=e94]: $1,000
+          - cell "0" [ref=e95]
+        - 'row "Printer-002 無抄表記錄 張數計費: 純張數 - - - 0" [ref=e96]':
+          - cell "Printer-002 無抄表記錄" [ref=e97]:
+            - strong [ref=e98]: Printer-002
+            - text: 無抄表記錄
+          - 'cell "張數計費: 純張數" [ref=e99]':
+            - generic [ref=e100]: "張數計費: 純張數"
+          - cell "-" [ref=e101]
+          - cell "-" [ref=e102]
+          - cell "-" [ref=e103]:
+            - strong [ref=e104]: "-"
+          - cell "0" [ref=e105]
+      - rowgroup [ref=e106]:
+        - row "合計 $1,000 $0 $1,000" [ref=e107]:
+          - cell "合計" [ref=e108]:
+            - strong [ref=e109]: 合計
+          - cell "$1,000" [ref=e110]:
+            - strong [ref=e111]: $1,000
+          - cell "$0" [ref=e112]:
+            - strong [ref=e113]: $0
+          - cell "$1,000" [ref=e114]:
+            - strong [ref=e115]: $1,000
+          - cell [ref=e116]
+  - contentinfo [ref=e117]:
+    - generic [ref=e118]: © 2026 - 印表機雲端抄表系統

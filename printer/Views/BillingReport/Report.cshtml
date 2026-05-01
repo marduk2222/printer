@@ -1,0 +1,162 @@
+@model List<printer.Data.Entities.Invoice>
+@{
+    ViewData["Title"] = ViewBag.ReportTitle;
+    var statusNames = new Dictionary<string, (string Name, string Class)>
+    {
+        ["draft"] = ("草稿", "bg-secondary"),
+        ["confirmed"] = ("已確認", "bg-primary"),
+        ["paid"] = ("已付款", "bg-success"),
+        ["cancelled"] = ("已取消", "bg-danger"),
+    };
+    var allItems = Model.SelectMany(i => i.Items).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>@ViewBag.ReportTitle</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Generate" method="post" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                    <option value="">全部客戶</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">起始日</label>
+                <input type="date" name="startDate" class="form-control" value="@ViewBag.DefaultStart" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">結束日</label>
+                <input type="date" name="endDate" class="form-control" value="@ViewBag.DefaultEnd" required />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">重新查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">帳單數</h6>
+                <h3 class="mb-0">@Model.Count</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">事務機數</h6>
+                <h3 class="mb-0">@allItems.Select(i => i.PrinterId).Distinct().Count()</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">總張數費</h6>
+                <h3 class="mb-0">$@(allItems.Sum(i => i.PageFee).ToString("N0"))</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">總金額</h6>
+                <h3 class="mb-0">@(Model.Sum(i => i.GrandTotal).ToString("N0"))</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+@foreach (var invoice in Model)
+{
+    var status = statusNames.GetValueOrDefault(invoice.Status, ("未知", "bg-secondary"));
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <strong>@invoice.InvoiceNumber</strong>
+                <span class="text-muted ms-2">@invoice.Partner?.Name</span>
+                <small class="text-muted ms-2">@invoice.PeriodStart.ToString("yyyy/MM/dd") ~ @invoice.PeriodEnd.ToString("yyyy/MM/dd")</small>
+            </span>
+            <span class="badge @status.Item2">@status.Item1</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>事務機</th>
+                            <th>張數明細</th>
+                            <th class="text-end">月租費</th>
+                            <th class="text-end">張數費</th>
+                            <th class="text-end">小計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in invoice.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@item.Printer?.Name</strong>
+                                    @if (!string.IsNullOrEmpty(item.Description))
+                                    {
+                                        <br /><small class="text-muted">@item.Description</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Breakdown))
+                                    {
+                                        @foreach (var line in item.Breakdown.Split('\n').Where(l => l.Contains("張")))
+                                        {
+                                            <small class="d-block text-muted">@line</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @if (item.BlackPages > 0)
+                                        {
+                                            <small class="d-block text-muted">黑白: @item.BlackPages.ToString("N0") 張</small>
+                                        }
+                                        @if (item.ColorPages > 0)
+                                        {
+                                            <small class="d-block text-muted">彩色: @item.ColorPages.ToString("N0") 張</small>
+                                        }
+                                        @if (item.LargePages > 0)
+                                        {
+                                            <small class="d-block text-muted">大張: @item.LargePages.ToString("N0") 張</small>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-end">@(item.MonthlyFee > 0 ? "$" + item.MonthlyFee.ToString("N0") : "-")</td>
+                                <td class="text-end">@(item.PageFee > 0 ? "$" + item.PageFee.ToString("N0") : "-")</td>
+                                <td class="text-end"><strong>@(item.Subtotal.ToString("N0"))</strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="6" class="text-end"><strong>合計</strong></td>
+                            <td class="text-end"><strong>@(invoice.GrandTotal.ToString("N0"))</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="card-body text-center py-4 text-muted">
+            <p>此期間無帳單資料</p>
+        </div>
+    </div>
+}

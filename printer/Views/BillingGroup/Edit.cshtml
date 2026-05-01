@@ -1,0 +1,512 @@
+@model printer.Data.Entities.PrinterBillingGroup
+@{
+    ViewData["Title"] = $"編輯群組 - {Model.Name}";
+    var availablePrinters = ViewBag.AvailablePrinters as List<printer.Data.Entities.Printer> ?? new();
+    var allSheetTypesJson = ViewBag.AllSheetTypesJson as string ?? "[]";
+    var sheetPricesJson = ViewBag.SheetPricesJson as string ?? "[]";
+    var sheetTiersJson = ViewBag.SheetTiersJson as string ?? "[]";
+
+    var nonMembers = availablePrinters.Where(p => p.BillingGroupId != Model.Id).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">編輯計費群組</h4>
+        <small class="text-muted">@Model.Name</small>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" form="groupForm" class="btn btn-success btn-sm">儲存變更</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回</a>
+        <button type="submit" form="deleteGroupForm" class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('確定要刪除此群組？成員將被解除綁定。')">刪除</button>
+    </div>
+</div>
+
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post" id="deleteGroupForm" class="d-none">
+    @Html.AntiForgeryToken()
+</form>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Edit" method="post" id="groupForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <!-- 基本資料 -->
+            <div class="card mb-3">
+                <div class="card-header"><span class="badge bg-primary me-2">1</span>基本資料</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">群組名稱</label>
+                            <input asp-for="Name" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">結帳客戶</label>
+                            <select asp-for="BillingPartnerId" class="form-select ts-select" asp-items="@ViewBag.Partners"></select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">說明</label>
+                            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">啟用</label>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input asp-for="AutoAdjustGiftPool" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label" asp-for="AutoAdjustGiftPool">
+                                    新增/移除成員時自動調整贈送張數共用池
+                                </label>
+                            </div>
+                            <small class="text-muted d-block">
+                                打開時：加入成員 → 將該機台各類別贈送張數加進共用池；移除成員 → 從共用池扣抵（最低為 0）。
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成員月租明細 -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <span class="badge bg-primary me-2">2</span>成員月租明細
+                </div>
+                <div class="card-body">
+                    <small class="text-muted d-block mb-2">
+                        每台月租仍綁在事務機自身的 PrinterBillingConfig；此處可集中編輯，存檔時會寫回各台計費設定。月租總計 = 各台加總，於帳單中分項列出。
+                    </small>
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"></th>
+                                <th>事務機</th>
+                                <th>客戶</th>
+                                <th style="width:200px">月租費</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberFeesBody">
+                            @{
+                                var memberConfigs = ViewBag.MemberConfigs as Dictionary<int, decimal> ?? new();
+                            }
+                            @if (!Model.Members.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted small">尚未加入成員</td></tr>
+                            }
+                            @foreach (var m in Model.Members)
+                            {
+                                var fee = memberConfigs.GetValueOrDefault(m.Id, 0m);
+                                <tr data-id="@m.Id">
+                                    <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                                    <td>
+                                        <strong>@m.Name</strong>
+                                        <input type="hidden" name="memberPrinterIds" value="@m.Id" />
+                                    </td>
+                                    <td><small>@m.Partner?.Name</small></td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" name="memberMonthlyFees" class="form-control"
+                                                   value="@fee.ToString("0.##")" step="1" min="0" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (Model.Members.Any())
+                        {
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">月租總計</td>
+                                    <td class="fw-bold">$@memberConfigs.Values.Sum().ToString("N0")</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            </div>
+
+            <!-- 張數計費（群組層級） -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <span class="badge bg-primary me-2">3</span>張數計費（群組合併）
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">計費週期</label>
+                            <div class="input-group">
+                                <input asp-for="PageFeeCycle" type="number" class="form-control" min="1" max="60" />
+                                <span class="input-group-text">個月</span>
+                            </div>
+                            <small class="text-muted">1=每月, 3=每季, 6=半年</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">起算日期</label>
+                            <input asp-for="PageStartDate" type="date" class="form-control" />
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="sheetTiersJson" id="sheetTiersJson" />
+                    <table class="table table-bordered table-sm align-middle mb-1">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"></th>
+                                <th>張數類型</th>
+                                <th style="width:18%">單價</th>
+                                <th style="width:14%">誤印率</th>
+                                <th style="width:12%">贈送（共用池）</th>
+                                <th style="width:14%" title="換算值：以最便宜類型為 1 為基準（例：黑白 1、彩色 5、彩色大張 10）。填 0 = 不參與互換">換算值</th>
+                                <th style="width:14%" title="折抵順序：小者優先享用折抵">折抵順序</th>
+                                <th style="width:8%" class="text-center">階梯</th>
+                                <th style="width:6%" class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="sheetPriceBody"></tbody>
+                    </table>
+                    <small class="text-muted d-block mb-2">
+                        計費張數 = 成員實印合計 × (1 - 誤印率%) - 贈送（共用池）；剩餘贈送依「換算值 + 折抵順序」自動折抵其他類型超印
+                    </small>
+                    <div class="d-flex gap-2 align-items-center mt-2">
+                        <select id="addSheetTypeSelect" class="form-select form-select-sm" style="max-width:200px">
+                            <option value="">選擇張數類型...</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetPriceRow()">+ 新增</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+<div class="col-md-4">
+        <!-- 套用計費模板 -->
+        <div class="card mb-3">
+            <div class="card-header">套用計費模板</div>
+            <div class="card-body">
+                <form asp-action="ApplyTemplate" asp-route-id="@Model.Id" method="post"
+                      onsubmit="return confirm('套用模板會覆蓋目前群組的張數類型單價、誤印率、贈送張數與階梯，確定要套用嗎？');">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-2">
+                        <select name="templateId" class="form-select form-select-sm" required asp-items="@ViewBag.Templates">
+                            <option value="">選擇模板...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">套用模板</button>
+                </form>
+                <small class="text-muted d-block mt-2">
+                    模板的張數類型計費會匯入；月租欄位忽略（群組無月租）。
+                </small>
+            </div>
+        </div>
+
+        <!-- 群組成員 -->
+        <div class="card mb-3">
+            <div class="card-header"><span class="badge bg-primary me-2">4</span>群組成員 (@Model.Members.Count)</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:30px"></th>
+                            <th>事務機</th>
+                            <th>客戶</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="membersBody">
+                        @foreach (var m in Model.Members)
+                        {
+                            <tr data-id="@m.Id">
+                                <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                                <td>
+                                    <strong>@m.Name</strong><br />
+                                    <small class="text-muted">@m.Code</small>
+                                </td>
+                                <td><small>@m.Partner?.Name</small></td>
+                                <td>
+                                    <form asp-action="RemoveMember" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="printerId" value="@m.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0"
+                                                onclick="return confirm('確定移出？')">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Members.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted small">尚無成員</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body border-top">
+                <form asp-action="AddMember" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <select name="printerId" class="form-select form-select-sm ts-select" required>
+                        <option value="">選擇要加入的事務機...</option>
+                        @foreach (var p in nonMembers)
+                        {
+                            <option value="@p.Id">@p.Name (@p.Partner?.Name)</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary">加入</button>
+                </form>
+                <small class="text-muted d-block mt-1">支援跨客戶選擇。是否同步調整贈送張數共用池由上方「群組設定」旗標控制。</small>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">合併計費說明</div>
+            <div class="card-body small">
+                <ol class="mb-0 ps-3">
+                    <li>合併群組所有成員當月實印張數</li>
+                    <li>套用群組層級誤印率扣減</li>
+                    <li>扣除群組共用贈送張數</li>
+                    <li>剩餘為超印張數，依群組單價／階梯計費</li>
+                    <li>各成員月租仍依各自 PrinterBillingConfig 計算</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    var allSheetTypes = @Html.Raw(allSheetTypesJson);
+    var initSheetPrices = @Html.Raw(sheetPricesJson);
+    var sheetTierSets = {};
+
+    (function() {
+        var raw = @Html.Raw(sheetTiersJson);
+        raw.forEach(function(t) {
+            if (!sheetTierSets[t.sheetTypeId]) sheetTierSets[t.sheetTypeId] = [];
+            sheetTierSets[t.sheetTypeId].push(t);
+        });
+    })();
+
+    var addedSheetTypeIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initSheetPrices.forEach(function(p) {
+            appendSheetPriceRow(p.sheetTypeId, p.sheetTypeName, p.unitPrice, p.discountPercent, p.freePages, p.weight, p.offsetOrder);
+        });
+        refreshAddDropdown();
+        addedSheetTypeIds.forEach(function(stId) { renderSheetTiers(stId); });
+        updateSheetTiersJson();
+        initSheetPriceSortable();
+        initMemberSortable('memberFeesBody');
+        initMemberSortable('membersBody');
+    });
+
+    function initMemberSortable(tbodyId) {
+        var tbody = document.getElementById(tbodyId);
+        if (!tbody || typeof Sortable === 'undefined') return;
+        var rows = tbody.querySelectorAll('tr[data-id]');
+        if (rows.length < 2) return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'table-active',
+            onEnd: function () {
+                var ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                    .map(function (tr) { return tr.dataset.id; });
+                var data = new FormData();
+                data.append('id', '@Model.Id');
+                ids.forEach(function (pid) { data.append('printerIds', pid); });
+                fetch('@Url.Action("ReorderMembers")', { method: 'POST', body: data })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d || !d.success) alert('排序儲存失敗');
+                    })
+                    .catch(function () { alert('排序儲存失敗'); });
+            }
+        });
+    }
+
+    function initSheetPriceSortable() {
+        var tbody = document.getElementById('sheetPriceBody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            draggable: 'tr.sortable-main',
+            animation: 150,
+            ghostClass: 'table-active',
+            onEnd: function () {
+                tbody.querySelectorAll('tr.sortable-main').forEach(function (mainTr) {
+                    var stId = mainTr.dataset.stid;
+                    var tierTr = document.getElementById('sheetTier_' + stId);
+                    if (tierTr && mainTr.nextSibling !== tierTr) {
+                        tbody.insertBefore(tierTr, mainTr.nextSibling);
+                    }
+                });
+            }
+        });
+    }
+
+    function appendSheetPriceRow(stId, stName, unitPrice, discountPercent, freePages, weight, offsetOrder) {
+        addedSheetTypeIds.add(stId);
+        var tbody = document.getElementById('sheetPriceBody');
+        var tierId = 'sheetTier_' + stId;
+        var weightVal = (weight === null || weight === undefined) ? '' : weight;
+        var offsetVal = (offsetOrder === null || offsetOrder === undefined) ? '' : offsetOrder;
+        var weightPh = '預設 0';
+        var offsetPh = '預設 0';
+
+        var tr = document.createElement('tr');
+        tr.id = 'sheetPriceRow_' + stId;
+        tr.className = 'sortable-main';
+        tr.dataset.stid = stId;
+        tr.innerHTML = `
+            <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+            <td class="fw-bold">
+                ${stName}
+                <input type="hidden" name="sheetTypeIds" value="${stId}" />
+            </td>
+            <td><div class="input-group input-group-sm"><span class="input-group-text">$</span>
+                <input type="number" name="unitPrices" class="form-control"
+                    value="${parseFloat(unitPrice).toFixed(4)}" step="0.0001" min="0" /></div></td>
+            <td><div class="input-group input-group-sm">
+                <input type="number" name="discountPercents" class="form-control"
+                    value="${parseFloat(discountPercent).toFixed(2)}" step="0.01" min="0" max="100" />
+                <span class="input-group-text">%</span></div></td>
+            <td><input type="number" name="freePagesList" class="form-control form-control-sm"
+                value="${freePages}" min="0" /></td>
+            <td><input type="number" name="weights" class="form-control form-control-sm"
+                value="${weightVal}" placeholder="${weightPh}" step="0.01" min="0" /></td>
+            <td><input type="number" name="offsetOrders" class="form-control form-control-sm"
+                value="${offsetVal}" placeholder="${offsetPh}" min="0" /></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        data-bs-toggle="collapse" data-bs-target="#${tierId}">&#8597;</button>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger py-0"
+                        onclick="removeSheetPriceRow(${stId})">×</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        var tierTr = document.createElement('tr');
+        tierTr.className = 'collapse sortable-tier';
+        tierTr.id = tierId;
+        tierTr.dataset.for = stId;
+        tierTr.innerHTML = `
+            <td colspan="9" class="p-2 bg-light">
+                <table class="table table-sm mb-2">
+                    <thead><tr><th>從 (張)</th><th>到 (張)</th><th>單價</th><th></th></tr></thead>
+                    <tbody id="sheetTierBody_${stId}"></tbody>
+                </table>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetTier(${stId})">+ 新增階梯</button>
+            </td>
+        `;
+        tbody.appendChild(tierTr);
+    }
+
+    function removeSheetPriceRow(stId) {
+        addedSheetTypeIds.delete(stId);
+        delete sheetTierSets[stId];
+        var row = document.getElementById('sheetPriceRow_' + stId);
+        var tierRow = document.getElementById('sheetTier_' + stId);
+        if (row) row.remove();
+        if (tierRow) tierRow.remove();
+        refreshAddDropdown();
+        updateSheetTiersJson();
+    }
+
+    function addSheetPriceRow() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        var stId = parseInt(sel.value);
+        if (!stId) return;
+        var st = allSheetTypes.find(function(s) { return s.id === stId; });
+        if (!st || addedSheetTypeIds.has(stId)) return;
+        appendSheetPriceRow(stId, st.name, 0, 0, 0, null, null);
+        renderSheetTiers(stId);
+        refreshAddDropdown();
+        sel.value = '';
+    }
+
+    function refreshAddDropdown() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        sel.innerHTML = '<option value="">選擇張數類型...</option>';
+        allSheetTypes.forEach(function(st) {
+            if (!addedSheetTypeIds.has(st.id)) {
+                var opt = document.createElement('option');
+                opt.value = st.id;
+                opt.text = st.name;
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    function renderSheetTiers(stId) {
+        var tbody = document.getElementById('sheetTierBody_' + stId);
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        var set = sheetTierSets[stId] || [];
+        set.forEach(function(tier, index) { addSheetTierRow(stId, tier, index); });
+    }
+
+    function addSheetTier(stId) {
+        if (!sheetTierSets[stId]) sheetTierSets[stId] = [];
+        var set = sheetTierSets[stId];
+        var last = set.length > 0 ? set[set.length - 1] : null;
+        var from = last && last.toPages ? last.toPages + 1 : (last ? last.fromPages + 500 : 1);
+        set.push({ sheetTypeId: stId, fromPages: from, toPages: null, price: 0 });
+        renderSheetTiers(stId);
+        updateSheetTiersJson();
+    }
+
+    function addSheetTierRow(stId, tier, index) {
+        var tbody = document.getElementById('sheetTierBody_' + stId);
+        var row = document.createElement('tr');
+        var toVal = tier.toPages != null ? tier.toPages : '';
+        row.innerHTML = `
+            <td><input type="number" class="form-control form-control-sm" value="${tier.fromPages}" min="1"
+                onchange="updateSheetTier(${stId}, ${index}, 'fromPages', this.value)" /></td>
+            <td><input type="number" class="form-control form-control-sm" value="${toVal}" min="0" placeholder="無上限"
+                onchange="updateSheetTier(${stId}, ${index}, 'toPages', this.value)" /></td>
+            <td><div class="input-group input-group-sm"><span class="input-group-text">$</span>
+                <input type="number" class="form-control" value="${tier.price}" step="0.0001" min="0"
+                onchange="updateSheetTier(${stId}, ${index}, 'price', this.value)" /></div></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger"
+                onclick="removeSheetTier(${stId}, ${index})">刪除</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function updateSheetTier(stId, index, field, value) {
+        if (field === 'toPages') sheetTierSets[stId][index][field] = value === '' ? null : parseInt(value);
+        else if (field === 'fromPages') sheetTierSets[stId][index][field] = parseInt(value);
+        else sheetTierSets[stId][index][field] = parseFloat(value);
+        updateSheetTiersJson();
+    }
+
+    function removeSheetTier(stId, index) {
+        sheetTierSets[stId].splice(index, 1);
+        renderSheetTiers(stId);
+        updateSheetTiersJson();
+    }
+
+    function updateSheetTiersJson() {
+        var all = [];
+        addedSheetTypeIds.forEach(function(stId) {
+            (sheetTierSets[stId] || []).forEach(function(t) { all.push(t); });
+        });
+        var el = document.getElementById('sheetTiersJson');
+        if (el) el.value = JSON.stringify(all);
+    }
+</script>
+}

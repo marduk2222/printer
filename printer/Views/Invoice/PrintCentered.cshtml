@@ -1,0 +1,32 @@
+@model printer.Models.InvoicePrintViewModel
+@{ Layout = null; var primary = !string.IsNullOrEmpty(Model.Settings.PrimaryColor) ? Model.Settings.PrimaryColor : "#2563eb";
+   var partner = Model.Invoice.Partner; var buyerName = !string.IsNullOrWhiteSpace(partner?.InvoiceTitle) ? partner!.InvoiceTitle : partner?.Name;
+   var buyerTaxId = !string.IsNullOrWhiteSpace(partner?.InvoiceTaxId) ? partner!.InvoiceTaxId : partner?.Vat; }
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8" /><title>帳單 - @Model.Invoice.InvoiceNumber</title>
+<style>:root{--p:@primary}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Noto Sans TC",sans-serif;color:#1f2937;background:#fafafa;font-size:13px}
+.no-print{display:flex;gap:8px;padding:12px;background:#fff;border-bottom:1px solid #e5e7eb;justify-content:center}.no-print button{padding:8px 22px;border:1px solid var(--p);background:#fff;color:var(--p);cursor:pointer;font-size:14px}.btn-print{background:var(--p) !important;color:#fff !important}
+.page{max-width:780px;margin:30px auto;background:#fff;padding:50px 56px;text-align:center}
+.brand{margin-bottom:8px}
+.brand .name{font-size:26px;color:var(--p);font-weight:600;letter-spacing:2px}.brand .meta{font-size:11px;color:#6b7280;margin-top:6px;line-height:1.7}
+.divider{margin:18px auto;width:80px;height:3px;background:var(--p)}
+.title{font-size:34px;color:var(--p);font-weight:300;letter-spacing:14px;margin-bottom:6px}
+.subtitle{font-size:13px;color:#6b7280;margin-bottom:30px}
+.info-grid{display:inline-grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:24px;text-align:left;padding:18px 24px;border:1px solid #e5e7eb;border-radius:8px}
+.info-grid h6{color:var(--p);font-size:11px;letter-spacing:2px;margin-bottom:6px}.info-grid p{font-size:12px;margin:2px 0;color:#4b5563}
+table{width:100%;border-collapse:collapse;margin-bottom:18px;text-align:left}th{padding:10px 12px;background:#eff6ff;color:var(--p);border-bottom:2px solid var(--p);font-size:12px;text-align:center}th:first-child{text-align:left}
+td{padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:center}td.left{text-align:left}td.right{text-align:right}
+.totals-card{display:inline-block;width:300px;border:1px solid var(--p);text-align:left}.totals-row{display:flex;justify-content:space-between;padding:8px 16px;font-size:13px;border-bottom:1px solid #e5e7eb}.totals-row.grand{background:var(--p);color:#fff;font-weight:700;padding:12px 16px;font-size:15px;border:none}
+.foot{margin-top:24px;padding-top:18px;border-top:1px dashed #e5e7eb;font-size:11px;color:#6b7280}.foot h6{color:var(--p);margin-bottom:4px}
+@@media print{body{background:#fff}.no-print{display:none !important}.page{margin:0;max-width:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}@@page{size:A4;margin:14mm}
+</style></head><body>
+<div class="no-print"><button class="btn-print" onclick="window.print()">列印</button><button onclick="history.back()">返回</button></div>
+<div class="page">
+<div class="brand"><div class="name">@(Model.Settings.CompanyName ?? "公司名稱")</div><div class="meta">@Model.Settings.CompanyAddress @if(!string.IsNullOrEmpty(Model.Settings.CompanyPhone)){<span>　·　@Model.Settings.CompanyPhone</span>}</div></div>
+<div class="divider"></div>
+<div class="title">帳　單</div>
+<div class="subtitle">@Model.Invoice.InvoiceNumber　·　@Model.Invoice.CreatedAt.ToString("yyyy 年 MM 月 dd 日")</div>
+<div class="info-grid"><div><h6>客戶</h6><p><strong>@buyerName</strong></p>@if(!string.IsNullOrEmpty(buyerTaxId)){<p>統編：@buyerTaxId</p>}@if(!string.IsNullOrEmpty(partner?.Address)){<p>@partner.Address</p>}</div><div><h6>期間</h6><p>@Model.Invoice.PeriodStart.ToString("yyyy/MM/dd") ~</p><p>@Model.Invoice.PeriodEnd.ToString("yyyy/MM/dd")</p>@if(!string.IsNullOrEmpty(Model.Settings.PaymentTerms)){<p>條件：@Model.Settings.PaymentTerms</p>}</div></div>
+<table><thead><tr><th style="width:34%">項目</th><th>黑白</th><th>彩色</th><th>大張</th><th>月租</th><th>張數費</th><th style="text-align:right;">小計</th></tr></thead><tbody>@foreach(var it in Model.Invoice.Items){<tr><td class="left">@it.Description</td><td>@it.BlackPages.ToString("N0")</td><td>@it.ColorPages.ToString("N0")</td><td>@it.LargePages.ToString("N0")</td><td class="right">@it.MonthlyFee.ToString("N0")</td><td class="right">@it.PageFee.ToString("N0")</td><td class="right">$@it.Subtotal.ToString("N0")</td></tr>}</tbody></table>
+<div class="totals-card"><div class="totals-row"><span>未稅</span><span>$@Model.Invoice.TotalAmount.ToString("N0")</span></div><div class="totals-row"><span>稅 (5%)</span><span>$@Model.Invoice.TaxAmount.ToString("N0")</span></div><div class="totals-row grand"><span>含稅總計</span><span>$@Model.Invoice.GrandTotal.ToString("N0")</span></div></div>
+<div class="foot">@if(!string.IsNullOrEmpty(Model.Settings.BankName)){<h6>匯款資訊</h6><p>@Model.Settings.BankName @Model.Settings.BankBranch / @Model.Settings.BankAccount</p>}@if(!string.IsNullOrEmpty(Model.Settings.FooterNote)){<p style="margin-top:8px;">@Model.Settings.FooterNote</p>}</div>
+</div></body></html>

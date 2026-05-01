@@ -1,0 +1,124 @@
+@model printer.Models.InvoicePrintViewModel
+@{
+    Layout = null;
+    var partner = Model.Invoice.Partner;
+    var buyerName = !string.IsNullOrWhiteSpace(partner?.InvoiceTitle) ? partner!.InvoiceTitle : partner?.Name;
+    var buyerTaxId = !string.IsNullOrWhiteSpace(partner?.InvoiceTaxId) ? partner!.InvoiceTaxId : partner?.Vat;
+}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <title>帳單 - @Model.Invoice.InvoiceNumber</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Inter", "Helvetica Neue", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #111; background: #fff; font-size: 13px; -webkit-font-smoothing: antialiased; }
+        .no-print { display: flex; gap: 8px; padding: 12px; background: #fafafa; border-bottom: 1px solid #eee; }
+        .no-print button { padding: 8px 22px; border: 1px solid #111; background: #fff; cursor: pointer; font-size: 14px; }
+        .page { max-width: 760px; margin: 40px auto; padding: 60px 40px; }
+        .top { margin-bottom: 60px; }
+        .top .label { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+        .top h1 { font-size: 36px; font-weight: 300; letter-spacing: -1px; color: #111; }
+        .top .num { font-size: 14px; color: #666; margin-top: 4px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-bottom: 50px; }
+        .grid .label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+        .grid p { font-size: 13px; color: #333; line-height: 1.7; margin: 0; }
+        .grid p strong { color: #111; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { padding: 14px 0; border-bottom: 1px solid #111; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 500; text-align: left; }
+        td { padding: 14px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #333; }
+        td.right { text-align: right; font-variant-numeric: tabular-nums; }
+        .totals { margin-left: auto; width: 320px; }
+        .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+        .totals-row.grand { border-top: 2px solid #111; margin-top: 6px; padding-top: 14px; font-size: 18px; font-weight: 600; color: #111; }
+        .footer { margin-top: 80px; padding-top: 20px; border-top: 1px solid #eee; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .footer .label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+        .footer p { font-size: 12px; color: #555; line-height: 1.7; }
+        @@media print { .no-print { display: none !important; } .page { margin: 0; max-width: none; } }
+        @@page { size: A4; margin: 16mm; }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">列印</button>
+        <button onclick="history.back()">返回</button>
+    </div>
+    <div class="page">
+        <div class="top">
+            <div class="label">Invoice</div>
+            <h1>帳單</h1>
+            <div class="num">@Model.Invoice.InvoiceNumber　·　@Model.Invoice.CreatedAt.ToString("yyyy.MM.dd")</div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="label">From</div>
+                <p><strong>@(Model.Settings.CompanyName ?? "")</strong></p>
+                @if (!string.IsNullOrEmpty(Model.Settings.CompanyAddress)) { <p>@Model.Settings.CompanyAddress</p> }
+                @if (!string.IsNullOrEmpty(Model.Settings.CompanyPhone)) { <p>@Model.Settings.CompanyPhone</p> }
+                @if (!string.IsNullOrEmpty(Model.Settings.CompanyEmail)) { <p>@Model.Settings.CompanyEmail</p> }
+            </div>
+            <div>
+                <div class="label">Bill To</div>
+                <p><strong>@buyerName</strong></p>
+                @if (!string.IsNullOrEmpty(buyerTaxId)) { <p>統編 @buyerTaxId</p> }
+                @if (!string.IsNullOrEmpty(partner?.Address)) { <p>@partner.Address</p> }
+                @if (!string.IsNullOrEmpty(partner?.Phone)) { <p>@partner.Phone</p> }
+                <p style="margin-top:8px;color:#888;font-size:12px;">期間：@Model.Invoice.PeriodStart.ToString("yyyy/MM/dd") – @Model.Invoice.PeriodEnd.ToString("yyyy/MM/dd")</p>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:60%;">項目</th>
+                    <th class="right" style="text-align:right;">數量／費率</th>
+                    <th class="right" style="text-align:right;">金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var it in Model.Invoice.Items)
+                {
+                    <tr>
+                        <td>@it.Description</td>
+                        <td class="right" style="color:#888;font-size:11px;">
+                            @if (it.BlackPages > 0) { <span>黑 @it.BlackPages.ToString("N0")　</span> }
+                            @if (it.ColorPages > 0) { <span>彩 @it.ColorPages.ToString("N0")　</span> }
+                            @if (it.LargePages > 0) { <span>大 @it.LargePages.ToString("N0")</span> }
+                        </td>
+                        <td class="right">$@it.Subtotal.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="totals-row"><span>未稅</span><span>$@Model.Invoice.TotalAmount.ToString("N0")</span></div>
+            <div class="totals-row"><span>稅額</span><span>$@Model.Invoice.TaxAmount.ToString("N0")</span></div>
+            <div class="totals-row grand"><span>應付總額</span><span>$@Model.Invoice.GrandTotal.ToString("N0")</span></div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Settings.BankName) || !string.IsNullOrEmpty(Model.Settings.FooterNote) || !string.IsNullOrEmpty(Model.Settings.PaymentTerms))
+        {
+            <div class="footer">
+                <div>
+                    @if (!string.IsNullOrEmpty(Model.Settings.BankName))
+                    {
+                        <div class="label">Payment</div>
+                        <p>@Model.Settings.BankName @Model.Settings.BankBranch</p>
+                        @if (!string.IsNullOrEmpty(Model.Settings.BankAccount)) { <p>@Model.Settings.BankAccount</p> }
+                    }
+                </div>
+                <div>
+                    @if (!string.IsNullOrEmpty(Model.Settings.PaymentTerms))
+                    {
+                        <div class="label">Terms</div>
+                        <p>@Model.Settings.PaymentTerms</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Settings.FooterNote)) { <p style="margin-top:8px;color:#888;">@Model.Settings.FooterNote</p> }
+                </div>
+            </div>
+        }
+    </div>
+</body>
+</html>

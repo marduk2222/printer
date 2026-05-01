@@ -1,0 +1,711 @@
+﻿<Window x:Class="printer_setup.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:printer_setup"
+        mc:Ignorable="d"
+        Title="雲端抄表 裝機設定精靈" Width="1040" Height="720" MinWidth="960" MinHeight="640"
+        WindowStartupLocation="CenterScreen" FontFamily="Segoe UI, 微軟正黑體"
+        Background="#F4F5F7">
+    <Window.Resources>
+        <!-- Palette -->
+        <SolidColorBrush x:Key="Accent"          Color="#2563EB"/>
+        <SolidColorBrush x:Key="AccentSoft"      Color="#DBEAFE"/>
+        <SolidColorBrush x:Key="SidebarBg"       Color="#1F2937"/>
+        <SolidColorBrush x:Key="SidebarFg"       Color="#9CA3AF"/>
+        <SolidColorBrush x:Key="SidebarFgActive" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="CardBg"          Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="CardBorder"      Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="HeaderBg"        Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="FgPrimary"       Color="#111827"/>
+        <SolidColorBrush x:Key="FgMuted"         Color="#6B7280"/>
+        <SolidColorBrush x:Key="Success"         Color="#10B981"/>
+        <SolidColorBrush x:Key="Warning"         Color="#F59E0B"/>
+        <SolidColorBrush x:Key="Danger"          Color="#EF4444"/>
+
+        <!-- Sidebar step item -->
+        <Style x:Key="StepItem" TargetType="Border">
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style x:Key="StepBadge" TargetType="Border">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Background" Value="#374151"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="StepBadgeText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource SidebarFg}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="StepTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource SidebarFg}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="12,0,0,0"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Card -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="28"/>
+        </Style>
+
+        <!-- Section header -->
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource FgPrimary}"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style x:Key="SectionSub" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource FgMuted}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+        </Style>
+
+        <!-- Form -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource FgPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+        <Style x:Key="Input" TargetType="TextBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style x:Key="InputPwd" TargetType="PasswordBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style x:Key="InputCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="DisplayMemberPath" Value="Name"/>
+            <Setter Property="SelectedValuePath" Value="Value"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <!-- Buttons -->
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#1D4ED8"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="bd" Property="Background" Value="#93C5FD"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BtnGhost" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#F3F4F6"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ListView -->
+        <Style x:Key="ModernList" TargetType="ListView">
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <!-- Status dot -->
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ Header ═══ -->
+        <Border Grid.ColumnSpan="2" Grid.Row="0" Background="{StaticResource HeaderBg}" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Name="Logo" Height="40" VerticalAlignment="Center" Stretch="Uniform"/>
+                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="雲端抄表 裝機設定精靈" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource FgPrimary}"/>
+                    <TextBlock Text="Printer Setup v3.0" FontSize="12" Foreground="{StaticResource FgMuted}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ Sidebar：步驟導引 ═══ -->
+        <Border Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Background="{StaticResource SidebarBg}" Padding="16,24">
+            <StackPanel>
+                <TextBlock Text="流程步驟" Foreground="#6B7280" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,12"/>
+
+                <!-- Step 0 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="0"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="01"/></Border>
+                        <TextBlock Text="驗證帳號"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="0"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 1 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="1"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="02"/></Border>
+                        <TextBlock Text="選定客戶"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="1"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 2 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="2"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="03"/></Border>
+                        <TextBlock Text="選定事務機"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="2"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 3 / 4 / 5 群組標題 -->
+                <TextBlock Text="設備操作" Foreground="#6B7280" FontSize="11" FontWeight="SemiBold" Margin="4,20,0,12"/>
+
+                <!-- Step 3 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="3"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="+"/></Border>
+                        <TextBlock Text="新增設備"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="3"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 4 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="−"/></Border>
+                        <TextBlock Text="移除設備"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ Main content ═══ -->
+        <Border Grid.Column="1" Grid.Row="1" Margin="20,20,20,0" Style="{StaticResource Card}">
+            <Grid>
+                <!-- Stage 0 : 驗證帳號 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
+                        <TextBlock Style="{StaticResource SectionTitle}" HorizontalAlignment="Center" Text="歡迎回來"/>
+                        <TextBlock Style="{StaticResource SectionSub}" HorizontalAlignment="Center" Text="請以工程師帳密登入以繼續"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="帳號"/>
+                        <TextBox Style="{StaticResource Input}" Name="staff_ac"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,6" Text="密碼"/>
+                        <PasswordBox Style="{StaticResource InputPwd}" Name="staff_pw"/>
+                        <TextBlock HorizontalAlignment="Center" Margin="0,18,0,0" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Setter Property="Text" Value=""/>
+                                    <Setter Property="FontSize" Value="13"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Verify}" Value="1">
+                                            <Setter Property="Foreground" Value="{StaticResource Success}"/>
+                                            <Setter Property="Text" Value="✓ 驗證成功"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Verify}" Value="2">
+                                            <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                                            <Setter Property="Text" Value="✕ 帳號密碼錯誤"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Verify}" Value="3">
+                                            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                            <Setter Property="Text" Value="⚠ 無法連線到伺服器"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Stage 1 : 選定客戶 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="1"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="選定客戶"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="以客戶編號、統一編號或名稱關鍵字搜尋，選定後將自動載入該客戶的事務機清單"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="搜尋關鍵字"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Style="{StaticResource Input}" Name="filter" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="1" Style="{StaticResource BtnPrimary}" Content="查詢" Command="{Binding SearchCommand}"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,16,0,6" Text="客戶"/>
+                        <ComboBox Style="{StaticResource InputCombo}" Name="company"
+                                  ItemsSource="{Binding CompanyItems}"
+                                  SelectedValue="{Binding SelectedCompanyValue}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Stage 2 : 選定事務機 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="2"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="選定事務機"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="勾選要操作的機器，可同時選取多台。接著在右下角選擇要執行的動作：新增 / 移除"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="42">
+                                    <GridViewColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding check}" HorizontalAlignment="Center"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn DisplayMemberBinding="{Binding name}"          Width="160" Header="事務機"/>
+                                <GridViewColumn Width="100" Header="IP">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding ip, UpdateSourceTrigger=PropertyChanged}"
+                                                     Height="28" Padding="6,0" MinWidth="100"
+                                                     VerticalContentAlignment="Center"
+                                                     BorderBrush="{StaticResource CardBorder}"
+                                                     BorderThickness="1"
+                                                     Background="White"
+                                                     ToolTip="可手動輸入或修改 IP"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn DisplayMemberBinding="{Binding mac}"           Width="140" Header="MAC"/>
+                                <GridViewColumn DisplayMemberBinding="{Binding serial_number}" Width="140" Header="機器碼"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+
+                <!-- Stage 3 : 新增設備 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="3"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="新增設備 (起表)"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="先點「目前張數」讀取各機 SNMP 抄表作為起表值（可手動調整），確認無誤後點「新增並回報」送出"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List2}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn DisplayMemberBinding="{Binding name}"          Width="140" Header="事務機"/>
+                                <GridViewColumn DisplayMemberBinding="{Binding serial_number}" Width="130" Header="機器碼"/>
+                                <GridViewColumn Width="96" Header="彩色起表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding color_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="黑白起表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding black_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="大張起表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding large_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="連線">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse><Ellipse.Style>
+                                                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                                            <Setter Property="Fill" Value="#9CA3AF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Fill" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="等待"/>
+                                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Text" Value="失敗"/><Setter Property="Foreground" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Text" Value="成功"/><Setter Property="Foreground" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="回傳">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse><Ellipse.Style>
+                                                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                                            <Setter Property="Fill" Value="#9CA3AF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding upload}" Value="1"><Setter Property="Fill" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding upload}" Value="2"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="等待"/>
+                                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding upload}" Value="1"><Setter Property="Text" Value="失敗"/><Setter Property="Foreground" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding upload}" Value="2"><Setter Property="Text" Value="成功"/><Setter Property="Foreground" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+
+                <!-- Stage 4 : 移除設備 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="移除設備 (尾表)"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="先點「目前張數」讀取各機的尾表數，確認後點「移除並回報」將設備標示為退機"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List2}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn DisplayMemberBinding="{Binding name}"          Width="140" Header="事務機"/>
+                                <GridViewColumn DisplayMemberBinding="{Binding serial_number}" Width="130" Header="機器碼"/>
+                                <GridViewColumn Width="96" Header="彩色尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding color_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="黑白尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding black_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="大張尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding large_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="連線">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse><Ellipse.Style>
+                                                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                                            <Setter Property="Fill" Value="#9CA3AF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Fill" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="等待"/>
+                                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Text" Value="失敗"/><Setter Property="Foreground" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Text" Value="成功"/><Setter Property="Foreground" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+
+            </Grid>
+        </Border>
+
+        <!-- ═══ Footer：Busy 狀態 + 情境按鈕 ═══ -->
+        <Border Grid.Column="1" Grid.Row="2" Margin="20" Padding="4,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Busy indicator -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsBusy}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <Ellipse Width="10" Height="10" Fill="{StaticResource Accent}" Margin="0,0,8,0"/>
+                    <TextBlock Text="處理中，請稍候…" Foreground="{StaticResource FgMuted}" VerticalAlignment="Center" FontSize="13"/>
+                </StackPanel>
+
+                <!-- Stage-specific action buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- Stage 0 -->
+                    <Button Style="{StaticResource BtnPrimary}" Content="驗證" Command="{Binding VerifyCommand}" Name="btn_verify">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="0"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+
+                    <!-- Stage 1 -->
+                    <Button Style="{StaticResource BtnGhost}" Content="上一步" Command="{Binding PrevCommand}" Name="btn_prev">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="1,2"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnPrimary}" Content="下一步" Command="{Binding NextCommand}" Name="btn_next">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="1"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+
+                    <!-- Stage 2 -->
+                    <Button Style="{StaticResource BtnPrimary}" Content="新增設備" Command="{Binding StageNewCommand}" Name="btn_stage_new">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="2"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnGhost}" Content="移除設備" Command="{Binding StageRemoveCommand}" Name="btn_stage_remove">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="2"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+
+                    <!-- Stage 3 / 4 -->
+                    <Button Style="{StaticResource BtnGhost}" Content="返回" Command="{Binding ReturnCommand}" Name="btn_return">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="3,4"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnGhost}" Content="目前張數" Command="{Binding PrinterCommand}" Name="btn_printer">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="3,4"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnPrimary}" Content="新增並回報" Command="{Binding TestCommand}" Name="btn_test">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="3"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnPrimary}" Content="移除並回報" Command="{Binding RemoveCommand}" Name="btn_remove">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="4"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

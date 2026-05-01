@@ -1,0 +1,128 @@
+@model printer.Data.Entities.Partner
+@{
+    ViewData["Title"] = "新增客戶";
+}
+
+<form asp-action="Create" method="post">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>新增客戶</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">建立客戶</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">代碼 (自動產生)</label>
+                    <input asp-for="Code" class="form-control" readonly />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">客戶編號</label>
+                    <input asp-for="PartnerNumber" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">公司名稱 <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">統一編號</label>
+                    <input asp-for="Vat" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">公司電話</label>
+                    <input asp-for="Phone" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">公司傳真</label>
+                    <input asp-for="Fax" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">手機</label>
+                    <input asp-for="Mobile" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Email" class="form-control" type="email" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">地址</label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">備註</label>
+                <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="mb-0">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
+                    <label class="form-check-label" asp-for="IsActive">啟用</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">發票資訊 (選填)</div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">作為日後開立電子發票的預設值。統編 / 發票抬頭可獨立於基本資料（A 公司可開 B 公司統編）；留空時儲存後會自動帶入基本資料對應欄位。</p>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">發票抬頭</label>
+                    <input asp-for="InvoiceTitle" class="form-control" placeholder="留空則自動帶入基本資料公司名稱" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">統編</label>
+                    <input asp-for="InvoiceTaxId" class="form-control" placeholder="留空則自動帶入基本資料統編" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">發票寄送 Email</label>
+                    <input asp-for="InvoiceEmail" class="form-control" type="email" placeholder="留空則使用聯絡 Email" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">載具類型</label>
+                    <select asp-for="InvoiceCarrierType" class="form-select">
+                        <option value="">紙本</option>
+                        <option value="mobile">手機條碼</option>
+                        <option value="citizen">自然人憑證</option>
+                        <option value="donate">捐贈</option>
+                    </select>
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label class="form-label">載具號碼</label>
+                    <input asp-for="InvoiceCarrierId" class="form-control" placeholder="如 /AB+12.3" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">愛心碼 (捐贈用)</label>
+                    <input asp-for="InvoiceDonationCode" class="form-control" placeholder="3-7 位數字" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">預設課稅別</label>
+                    <select asp-for="InvoiceDefaultTaxType" class="form-select">
+                        <option value="">未指定</option>
+                        <option value="taxable">應稅</option>
+                        <option value="zero">零稅率</option>
+                        <option value="free">免稅</option>
+                    </select>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">發票備註</label>
+                    <input asp-for="InvoiceNote" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

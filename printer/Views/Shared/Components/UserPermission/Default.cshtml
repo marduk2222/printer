@@ -1,0 +1,4 @@
+@model Dictionary<string, bool>
+@{
+    bool Can(string code) => Model.TryGetValue(code, out var v) && v;
+}

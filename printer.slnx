@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="printer/printer.csproj" />
+  <Project Path="printer_info/printer_info.csproj" Id="fb5d8f2c-cfa5-4e51-9ec2-a21feaf45695" />
+  <Project Path="printer_setup/printer_setup.csproj" Id="47514017-5f52-402e-b3a0-d4c36b74f08c" />
+</Solution>

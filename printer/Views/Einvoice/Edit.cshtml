@@ -1,0 +1,185 @@
+@model printer.Data.Entities.Einvoice
+@{
+    ViewData["Title"] = $"編輯發票草稿 - {Model.InvoiceNumber}";
+}
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" name="id" value="@Model.Id" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>編輯發票草稿 - @Model.InvoiceNumber</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存草稿</button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">發票資訊</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">發票號碼</label>
+                    <input type="text" class="form-control" value="@Model.InvoiceNumber" readonly />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">發票日期 <span class="text-danger">*</span></label>
+                    <input type="date" name="invoiceDate" class="form-control" value="@Model.InvoiceDate.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">買方統編</label>
+                    <input type="text" name="buyerTaxId" class="form-control" value="@Model.BuyerTaxId" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">買方名稱</label>
+                    <input type="text" name="buyerName" class="form-control" value="@Model.BuyerName" required />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">買方 Email</label>
+                    <input type="email" name="buyerEmail" class="form-control" value="@Model.BuyerEmail" />
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">載具類型</label>
+                    <select name="carrierType" class="form-select">
+                        <option value="" selected="@(string.IsNullOrEmpty(Model.CarrierType))">紙本</option>
+                        <option value="mobile" selected="@(Model.CarrierType == "mobile")">手機條碼</option>
+                        <option value="citizen" selected="@(Model.CarrierType == "citizen")">自然人憑證</option>
+                        <option value="donate" selected="@(Model.CarrierType == "donate")">捐贈</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">載具號碼</label>
+                    <input type="text" name="carrierId" class="form-control" value="@Model.CarrierId" placeholder="如 /AB+12.3" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">愛心碼</label>
+                    <input type="text" name="donationCode" class="form-control" value="@Model.DonationCode" placeholder="3-7 位數字" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">課稅類別</label>
+                    <select name="taxType" id="taxType" class="form-select">
+                        <option value="taxable" selected="@(Model.TaxType == "taxable")">應稅</option>
+                        <option value="zero" selected="@(Model.TaxType == "zero")">零稅率</option>
+                        <option value="free" selected="@(Model.TaxType == "free")">免稅</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">稅率 (%)</label>
+                    <input type="number" name="taxRate" id="taxRate" class="form-control" value="@Model.TaxRate" min="0" />
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">備註</label>
+                    <input type="text" name="note" class="form-control" value="@Model.Note" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>發票明細</span>
+            <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">新增明細</button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>品名</th>
+                            <th class="text-end" style="width:100px">數量</th>
+                            <th class="text-end" style="width:120px">單價</th>
+                            <th class="text-end" style="width:120px">小計</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody"></tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>未稅合計</strong></td>
+                            <td class="text-end"><strong id="totalAmount">0</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-end">稅額</td>
+                            <td class="text-end" id="taxAmount">0</td>
+                            <td></td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td colspan="3" class="text-end"><strong>含稅總計</strong></td>
+                            <td class="text-end"><strong id="grandTotal">0</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemsBody = document.getElementById('itemsBody');
+        const totalAmountEl = document.getElementById('totalAmount');
+        const taxAmountEl = document.getElementById('taxAmount');
+        const grandTotalEl = document.getElementById('grandTotal');
+        const taxTypeSelect = document.getElementById('taxType');
+        const taxRateInput = document.getElementById('taxRate');
+        let itemIndex = 0;
+
+        // 載入現有明細
+        const existingItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Items.Select(i => new { desc = i.Description, qty = i.Quantity, price = i.UnitPrice, subtotal = i.Subtotal }).ToList()));
+
+        existingItems.forEach(i => addItem(i.desc, i.qty, i.price));
+
+        addItemBtn.addEventListener('click', () => addItem());
+        taxTypeSelect.addEventListener('change', updateTotal);
+        taxRateInput.addEventListener('input', updateTotal);
+
+        function addItem(desc, qty, price) {
+            const idx = itemIndex++;
+            const tr = document.createElement('tr');
+            const sub = ((qty || 1) * (price || 0));
+            tr.innerHTML = `
+                <td><input name="items[${idx}].Description" class="form-control form-control-sm" value="${desc || ''}" required /></td>
+                <td><input name="items[${idx}].Quantity" type="number" class="form-control form-control-sm text-end item-qty" min="1" value="${qty || 1}" /></td>
+                <td><input name="items[${idx}].UnitPrice" type="number" class="form-control form-control-sm text-end item-price" min="0" step="0.01" value="${price || 0}" /></td>
+                <td><input name="items[${idx}].Subtotal" type="number" class="form-control form-control-sm text-end item-subtotal" min="0" step="0.01" value="${sub.toFixed(2)}" readonly /></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger remove-item">X</button></td>
+            `;
+
+            const qtyInput = tr.querySelector('.item-qty');
+            const priceInput = tr.querySelector('.item-price');
+            const subtotalInput = tr.querySelector('.item-subtotal');
+
+            function calcRow() {
+                subtotalInput.value = ((parseInt(qtyInput.value) || 0) * (parseFloat(priceInput.value) || 0)).toFixed(2);
+                updateTotal();
+            }
+
+            qtyInput.addEventListener('input', calcRow);
+            priceInput.addEventListener('input', calcRow);
+            tr.querySelector('.remove-item').addEventListener('click', () => { tr.remove(); updateTotal(); });
+
+            itemsBody.appendChild(tr);
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let amount = 0;
+            document.querySelectorAll('.item-subtotal').forEach(el => { amount += parseFloat(el.value) || 0; });
+            const tax = taxTypeSelect.value === 'taxable' ? Math.round(amount * (parseInt(taxRateInput.value) || 0) / 100) : 0;
+            totalAmountEl.textContent = amount.toLocaleString('zh-TW');
+            taxAmountEl.textContent = tax.toLocaleString('zh-TW');
+            grandTotalEl.textContent = (amount + tax).toLocaleString('zh-TW');
+        }
+    });
+</script>
+}

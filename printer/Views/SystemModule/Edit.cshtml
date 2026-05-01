@@ -1,0 +1,71 @@
+@model printer.Data.Entities.SystemModule
+@{
+    ViewData["Title"] = "編輯模組";
+}
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Code" />
+    <input type="hidden" asp-for="CreatedAt" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>編輯模組</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存變更</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">代碼</label>
+                    <input class="form-control" value="@Model.Code" disabled />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">名稱 <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">說明</label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">排序</label>
+                    <input asp-for="SortOrder" type="number" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">圖示 (Bootstrap Icons)</label>
+                    <input asp-for="Icon" class="form-control" placeholder="bi-calculator" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">選單路徑</label>
+                    <input asp-for="MenuPath" class="form-control" placeholder="/Invoice" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">選單控制器</label>
+                    <input asp-for="MenuController" class="form-control" placeholder="Invoice" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">選單動作</label>
+                    <input asp-for="MenuAction" class="form-control" placeholder="Index" />
+                </div>
+            </div>
+
+            <div class="mb-0">
+                <div class="form-check">
+                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
+                    <label class="form-check-label" asp-for="IsEnabled">啟用</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

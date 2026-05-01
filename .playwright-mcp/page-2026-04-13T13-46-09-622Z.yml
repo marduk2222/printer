@@ -1,0 +1,151 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - heading "事務機管理" [level=4] [ref=e34]
+      - generic [ref=e35]:
+        - link "新增事務機" [ref=e36] [cursor=pointer]:
+          - /url: /Printer/Create
+        - link "匯入 Excel" [ref=e37] [cursor=pointer]:
+          - /url: /Printer/Import
+        - link "匯出 Excel" [ref=e38] [cursor=pointer]:
+          - /url: /Printer/Export
+    - generic [ref=e39]:
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - heading "使用中設備" [level=6] [ref=e45]
+          - heading "0 / 2" [level=2] [ref=e46]
+        - generic [ref=e47]: 🖨
+      - generic [ref=e49]:
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - heading "回傳狀態 (7天)" [level=6] [ref=e53]
+            - heading "0 / 0" [level=2] [ref=e54]
+          - generic [ref=e55]: 🔌
+        - generic [ref=e56]: 回傳率 0.0%
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - heading "合約到期提醒" [level=6] [ref=e62]
+          - heading "1" [level=2] [ref=e63]
+        - generic [ref=e64]: 📅
+    - generic [ref=e67]:
+      - textbox "搜尋代碼/名稱/序號" [ref=e69]
+      - generic [ref=e70]:
+        - combobox [ref=e71]:
+          - option "全部客戶" [selected]
+          - option "台積電"
+        - generic [ref=e73] [cursor=pointer]:
+          - generic [ref=e74]: 全部客戶
+          - combobox [ref=e75]
+      - combobox [ref=e77]:
+        - option "全部狀態" [selected]
+        - option "未知"
+        - option "使用中"
+        - option "新增"
+        - option "關閉"
+        - option "移轉"
+        - option "換機"
+        - option "測試"
+      - combobox [ref=e79]:
+        - option "啟用狀態" [selected]
+        - option "啟用"
+        - option "停用"
+      - button "搜尋" [ref=e81] [cursor=pointer]
+    - generic [ref=e83]:
+      - table [ref=e85]:
+        - rowgroup [ref=e86]:
+          - row "代碼 名稱 客戶 廠牌 / 型號 序號 合約 資料完整度 啟用 操作" [ref=e87]:
+            - columnheader "代碼" [ref=e88]
+            - columnheader "名稱" [ref=e89]
+            - columnheader "客戶" [ref=e90]
+            - columnheader "廠牌 / 型號" [ref=e91]
+            - columnheader "序號" [ref=e92]
+            - columnheader "合約" [ref=e93]
+            - columnheader "資料完整度" [ref=e94]
+            - columnheader "啟用" [ref=e95]
+            - columnheader "操作" [ref=e96]
+        - rowgroup [ref=e97]:
+          - row "202604001 Printer-002 台積電 Ricoh MC3503 30% 檢視 刪除" [ref=e98]:
+            - cell "202604001" [ref=e99]
+            - cell "Printer-002" [ref=e100]
+            - cell "台積電" [ref=e101]
+            - cell "Ricoh MC3503" [ref=e102]:
+              - generic [ref=e103]: Ricoh
+              - text: MC3503
+            - cell [ref=e104]
+            - cell [ref=e105]
+            - cell "30%" [ref=e106]:
+              - generic [ref=e107]:
+                - generic "已填 3 / 10 項" [ref=e108]
+                - generic [ref=e110]: 30%
+            - cell [ref=e111]:
+              - checkbox [checked] [ref=e113]
+            - cell "檢視 刪除" [ref=e114]:
+              - link "檢視" [ref=e115] [cursor=pointer]:
+                - /url: /Printer/Details/2
+              - button "刪除" [ref=e117] [cursor=pointer]
+          - row "TEST-001 Printer-001 台積電 Ricoh MC3504 SN-TEST-20260302 逾期 12 天 90% 檢視 刪除" [ref=e118]:
+            - cell "TEST-001" [ref=e119]
+            - cell "Printer-001" [ref=e120]
+            - cell "台積電" [ref=e121]
+            - cell "Ricoh MC3504" [ref=e122]:
+              - generic [ref=e123]: Ricoh
+              - text: MC3504
+            - cell "SN-TEST-20260302" [ref=e124]
+            - cell "逾期 12 天" [ref=e125]:
+              - generic "到期日 2026-04-01" [ref=e126]: 逾期 12 天
+            - cell "90%" [ref=e127]:
+              - generic [ref=e128]:
+                - generic "已填 9 / 10 項" [ref=e129]
+                - generic [ref=e131]: 90%
+            - cell [ref=e132]:
+              - checkbox [checked] [ref=e134]
+            - cell "檢視 刪除" [ref=e135]:
+              - link "檢視" [ref=e136] [cursor=pointer]:
+                - /url: /Printer/Details/1
+              - button "刪除" [ref=e138] [cursor=pointer]
+      - generic [ref=e139]:
+        - generic [ref=e140]: 共 2 筆
+        - navigation [ref=e141]:
+          - list [ref=e142]:
+            - listitem [ref=e143]:
+              - link "1" [ref=e144] [cursor=pointer]:
+                - /url: /Printer?page=1
+  - contentinfo [ref=e145]:
+    - generic [ref=e146]: © 2026 - 印表機雲端抄表系統

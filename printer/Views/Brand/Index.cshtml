@@ -1,0 +1,126 @@
+@model IEnumerable<printer.Data.Entities.Brand>
+@{
+    ViewData["Title"] = "廠牌管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>廠牌管理</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">新增廠牌</a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th style="width:36px;"><input type="checkbox" id="selectAll" /></th>
+                    <th style="width:36px;"></th>
+                    <th style="width:60px;">圖片</th>
+                    <th>廠牌名稱</th>
+                    <th>說明</th>
+                    <th>型號數</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="brandSortable">
+                @foreach (var item in Model)
+                {
+                    <tr data-id="@item.Id">
+                        <td><input type="checkbox" class="row-check" value="@item.Id" /></td>
+                        <td class="drag-handle text-center text-muted" style="cursor:grab">&#x2630;</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.ImagePath))
+                            {
+                                <img src="@item.ImagePath" alt="@item.Name" style="width:40px;height:40px;object-fit:contain;" />
+                            }
+                            else
+                            {
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                    <small class="text-muted">--</small>
+                                </div>
+                            }
+                        </td>
+                        <td><strong>@item.Name</strong></td>
+                        <td>@item.Description</td>
+                        <td><span class="badge bg-secondary">@item.Models.Count</span></td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">編輯</a>
+                            <a asp-controller="PrinterModel" asp-action="Index" asp-route-brandId="@item.Id" class="btn btn-sm btn-info">型號</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('確定要刪除嗎？');">
+                                <button type="submit" class="btn btn-sm btn-danger">刪除</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('brandSortable');
+    if (el) {
+        Sortable.create(el, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: function() {
+                var ids = Array.from(el.querySelectorAll('tr[data-id]'))
+                             .map(function(tr) { return parseInt(tr.dataset.id); });
+                fetch('@Url.Action("Reorder", "Brand")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ids)
+                });
+            }
+        });
+    }
+
+    var selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "Brand")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+</script>
+}

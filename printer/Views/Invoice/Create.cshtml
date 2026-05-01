@@ -1,0 +1,247 @@
+@using printer.Data.Enums
+@{
+    ViewData["Title"] = "手動建立帳單";
+}
+
+<form asp-action="Create" method="post" id="createForm">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>手動建立帳單</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm" id="submitBtn">建立帳單</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">帳單資訊</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">客戶 <span class="text-danger">*</span></label>
+                    <select name="partnerId" id="partnerId" class="form-select ts-select" required>
+                        <option value="">請選擇客戶</option>
+                        @foreach (SelectListItem item in ViewBag.Partners)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">起始日 <span class="text-danger">*</span></label>
+                    <input type="date" name="periodStart" class="form-control" required />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">結束日 <span class="text-danger">*</span></label>
+                    <input type="date" name="periodEnd" class="form-control" required />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-10 mb-3">
+                    <label class="form-label">備註</label>
+                    <input type="text" name="note" class="form-control" placeholder="選填" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>帳單明細</span>
+            <button type="button" class="btn btn-sm btn-primary" id="addItemBtn" disabled>新增明細</button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0" id="itemsTable">
+                    <thead class="table-light" id="itemsHeader">
+                        <tr>
+                            <th style="width:200px">事務機</th>
+                            <th>說明</th>
+                            <th class="text-end" style="width:110px">月租費</th>
+                            <th class="text-end" style="width:110px">張數費用</th>
+                            <th class="text-end" style="width:110px">小計</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody"></tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>總計</strong></td>
+                            <td class="text-end"><strong id="grandTotal">$0</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div id="emptyMessage" class="text-center py-4 text-muted">
+                <p class="mb-0">請先選擇客戶，再新增明細</p>
+            </div>
+        </div>
+    </div>
+
+</form>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const partnerSelect = document.getElementById('partnerId');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const itemsBody = document.getElementById('itemsBody');
+    const emptyMessage = document.getElementById('emptyMessage');
+    const grandTotalEl = document.getElementById('grandTotal');
+    let printers = [];
+    let itemIndex = 0;
+
+    partnerSelect.addEventListener('change', async function () {
+        const partnerId = this.value;
+        itemsBody.innerHTML = '';
+        itemIndex = 0;
+        updateTotal();
+
+        if (!partnerId) {
+            addItemBtn.disabled = true;
+            printers = [];
+            emptyMessage.style.display = '';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/v1/printers?partnerId=${partnerId}&isActive=true&pageSize=999`);
+            printers = await res.json();
+            addItemBtn.disabled = false;
+            emptyMessage.style.display = '';
+        } catch {
+            printers = [];
+            addItemBtn.disabled = true;
+        }
+    });
+
+    addItemBtn.addEventListener('click', function () { addItem(); });
+
+    function addItem() {
+        emptyMessage.style.display = 'none';
+        const idx = itemIndex++;
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+
+        let printerOptions = '<option value="">請選擇</option>';
+        printers.forEach(p => {
+            printerOptions += `<option value="${p.id}">${p.name}</option>`;
+        });
+
+        tr.innerHTML = `
+            <td>
+                <select name="items[${idx}].PrinterId" class="form-select form-select-sm item-printer" required>
+                    ${printerOptions}
+                </select>
+            </td>
+            <td>
+                <input name="items[${idx}].Description" class="form-control form-control-sm" placeholder="說明" />
+                <div class="sheet-type-inputs mt-1"></div>
+            </td>
+            <td>
+                <input name="items[${idx}].MonthlyFee" type="number" class="form-control form-control-sm text-end item-monthly"
+                       min="0" step="0.01" value="0" />
+            </td>
+            <td>
+                <input name="items[${idx}].PageFee" type="number" class="form-control form-control-sm text-end item-pagefee"
+                       min="0" step="0.01" value="0" readonly />
+            </td>
+            <td>
+                <input name="items[${idx}].Subtotal" type="number" class="form-control form-control-sm text-end item-subtotal"
+                       min="0" step="0.01" value="0" required />
+                <input type="hidden" name="items[${idx}].BlackPages" value="0" class="hidden-black" />
+                <input type="hidden" name="items[${idx}].ColorPages" value="0" class="hidden-color" />
+                <input type="hidden" name="items[${idx}].LargePages" value="0" class="hidden-large" />
+            </td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger remove-item">X</button></td>
+        `;
+
+        let billing = null;
+        const printerSelect = tr.querySelector('.item-printer');
+        const monthlyInput = tr.querySelector('.item-monthly');
+        const pageFeeInput = tr.querySelector('.item-pagefee');
+        const subtotalInput = tr.querySelector('.item-subtotal');
+        const sheetInputsContainer = tr.querySelector('.sheet-type-inputs');
+
+        printerSelect.addEventListener('change', async function () {
+            const printerId = this.value;
+            billing = null;
+            sheetInputsContainer.innerHTML = '';
+            pageFeeInput.value = 0;
+            if (!printerId) { calcSubtotal(); return; }
+
+            try {
+                const res = await fetch(`/api/v1/printers/${printerId}/billing`);
+                billing = await res.json();
+                if (!billing.hasBilling) { billing = null; calcSubtotal(); return; }
+
+                monthlyInput.value = billing.monthlyFee || 0;
+
+                if (billing.hasSheetTypes && billing.sheetTypes.length > 0) {
+                    // 張數類型模式：顯示每種類型的輸入欄位
+                    billing.sheetTypes.forEach(st => {
+                        const div = document.createElement('div');
+                        div.className = 'd-flex align-items-center gap-1 mb-1';
+                        div.innerHTML = `
+                            <span class="text-muted small" style="min-width:80px">${st.name}</span>
+                            <input type="number" class="form-control form-control-sm text-end sheet-count"
+                                   placeholder="張數" min="0" value="0"
+                                   data-price="${st.unitPrice}" data-name="${st.name}" style="width:80px" />
+                            <span class="text-muted small">× $${st.unitPrice}</span>
+                        `;
+                        div.querySelector('.sheet-count').addEventListener('input', calcSheetFee);
+                        sheetInputsContainer.appendChild(div);
+                    });
+                }
+                calcSubtotal();
+            } catch { billing = null; }
+        });
+
+        function calcSheetFee() {
+            if (!billing || !billing.hasSheetTypes) return;
+            let total = 0;
+            sheetInputsContainer.querySelectorAll('.sheet-count').forEach(input => {
+                total += (parseInt(input.value) || 0) * parseFloat(input.dataset.price || 0);
+            });
+            pageFeeInput.value = total.toFixed(2);
+            calcSubtotal();
+        }
+
+        function calcSubtotal() {
+            const monthly = parseFloat(monthlyInput.value) || 0;
+            const page = parseFloat(pageFeeInput.value) || 0;
+            subtotalInput.value = (monthly + page).toFixed(2);
+            updateTotal();
+        }
+
+        monthlyInput.addEventListener('input', calcSubtotal);
+        pageFeeInput.addEventListener('input', calcSubtotal);
+
+        tr.querySelector('.remove-item').addEventListener('click', function () {
+            tr.remove();
+            updateTotal();
+            if (itemsBody.children.length === 0) emptyMessage.style.display = '';
+        });
+
+        itemsBody.appendChild(tr);
+        updateTotal();
+    }
+
+    function updateTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-subtotal').forEach(el => {
+            total += parseFloat(el.value) || 0;
+        });
+        grandTotalEl.textContent = '$' + total.toLocaleString('zh-TW');
+    }
+});
+</script>
+}

@@ -1,0 +1,215 @@
+@model printer.Data.Entities.PrinterModel
+@using printer.Data.Entities
+@{
+    ViewData["Title"] = "編輯型號";
+    var availableSheetTypes = ViewBag.AvailableSheetTypes as List<SheetType> ?? new List<SheetType>();
+}
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>編輯型號</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存變更</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">廠牌 <span class="text-danger">*</span></label>
+                            <select asp-for="BrandId" class="form-select" asp-items="@ViewBag.Brands" required>
+                                <option value="">請選擇</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">型號名稱 <span class="text-danger">*</span></label>
+                            <input asp-for="Name" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">代碼</label>
+                            <input asp-for="Code" class="form-control" placeholder="英文+數字" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">狀態</label>
+                            <select asp-for="State" class="form-select">
+                                <option value="1">啟用</option>
+                                <option value="0">停用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">特性</label>
+                        <input asp-for="Feature" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">說明</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-0">
+                        <label class="form-label">圖片</label>
+                        <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImg(this)" />
+                        <div class="mt-2 text-center">
+                            @if (!string.IsNullOrEmpty(Model.ImagePath))
+                            {
+                                <img id="preview" src="@Model.ImagePath" style="max-width:150px;max-height:150px;" />
+                            }
+                            else
+                            {
+                                <img id="preview" src="" style="max-width:150px;max-height:150px;display:none;" />
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mt-3">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">張數類型配置</span>
+        @if (availableSheetTypes.Any())
+        {
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSheetTypeModal">加入類型</button>
+        }
+        else
+        {
+            <a asp-controller="SheetType" asp-action="Index" class="btn btn-sm btn-outline-secondary">管理全域張數類型</a>
+        }
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.PrinterModelSheetTypes.Any())
+        {
+            <p class="text-muted p-3 mb-0">尚未配置任何張數類型。請先至「張數類型」建立全域類型，再加入此機型。</p>
+        }
+        else
+        {
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px"></th>
+                        <th>張數類型</th>
+                        <th>驅動參數</th>
+                        <th style="width:80px"></th>
+                    </tr>
+                </thead>
+                <tbody id="sheetTypeSortable">
+                    @foreach (var st in Model.PrinterModelSheetTypes.OrderBy(s => s.SortOrder))
+                    {
+                        <tr data-id="@st.Id">
+                            <td class="align-middle text-center text-muted drag-handle" style="cursor:grab">&#x2630;</td>
+                            <td class="align-middle fw-bold">@st.SheetType?.Name</td>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var key in st.SheetType?.Keys ?? new List<SheetTypeKey>())
+                                    {
+                                        <span class="badge bg-secondary">@key.DriverKey</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                <form asp-action="RemoveSheetType" asp-route-id="@st.Id" asp-route-modelId="@Model.Id" method="post">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('移除「@st.SheetType?.Name」？')">移除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@if (availableSheetTypes.Any())
+{
+    <div class="modal fade" id="addSheetTypeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form asp-action="AddSheetType" method="post" class="modal-content">
+                <input type="hidden" name="modelId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">加入張數類型</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">選擇張數類型 <span class="text-danger">*</span></label>
+                        <select name="sheetTypeId" class="form-select" required>
+                            <option value="">請選擇</option>
+                            @foreach (var st in availableSheetTypes)
+                            {
+                                <option value="@st.Id">@st.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">排序</label>
+                        <input type="number" name="sortOrder" class="form-control" value="@(Model.PrinterModelSheetTypes.Count * 10)" min="0" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">加入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+function previewImg(input) {
+    var img = document.getElementById('preview');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) { img.src = e.target.result; img.style.display = ''; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var sortableEl = document.getElementById('sheetTypeSortable');
+    if (sortableEl) {
+        Sortable.create(sortableEl, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: function() {
+                var ids = Array.from(sortableEl.querySelectorAll('tr[data-id]'))
+                             .map(function(tr) { return parseInt(tr.dataset.id); });
+                fetch('@Url.Action("ReorderSheetTypes", "PrinterModel")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modelId: @Model.Id, orderedIds: ids })
+                });
+            }
+        });
+    }
+});
+</script>
+}

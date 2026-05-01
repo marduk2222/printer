@@ -1,0 +1,12 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - heading "印表機雲端抄表" [level=4] [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: 帳號
+        - textbox [active] [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e12]: 密碼
+        - textbox [ref=e13]
+      - button "登入" [ref=e14] [cursor=pointer]
+  - paragraph [ref=e15]: © 2026 印表機雲端抄表系統

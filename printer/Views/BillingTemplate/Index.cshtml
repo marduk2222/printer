@@ -1,0 +1,90 @@
+@model List<printer.Data.Entities.BillingTemplate>
+@using printer.Data.Enums
+@{
+    ViewData["Title"] = "計費模板";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>計費模板</h4>
+    <a asp-action="Create" class="btn btn-primary">新增模板</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted mb-3">計費模板可用於快速套用到事務機，節省重複設定的時間</p>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>名稱</th>
+                        <th class="text-end">月租費</th>
+                        <th class="text-end">黑白/張</th>
+                        <th class="text-end">彩色/張</th>
+                        <th class="text-end">大張/張</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in Model)
+                    {
+                        <tr class="@(!template.IsActive ? "table-secondary" : "")">
+                            <td>
+                                <strong>@template.Name</strong>
+                                @if (!string.IsNullOrEmpty(template.Description))
+                                {
+                                    <br /><small class="text-muted">@template.Description</small>
+                                }
+                            </td>
+                            <td class="text-end">$@template.MonthlyFee.ToString("N0")</td>
+                            <td class="text-end">$@template.PricePerBlack.ToString("N2")</td>
+                            <td class="text-end">$@template.PricePerColor.ToString("N2")</td>
+                            <td class="text-end">$@template.PricePerLarge.ToString("N2")</td>
+                            <td>
+                                @if (template.IsActive)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@template.Id" class="btn btn-sm btn-outline-primary">設定</a>
+                                <form asp-action="Delete" asp-route-id="@template.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('確定要刪除此模板嗎？')">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無計費模板</p>
+                <a asp-action="Create" class="btn btn-primary">建立第一個模板</a>
+            </div>
+        }
+    </div>
+</div>

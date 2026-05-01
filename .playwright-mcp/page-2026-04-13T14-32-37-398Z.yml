@@ -1,0 +1,162 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - heading "新增事務機" [level=4] [ref=e33]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: 代碼 (自動產生)
+          - textbox [ref=e40]: "202604002"
+        - generic [ref=e41]:
+          - generic [ref=e42]: 名稱 *
+          - textbox [ref=e43]
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]: 客戶
+          - combobox [ref=e47]:
+            - option "請選擇" [selected]
+            - option "台積電"
+          - generic [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: 請選擇
+            - combobox [ref=e51]
+        - generic [ref=e52]:
+          - generic [ref=e53]: 客戶編號
+          - textbox [ref=e54]
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]: 廠牌
+          - combobox [ref=e58]:
+            - option "請選擇" [selected]
+            - option "Ricoh"
+            - option "Xeror"
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]: 請選擇
+            - combobox [ref=e62]
+        - generic [ref=e63]:
+          - generic [ref=e64]: 型號
+          - combobox [ref=e65]:
+            - option "請選擇" [selected]
+            - option "MC3503"
+            - option "MC3504"
+            - option "X3005"
+          - generic [ref=e67] [cursor=pointer]:
+            - generic [ref=e68]: 請選擇
+            - combobox [ref=e69]
+      - generic [ref=e71]:
+        - generic [ref=e72]: 序號
+        - textbox [ref=e73]
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]: IP 位址
+          - textbox [ref=e77]
+        - generic [ref=e78]:
+          - generic [ref=e79]: MAC 位址
+          - textbox [ref=e80]
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - generic [ref=e83]: 印表機名稱
+          - textbox [ref=e84]
+        - generic [ref=e85]:
+          - generic [ref=e86]: 狀態
+          - combobox [ref=e87]:
+            - option "未知"
+            - option "使用中"
+            - option "新增" [selected]
+            - option "關閉"
+            - option "移轉"
+            - option "換機"
+            - option "測試"
+      - generic [ref=e88]:
+        - generic [ref=e89]: 說明
+        - textbox [ref=e90]
+      - separator [ref=e91]
+      - heading "合約資訊" [level=6] [ref=e92]
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]: 合約開始日期
+          - textbox [ref=e96]
+        - generic [ref=e97]:
+          - generic [ref=e98]: 合約結束日期
+          - textbox [ref=e99]
+        - generic [ref=e100]:
+          - generic [ref=e101]: 押金
+          - generic [ref=e102]:
+            - generic [ref=e103]: $
+            - spinbutton [ref=e104]
+        - generic [ref=e105]:
+          - generic [ref=e106]: 到期前通知天數
+          - spinbutton [ref=e107]: "30"
+      - separator [ref=e108]
+      - heading "碳粉警告閾值 (%)" [level=6] [ref=e109]
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - generic [ref=e112]: 黑色
+          - spinbutton [ref=e113]: "20"
+        - generic [ref=e114]:
+          - generic [ref=e115]: 青色
+          - spinbutton [ref=e116]: "20"
+        - generic [ref=e117]:
+          - generic [ref=e118]: 洋紅
+          - spinbutton [ref=e119]: "20"
+        - generic [ref=e120]:
+          - generic [ref=e121]: 黃色
+          - spinbutton [ref=e122]: "20"
+      - heading "感光鼓警告閾值 (%)" [level=6] [ref=e123]
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]: 黑色
+          - spinbutton [ref=e127]: "20"
+        - generic [ref=e128]:
+          - generic [ref=e129]: 青色
+          - spinbutton [ref=e130]: "20"
+        - generic [ref=e131]:
+          - generic [ref=e132]: 洋紅
+          - spinbutton [ref=e133]: "20"
+        - generic [ref=e134]:
+          - generic [ref=e135]: 黃色
+          - spinbutton [ref=e136]: "20"
+      - generic [ref=e138]:
+        - checkbox "啟用" [checked] [ref=e139]
+        - generic [ref=e140]: 啟用
+      - generic [ref=e141]:
+        - button "儲存" [ref=e142] [cursor=pointer]
+        - link "取消" [ref=e143] [cursor=pointer]:
+          - /url: /Printer
+  - contentinfo [ref=e144]:
+    - generic [ref=e145]: © 2026 - 印表機雲端抄表系統

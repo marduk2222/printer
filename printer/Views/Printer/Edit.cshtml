@@ -1,0 +1,167 @@
+@model printer.Data.Entities.Printer
+@{
+    ViewData["Title"] = "編輯事務機";
+}
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>編輯事務機</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存變更</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">代碼 <span class="text-danger">*</span></label>
+                    <input asp-for="Code" class="form-control" required />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">名稱 <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" required />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">客戶</label>
+                    <select asp-for="PartnerId" id="partnerSelect" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                        <option value="">請選擇</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">客戶編號</label>
+                    <input asp-for="PartnerNumber" id="partnerNumberInput" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">廠牌</label>
+                    <select asp-for="BrandId" id="brandSelect" class="form-select ts-select" asp-items="@ViewBag.Brands">
+                        <option value="">請選擇</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">型號</label>
+                    <select asp-for="ModelId" id="modelSelect" class="form-select ts-select">
+                        <option value="">請選擇</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">序號</label>
+                    <input asp-for="SerialNumber" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">IP 位址</label>
+                    <input asp-for="Ip" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">MAC 位址</label>
+                    <input asp-for="Mac" class="form-control" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">印表機名稱</label>
+                    <input asp-for="PrinterName" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">說明</label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            </div>
+
+            <hr />
+            <h6 class="text-muted mb-3">碳粉警告閾值 (%)</h6>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">黑色</label>
+                    <input asp-for="TonerBlackAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">青色</label>
+                    <input asp-for="TonerCyanAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">洋紅</label>
+                    <input asp-for="TonerMagentaAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">黃色</label>
+                    <input asp-for="TonerYellowAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+            </div>
+            <h6 class="text-muted mb-3">感光鼓警告閾值 (%)</h6>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">黑色</label>
+                    <input asp-for="DrumBlackAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">青色</label>
+                    <input asp-for="DrumCyanAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">洋紅</label>
+                    <input asp-for="DrumMagentaAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">黃色</label>
+                    <input asp-for="DrumYellowAlertThreshold" class="form-control" type="number" min="0" max="100" />
+                </div>
+            </div>
+
+            <div class="mb-0">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label class="form-check-label" asp-for="IsActive">啟用</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    var partnerNumbers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.PartnerNumbers as Dictionary<string, string> ?? new Dictionary<string, string>()));
+    var allModels = @Html.Raw(ViewBag.ModelsJson ?? "[]");
+    var currentModelId = @(Model.ModelId.HasValue ? Model.ModelId.Value.ToString() : "null");
+
+    document.getElementById('partnerSelect').addEventListener('change', function() {
+        var pn = partnerNumbers[this.value] || '';
+        document.getElementById('partnerNumberInput').value = pn;
+    });
+
+    function filterModels(brandId) {
+        var sel = document.getElementById('modelSelect');
+        if (sel.tomselect) sel.tomselect.destroy();
+        sel.innerHTML = '<option value="">請選擇</option>';
+        var filtered = brandId ? allModels.filter(m => m.brandId === brandId) : allModels;
+        filtered.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.id;
+            opt.text = m.name;
+            if (currentModelId !== null && m.id === currentModelId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        new TomSelect(sel, { allowEmptyOption: true });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var initBrandId = @(Model.BrandId.HasValue ? Model.BrandId.Value.ToString() : "null");
+        filterModels(initBrandId);
+
+        document.getElementById('brandSelect').addEventListener('change', function() {
+            filterModels(this.value ? parseInt(this.value) : null);
+        });
+    });
+</script>
+}

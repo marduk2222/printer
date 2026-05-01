@@ -1,0 +1,122 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "發票詳情" [level=4] [ref=e32]
+      - link "返回列表" [ref=e33] [cursor=pointer]:
+        - /url: /Einvoice
+    - alert [ref=e34]:
+      - text: 發票 EI-202604-0001 已建立
+      - button [ref=e35] [cursor=pointer]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 發票資訊
+            - generic [ref=e41]: 草稿
+          - generic [ref=e43]:
+            - generic [ref=e45]:
+              - term [ref=e46]: 發票號碼
+              - definition [ref=e47]:
+                - strong [ref=e48]: EI-202604-0001
+              - term [ref=e49]: 發票日期
+              - definition [ref=e50]: 2026/04/14
+              - term [ref=e51]: 客戶
+              - definition [ref=e52]: 台積電
+              - term [ref=e53]: 買方統編
+              - definition [ref=e54]: "123456789"
+              - term [ref=e55]: 課稅類別
+              - definition [ref=e56]: 應稅 (5%)
+            - generic [ref=e58]:
+              - term [ref=e59]: 平台
+              - definition [ref=e60]: 未指定
+              - term [ref=e61]: 建立時間
+              - definition [ref=e62]: 2026/04/14 10:46
+        - generic [ref=e63]:
+          - generic [ref=e64]: 發票明細
+          - table [ref=e66]:
+            - rowgroup [ref=e67]:
+              - row "品名 數量 單價 小計" [ref=e68]:
+                - columnheader "品名" [ref=e69]
+                - columnheader "數量" [ref=e70]
+                - columnheader "單價" [ref=e71]
+                - columnheader "小計" [ref=e72]
+            - rowgroup [ref=e73]:
+              - row "Printer-001 1 13,000.00 13,000" [ref=e74]:
+                - cell "Printer-001" [ref=e75]
+                - cell "1" [ref=e76]
+                - cell "13,000.00" [ref=e77]
+                - cell "13,000" [ref=e78]:
+                  - strong [ref=e79]: 13,000
+            - rowgroup [ref=e80]:
+              - row "未稅 13,000" [ref=e81]:
+                - cell "未稅" [ref=e82]:
+                  - strong [ref=e83]: 未稅
+                - cell "13,000" [ref=e84]:
+                  - strong [ref=e85]: 13,000
+              - row "稅額 650" [ref=e86]:
+                - cell "稅額" [ref=e87]
+                - cell "650" [ref=e88]
+              - row "含稅總計 13,650" [ref=e89]:
+                - cell "含稅總計" [ref=e90]:
+                  - strong [ref=e91]: 含稅總計
+                - cell "13,650" [ref=e92]:
+                  - strong [ref=e93]: 13,650
+        - generic [ref=e94]:
+          - generic [ref=e95]: 備註
+          - generic [ref=e96]: 帳單 INV-202601-001
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: 操作
+          - generic [ref=e100]:
+            - link "編輯草稿" [ref=e101] [cursor=pointer]:
+              - /url: /Einvoice/Edit/2
+            - button "確認開立" [ref=e103] [cursor=pointer]
+            - button "刪除草稿" [ref=e105] [cursor=pointer]
+        - generic [ref=e106]:
+          - generic [ref=e107]: 金額摘要
+          - generic [ref=e109]:
+            - term [ref=e110]: 明細數
+            - definition [ref=e111]: 1 項
+            - term [ref=e112]: 未稅
+            - definition [ref=e113]: 13,000
+            - term [ref=e114]: 稅額
+            - definition [ref=e115]: "650"
+            - term [ref=e116]: 含稅總計
+            - definition [ref=e117]:
+              - strong [ref=e118]: 13,650
+  - contentinfo [ref=e119]:
+    - generic [ref=e120]: © 2026 - 印表機雲端抄表系統

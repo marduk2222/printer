@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "匯入派工單";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>匯入派工單</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="DownloadSample" class="btn btn-outline-primary btn-sm">下載範本</a>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+</div>
+
+<div class="alert alert-warning">
+    <strong>派工單目前僅支援匯出</strong>
+    <p class="mb-0">由於派工單牽涉事務機、指派人員等多對多關聯，目前不開放 Excel 匯入。請改用「開立派工單」頁面建立單筆資料。</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" onsubmit="return false;">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">上傳 Excel 檔案（停用）</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">選擇 Excel 檔案 (.xlsx)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" disabled />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" disabled>匯入</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">範本欄位</div>
+                <div class="card-body small">
+                    <ul class="mb-0">
+                        <li>單號</li>
+                        <li>客戶代碼</li>
+                        <li>標題</li>
+                        <li>描述</li>
+                        <li>狀態</li>
+                        <li>預計到場</li>
+                        <li>預計天數</li>
+                        <li>處理備註</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

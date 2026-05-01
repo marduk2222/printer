@@ -1,0 +1,550 @@
+@using printer.Data.Entities
+@using printer.Controllers
+@{
+    ViewData["Title"] = "Dashboard";
+    var stats = ViewBag.Stats as DashboardStats;
+    var alertPrinters = ViewBag.AlertPrinters as List<Printer> ?? new List<Printer>();
+    var lowSupplyPrinters = ViewBag.LowSupplyPrinters as List<Printer> ?? new List<Printer>();
+    var offlinePrinters = ViewBag.OfflinePrinters as List<Printer> ?? new List<Printer>();
+    var contractAlertPrinters = ViewBag.ContractAlertPrinters as List<Printer> ?? new List<Printer>();
+    var unpaidInvoices = ViewBag.UnpaidInvoices as List<printer.Data.Entities.Invoice> ?? new List<printer.Data.Entities.Invoice>();
+    var recentInvoices = ViewBag.RecentInvoices as List<printer.Data.Entities.Invoice> ?? new List<printer.Data.Entities.Invoice>();
+    var invoiceDays = (int)(ViewBag.InvoiceDays ?? 7);
+}
+
+<h4 class="mb-4">Dashboard</h4>
+
+<!-- 統計卡片 -->
+@{
+    var totalInUse = stats?.TotalPrintersInUse ?? 0;
+    var reported = stats?.ReportedPrinters ?? 0;
+    var reportRate = totalInUse > 0 ? (double)reported / totalInUse * 100 : 0;
+}
+<div class="row mb-2">
+    <!-- 告警 (紅) -->
+    <div class="col mb-3">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">未處理告警</h6>
+                        <h2 class="mb-0">@stats?.ActiveAlerts.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#9888;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#alertSection" class="text-white text-decoration-none small">
+                    查看詳情 &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- 合約 (橘) -->
+    <div class="col mb-3">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75">合約到期提醒</h6>
+                        <h2 class="mb-0">@stats?.ContractAlertCount.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128197;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#contractSection" class="text-dark text-decoration-none small">
+                    查看詳情 &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- 耗材不足 (藍綠) -->
+    <div class="col mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">耗材不足設備</h6>
+                        <h2 class="mb-0">@stats?.LowSupplyCount.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128465;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#supplySection" class="text-white text-decoration-none small">
+                    查看詳情 &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- 回傳/離線 (灰) -->
+    <div class="col mb-3">
+        <div class="card bg-secondary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">離線設備 (7天)</h6>
+                        <h2 class="mb-0">@stats?.ReportedPrinters.ToString("N0") <small class="fs-6">/ @totalInUse</small></h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128268;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <span class="text-white small">回傳率 @reportRate.ToString("N1")%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.BillingEnabled == true)
+{
+<!-- 帳單統計卡片 -->
+<div class="row mb-4">
+    <!-- 未付帳單 (紫) -->
+    <div class="col-md-6 mb-3">
+        <div class="card text-white h-100" style="background-color:#7c3aed;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">未付帳單</h6>
+                        <h2 class="mb-0">@stats?.UnpaidInvoiceCount.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128181;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#unpaidInvoiceSection" class="text-white text-decoration-none small">
+                    查看詳情 &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- 近期帳單 (綠) -->
+    <div class="col-md-6 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">近期帳單 (@invoiceDays 天)</h6>
+                        <h2 class="mb-0">@stats?.RecentInvoiceCount.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128203;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#recentInvoiceSection" class="text-white text-decoration-none small">
+                    查看詳情 &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<div class="row">
+    <!-- 異常設備 -->
+    <div class="col-md-6 mb-4" id="alertSection">
+        <div class="card border-danger h-100">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <span><strong>&#9888; 告警設備</strong> (@alertPrinters.Count)</span>
+                @if (alertPrinters.Any())
+                {
+                    <span class="badge bg-white text-danger">需要處理</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (alertPrinters.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>設備</th>
+                                    <th>客戶</th>
+                                    <th>告警數</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in alertPrinters)
+                                {
+                                    var alertCount = p.AlertRecords.Count;
+                                    <tr>
+                                        <td>
+                                            <strong>@p.Name</strong><br />
+                                            <small class="text-muted">@p.Code</small>
+                                        </td>
+                                        <td>@p.Partner?.Name</td>
+                                        <td>
+                                            <span class="badge bg-danger">@alertCount 個告警</span>
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Printer" asp-action="Details" asp-route-id="@p.Id"
+                                               class="btn btn-sm btn-outline-danger">處理</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-success">&#10004;</div>
+                        <p class="mt-2 mb-0">目前無告警</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 合約到期設備 -->
+    <div class="col-md-6 mb-4" id="contractSection">
+        <div class="card border-warning h-100">
+            <div class="card-header bg-warning d-flex justify-content-between align-items-center">
+                <span><strong>&#128197; 合約到期提醒</strong> (@contractAlertPrinters.Count)</span>
+                @if (contractAlertPrinters.Any())
+                {
+                    <span class="badge bg-dark">即將到期 / 已到期</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (contractAlertPrinters.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>設備</th>
+                                    <th>客戶</th>
+                                    <th>到期日</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in contractAlertPrinters)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@p.Name</strong><br />
+                                            <small class="text-muted">@p.Code</small>
+                                        </td>
+                                        <td>@p.Partner?.Name</td>
+                                        <td>@p.ContractEndDate?.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            @if (p.IsContractExpired)
+                                            {
+                                                <span class="badge bg-danger">已到期</span>
+                                            }
+                                            else
+                                            {
+                                                var daysLeft = p.ContractEndDate!.Value.DayNumber - DateOnly.FromDateTime(DateTime.Today).DayNumber;
+                                                <span class="badge bg-warning text-dark">@daysLeft 天後到期</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Printer" asp-action="Details" asp-route-id="@p.Id"
+                                               class="btn btn-sm btn-outline-warning">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-success">&#10004;</div>
+                        <p class="mt-2 mb-0">無合約到期提醒</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row">
+    <!-- 耗材不足設備 (藍綠) -->
+    <div class="col-md-6 mb-4" id="supplySection">
+        <div class="card border-info h-100">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <span><strong>&#128465; 耗材不足設備</strong> (@lowSupplyPrinters.Count)</span>
+                @if (lowSupplyPrinters.Any())
+                {
+                    <span class="badge bg-white text-info">低於閾值</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (lowSupplyPrinters.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>設備</th>
+                                    <th>客戶</th>
+                                    <th>碳粉狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in lowSupplyPrinters)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@p.Name</strong><br />
+                                            <small class="text-muted">@p.Code</small>
+                                        </td>
+                                        <td>@p.Partner?.Name</td>
+                                        <td>
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                @if (p.TonerBlack.HasValue)
+                                                {
+                                                    <span class="badge @(p.TonerBlack < p.TonerBlackAlertThreshold ? "bg-danger" : "bg-dark")" title="黑色 (閾值:@(p.TonerBlackAlertThreshold)%)">
+                                                        K:@((int)p.TonerBlack)%
+                                                    </span>
+                                                }
+                                                @if (p.TonerCyan.HasValue)
+                                                {
+                                                    <span class="badge @(p.TonerCyan < p.TonerCyanAlertThreshold ? "bg-danger" : "bg-info")" title="青色 (閾值:@(p.TonerCyanAlertThreshold)%)">
+                                                        C:@((int)p.TonerCyan)%
+                                                    </span>
+                                                }
+                                                @if (p.TonerMagenta.HasValue)
+                                                {
+                                                    <span class="badge" style="background-color:@(p.TonerMagenta < p.TonerMagentaAlertThreshold ? "#dc3545" : "#d63384")" title="洋紅 (閾值:@(p.TonerMagentaAlertThreshold)%)">
+                                                        M:@((int)p.TonerMagenta)%
+                                                    </span>
+                                                }
+                                                @if (p.TonerYellow.HasValue)
+                                                {
+                                                    <span class="badge @(p.TonerYellow < p.TonerYellowAlertThreshold ? "bg-danger" : "bg-warning text-dark")" title="黃色 (閾值:@(p.TonerYellowAlertThreshold)%)">
+                                                        Y:@((int)p.TonerYellow)%
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Printer" asp-action="Details" asp-route-id="@p.Id"
+                                               class="btn btn-sm btn-outline-info">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-success">&#10004;</div>
+                        <p class="mt-2 mb-0">耗材充足</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 離線設備 -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-secondary h-100">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <span><strong>&#128268; 離線設備</strong> (@offlinePrinters.Count)</span>
+                @if (offlinePrinters.Any())
+                {
+                    <span class="badge bg-white text-secondary">超過 7 天未回報</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (offlinePrinters.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>設備</th>
+                                    <th>客戶</th>
+                                    <th>IP</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in offlinePrinters)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@p.Name</strong><br />
+                                            <small class="text-muted">@p.Code</small>
+                                        </td>
+                                        <td>@p.Partner?.Name</td>
+                                        <td><small>@p.Ip</small></td>
+                                        <td>
+                                            <a asp-controller="Printer" asp-action="Details" asp-route-id="@p.Id"
+                                               class="btn btn-sm btn-outline-secondary">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-success">&#10004;</div>
+                        <p class="mt-2 mb-0">所有設備正常回報</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.BillingEnabled == true)
+{
+<div class="row">
+    <!-- 未付帳單提醒 -->
+    <div class="col-md-6 mb-4" id="unpaidInvoiceSection">
+        <div class="card h-100" style="border-color:#7c3aed;">
+            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#7c3aed;">
+                <span><strong>&#128181; 未付帳單</strong> (@unpaidInvoices.Count)</span>
+                @if (unpaidInvoices.Any())
+                {
+                    <span class="badge bg-white" style="color:#7c3aed;">待收款</span>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (unpaidInvoices.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>帳單編號</th>
+                                    <th>客戶</th>
+                                    <th>金額</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in unpaidInvoices)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@inv.InvoiceNumber</strong><br />
+                                            <small class="text-muted">@inv.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>@inv.Partner?.Name</td>
+                                        <td>$ @inv.GrandTotal.ToString("N0")</td>
+                                        <td>
+                                            @if (inv.Status == "draft")
+                                            {
+                                                <span class="badge bg-secondary">草稿</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-primary">已確認</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id"
+                                               class="btn btn-sm btn-outline-secondary">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-success">&#10004;</div>
+                        <p class="mt-2 mb-0">無未付帳單</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 近期帳單通知 -->
+    <div class="col-md-6 mb-4" id="recentInvoiceSection">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <span><strong>&#128203; 帳單通知</strong> (@recentInvoices.Count 筆，近 @invoiceDays 天)</span>
+                <form method="get" asp-action="Index" class="d-flex align-items-center gap-1 mb-0">
+                    <label class="text-white small mb-0">天數</label>
+                    <input type="number" name="invoiceDays" value="@invoiceDays" min="1" max="365"
+                           class="form-control form-control-sm" style="width:65px;" />
+                    <button type="submit" class="btn btn-sm btn-light">套用</button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                @if (recentInvoices.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>帳單編號</th>
+                                    <th>客戶</th>
+                                    <th>金額</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in recentInvoices)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@inv.InvoiceNumber</strong><br />
+                                            <small class="text-muted">@inv.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>@inv.Partner?.Name</td>
+                                        <td>$ @inv.GrandTotal.ToString("N0")</td>
+                                        <td>
+                                            @switch (inv.Status)
+                                            {
+                                                case "draft":
+                                                    <span class="badge bg-secondary">草稿</span>
+                                                    break;
+                                                case "confirmed":
+                                                    <span class="badge bg-primary">已確認</span>
+                                                    break;
+                                                case "paid":
+                                                    <span class="badge bg-success">已付款</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-light text-dark">@inv.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id"
+                                               class="btn btn-sm btn-outline-success">查看</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <div class="fs-1 text-muted">&#128203;</div>
+                        <p class="mt-2 mb-0">近 @invoiceDays 天內無帳單</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}

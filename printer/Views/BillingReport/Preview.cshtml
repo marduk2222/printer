@@ -1,0 +1,170 @@
+@model List<printer.Services.BillingCalculation>
+@{
+    ViewData["Title"] = "計費預覽";
+    var total = Model.Sum(c => c.TotalFee);
+    var totalPage = Model.Sum(c => c.PageFee);
+    var totalMonthly = Model.Sum(c => c.MonthlyFee);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>@ViewBag.ReportTitle</h4>
+    <div class="d-flex gap-2">
+        @if (Model.Any(c => c.TotalFee > 0))
+        {
+            <form asp-action="GenerateInvoice" method="post" class="d-inline">
+                <input type="hidden" name="partnerId" value="@ViewBag.PartnerId" />
+                <input type="hidden" name="startDate" value="@ViewBag.StartDate" />
+                <input type="hidden" name="endDate" value="@ViewBag.EndDate" />
+                <button type="submit" class="btn btn-success btn-sm"
+                        onclick="return confirm('確定要生成帳單嗎？生成後將轉至帳單管理頁面。')">
+                    生成帳單
+                </button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Preview" method="post" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select" asp-items="@ViewBag.Partners">
+                    <option value="">全部客戶</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">起始日</label>
+                <input type="date" name="startDate" class="form-control" value="@ViewBag.StartDate" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">結束日</label>
+                <input type="date" name="endDate" class="form-control" value="@ViewBag.EndDate" required />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">重新查詢</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">計費事務機</h6>
+                <h3 class="mb-0">@Model.Count(c => c.TotalFee > 0)</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">月租費合計</h6>
+                <h3 class="mb-0">$@totalMonthly.ToString("N0")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-1">張數費合計</h6>
+                <h3 class="mb-0">$@totalPage.ToString("N0")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">預計總金額</h6>
+                <h3 class="mb-0">$@total.ToString("N0")</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>事務機</th>
+                    <th>張數計費明細</th>
+                    <th class="text-end">月租費</th>
+                    <th class="text-end">張數費</th>
+                    <th class="text-end">小計</th>
+                    <th class="text-end">筆數</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var calc in Model.OrderByDescending(c => c.TotalFee))
+                {
+                    <tr class="@(calc.TotalFee == 0 ? "table-secondary" : "")">
+                        <td>
+                            <strong>@calc.PrinterName</strong>
+                            @if (calc.RecordCount == 0)
+                            {
+                                <br /><small class="text-muted">無抄表記錄</small>
+                            }
+                            else if (!string.IsNullOrEmpty(calc.Breakdown) && calc.Breakdown.StartsWith("未設定"))
+                            {
+                                <br /><small class="text-warning">@calc.Breakdown</small>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(calc.Breakdown) && !calc.Breakdown.StartsWith("未設定"))
+                            {
+                                @foreach (var line in calc.Breakdown.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)))
+                                {
+                                    <small class="d-block text-muted">@line</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted small">-</span>
+                            }
+                        </td>
+                        <td class="text-end">@(calc.MonthlyFee > 0 ? "$" + calc.MonthlyFee.ToString("N0") : "-")</td>
+                        <td class="text-end">@(calc.PageFee > 0 ? "$" + calc.PageFee.ToString("N0") : "-")</td>
+                        <td class="text-end"><strong>@(calc.TotalFee > 0 ? "$" + calc.TotalFee.ToString("N0") : "-")</strong></td>
+                        <td class="text-end"><small class="text-muted">@calc.RecordCount</small></td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="2" class="text-end"><strong>合計</strong></td>
+                    <td class="text-end"><strong>$@totalMonthly.ToString("N0")</strong></td>
+                    <td class="text-end"><strong>$@totalPage.ToString("N0")</strong></td>
+                    <td class="text-end"><strong>$@total.ToString("N0")</strong></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card mt-3">
+        <div class="card-body text-center py-4 text-muted">
+            <p>此期間無計費資料</p>
+        </div>
+    </div>
+}

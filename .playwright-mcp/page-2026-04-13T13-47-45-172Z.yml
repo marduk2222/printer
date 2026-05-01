@@ -1,0 +1,119 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - heading "編輯計費設定" [level=4] [ref=e34]
+      - link "返回列表" [ref=e35] [cursor=pointer]:
+        - /url: /BillingConfig
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: 事務機資訊
+          - generic [ref=e41]:
+            - term [ref=e42]: 事務機
+            - definition [ref=e43]:
+              - strong [ref=e44]: Printer-002
+              - text: (202604001)
+            - term [ref=e45]: 客戶
+            - definition [ref=e46]: 台積電
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: "1"
+              - text: 啟用設定
+            - generic [ref=e52]:
+              - checkbox "啟用計費" [checked] [ref=e53]
+              - generic [ref=e54]: 啟用計費
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - generic [ref=e58]: "2"
+              - text: 月租費
+            - generic [ref=e59]:
+              - checkbox "啟用" [ref=e60]
+              - generic [ref=e61]: 啟用
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - generic [ref=e65]: "3"
+              - text: 張數計費
+            - generic [ref=e66]:
+              - checkbox "啟用" [ref=e67]
+              - generic [ref=e68]: 啟用
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: "4"
+              - text: 備註
+            - textbox "計費相關備註..." [ref=e73]
+          - generic [ref=e74]:
+            - button "儲存" [ref=e75] [cursor=pointer]
+            - link "取消" [ref=e76] [cursor=pointer]:
+              - /url: /BillingConfig
+            - button "刪除" [ref=e77] [cursor=pointer]
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: 快速套用模板
+          - generic [ref=e82]:
+            - combobox [ref=e84]:
+              - option "選擇模板..." [selected]
+              - option "Template模板"
+            - button "套用模板" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - generic [ref=e87]: 計費方式說明
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - strong [ref=e90]: 目前使用：張數類型計費
+              - text: 依各類型張數 × 單價計算
+            - paragraph [ref=e91]:
+              - strong [ref=e92]: 張數類型計費流程：
+            - list [ref=e93]:
+              - listitem [ref=e94]: 設定各類型單價（左方）
+              - listitem [ref=e95]: 上傳抄表資料
+              - listitem [ref=e96]: 系統自動依驅動參數分類累加
+              - listitem [ref=e97]: 生成帳單時自動計算
+            - separator [ref=e98]
+            - paragraph [ref=e99]:
+              - strong [ref=e100]: 月租費
+              - text: ：固定金額 × 週期
+            - paragraph [ref=e101]:
+              - strong [ref=e102]: 單價計費
+              - text: ：張數 × 單價
+            - paragraph [ref=e103]:
+              - strong [ref=e104]: 合計
+              - text: = 月租費 + 張數費
+  - contentinfo [ref=e105]:
+    - generic [ref=e106]: © 2026 - 印表機雲端抄表系統

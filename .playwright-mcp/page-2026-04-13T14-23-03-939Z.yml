@@ -1,0 +1,202 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - heading "事務機詳情" [level=4] [ref=e35]
+        - generic [ref=e36]:
+          - generic "已填 3 / 11 項" [ref=e37]:
+            - generic [ref=e38]: 27%
+          - button "3/11" [ref=e39] [cursor=pointer]
+      - generic [ref=e40]:
+        - button "編輯" [ref=e41] [cursor=pointer]
+        - link "返回" [ref=e42] [cursor=pointer]:
+          - /url: /Printer
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e46]:
+          - generic [ref=e47]: 基本資料
+          - generic [ref=e49]:
+            - term [ref=e50]: 代碼
+            - definition [ref=e51]: "202604001"
+            - term [ref=e52]: 名稱
+            - definition [ref=e53]: Printer-002
+            - term [ref=e54]: 客戶
+            - definition [ref=e55]: 台積電
+            - term [ref=e56]: 廠牌
+            - definition [ref=e57]
+            - term [ref=e58]: 型號
+            - definition [ref=e59]: Ricoh MC3503
+            - term [ref=e60]: 序號
+            - definition [ref=e61]
+            - term [ref=e62]: 客戶編號
+            - definition [ref=e63]: A0001
+            - term [ref=e64]: 狀態
+            - definition [ref=e65]: 新增
+            - term [ref=e66]: 啟用
+            - definition [ref=e67]:
+              - generic [ref=e69]: 啟用
+        - generic [ref=e71]:
+          - generic [ref=e72]: 網路資訊
+          - generic [ref=e74]:
+            - term [ref=e75]: IP 位址
+            - definition [ref=e76]
+            - term [ref=e77]: MAC 位址
+            - definition [ref=e78]
+            - term [ref=e79]: 印表機名稱
+            - definition [ref=e80]
+      - generic [ref=e81]:
+        - generic [ref=e82]: 合約資訊
+        - generic [ref=e84]:
+          - term [ref=e85]: 合約開始日期
+          - definition [ref=e86]
+          - term [ref=e87]: 合約結束日期
+          - definition [ref=e88]
+          - term [ref=e89]: 押金
+          - definition [ref=e90]
+          - term [ref=e91]: 到期前通知天數
+          - definition [ref=e92]: 30 天
+      - generic [ref=e93]:
+        - generic [ref=e94]: 說明
+        - generic [ref=e95]: 無
+      - generic [ref=e96]:
+        - generic [ref=e98]: 耗材狀態
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - heading "碳粉" [level=6] [ref=e102]
+            - generic [ref=e103]:
+              - generic [ref=e104]: 黑色
+              - generic [ref=e105]:
+                - generic: 0%
+              - generic [ref=e106]: 閾值 20%
+            - generic [ref=e107]:
+              - generic [ref=e108]: 青色
+              - generic [ref=e109]:
+                - generic: 0%
+              - generic [ref=e110]: 閾值 20%
+            - generic [ref=e111]:
+              - generic [ref=e112]: 洋紅
+              - generic [ref=e113]:
+                - generic: 0%
+              - generic [ref=e114]: 閾值 20%
+            - generic [ref=e115]:
+              - generic [ref=e116]: 黃色
+              - generic [ref=e117]:
+                - generic: 0%
+              - generic [ref=e118]: 閾值 20%
+          - generic [ref=e119]:
+            - heading "感光鼓" [level=6] [ref=e120]
+            - generic [ref=e121]:
+              - generic [ref=e122]: 黑色
+              - generic [ref=e123]:
+                - generic: 0%
+              - generic [ref=e124]: 閾值 20%
+            - generic [ref=e125]:
+              - generic [ref=e126]: 青色
+              - generic [ref=e127]:
+                - generic: 0%
+              - generic [ref=e128]: 閾值 20%
+            - generic [ref=e129]:
+              - generic [ref=e130]: 洋紅
+              - generic [ref=e131]:
+                - generic: 0%
+              - generic [ref=e132]: 閾值 20%
+            - generic [ref=e133]:
+              - generic [ref=e134]: 黃色
+              - generic [ref=e135]:
+                - generic: 0%
+              - generic [ref=e136]: 閾值 20%
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - generic [ref=e139]: 計費方式
+        - link "編輯計費" [ref=e140] [cursor=pointer]:
+          - /url: /BillingConfig/Edit?printerId=2
+      - generic [ref=e141]:
+        - generic [ref=e142]:
+          - generic [ref=e144]:
+            - term [ref=e145]: 月租費
+            - definition [ref=e146]: $0
+            - term [ref=e147]: 啟用
+            - definition [ref=e148]:
+              - generic [ref=e149]: 是
+          - generic [ref=e151]:
+            - term [ref=e152]: 彩色單價
+            - definition [ref=e153]: $0.0000
+            - term [ref=e154]: 黑白單價
+            - definition [ref=e155]: $0.0000
+            - term [ref=e156]: 大張單價
+            - definition [ref=e157]: $0.0000
+          - generic [ref=e159]:
+            - term [ref=e160]: 免費彩色
+            - definition [ref=e161]: 0 張
+            - term [ref=e162]: 免費黑白
+            - definition [ref=e163]: 0 張
+            - term [ref=e164]: 免費大張
+            - definition [ref=e165]: 0 張
+        - separator [ref=e166]
+        - generic [ref=e167]:
+          - generic [ref=e168]: 月租起算： -
+          - generic [ref=e169]: 月租作帳： -
+          - generic [ref=e170]: 張數起算： -
+          - generic [ref=e171]: 張數作帳： -
+    - generic [ref=e172]:
+      - generic [ref=e173]: 帳單記錄
+      - generic [ref=e175]: 尚無帳單記錄
+    - generic [ref=e176]:
+      - generic [ref=e177]: 維護人員
+      - generic [ref=e178]:
+        - paragraph [ref=e179]: 尚未指定維護人員
+        - generic [ref=e180]:
+          - combobox [ref=e182]:
+            - option "選擇人員" [selected]
+            - option "staff"
+            - option "系統管員"
+          - combobox [ref=e184]:
+            - option "主要維護" [selected]
+            - option "支援"
+          - button "新增" [ref=e186] [cursor=pointer]
+    - generic [ref=e187]:
+      - generic [ref=e189]:
+        - generic [ref=e190]: 最近抄表記錄
+        - paragraph [ref=e192]: 無記錄
+      - generic [ref=e194]:
+        - generic [ref=e195]: 告警記錄
+        - paragraph [ref=e197]: 無告警
+  - contentinfo [ref=e198]:
+    - generic [ref=e199]: © 2026 - 印表機雲端抄表系統

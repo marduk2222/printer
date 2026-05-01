@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\Lucas\\Downloads\\discuss\\printer"
+    ],
+    "allow": [
+      "Bash(dotnet run *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$conn = Get-NetTCPConnection -LocalPort 5062 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($conn) { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }; Start-Process -FilePath dotnet -ArgumentList run -WorkingDirectory 'C:\\Users\\Lucas\\source\\repos\\printer\\printer' -WindowStyle Hidden",
+            "shell": "powershell",
+            "timeout": 30,
+            "statusMessage": "重新啟動 Web..."
+          }
+        ]
+      }
+    ]
+  }
+}

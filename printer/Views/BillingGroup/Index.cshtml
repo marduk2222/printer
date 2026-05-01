@@ -1,0 +1,86 @@
+@model List<printer.Data.Entities.PrinterBillingGroup>
+@{
+    ViewData["Title"] = "計費群組";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h4>計費群組</h4>
+    <a asp-action="Create" class="btn btn-primary">新增群組</a>
+</div>
+
+@await Html.PartialAsync("_BillingTabs", "group")
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <small class="text-muted">
+            計費群組讓多台事務機合併計算超印費：張數共用贈送額度與誤印率，月租仍各台獨立。
+            群組成員可跨客戶，整張帳單以「結帳客戶」為單位開立。
+        </small>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>群組名稱</th>
+                        <th>結帳客戶</th>
+                        <th>成員數</th>
+                        <th>說明</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in Model)
+                    {
+                        <tr>
+                            <td><strong>@g.Name</strong></td>
+                            <td>@g.BillingPartner?.Name</td>
+                            <td>@g.Members.Count</td>
+                            <td><small class="text-muted">@g.Description</small></td>
+                            <td>
+                                @if (g.IsActive)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-primary">設定</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無計費群組</p>
+                <a asp-action="Create" class="btn btn-primary">新增群組</a>
+            </div>
+        }
+    </div>
+</div>

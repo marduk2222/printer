@@ -1,0 +1,99 @@
+@{
+    ViewData["Title"] = "權限設定";
+    var features = ViewBag.Features as List<printer.Services.FeatureDefinition>;
+    var roles = ViewBag.Roles as string[];
+    var roleNames = ViewBag.RoleNames as Dictionary<string, string>;
+    var permissions = ViewBag.Permissions as Dictionary<string, Dictionary<string, bool>>;
+}
+
+<h4 class="mb-3">權限設定</h4>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>功能</th>
+                        @if (roles != null)
+                        {
+                            @foreach (var role in roles)
+                            {
+                                <th class="text-center" style="width: 150px">@roleNames?.GetValueOrDefault(role, role)</th>
+                            }
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (features != null && roles != null && permissions != null)
+                    {
+                        @foreach (var feature in features)
+                        {
+                            <tr>
+                                <td>@feature.Name</td>
+                                @foreach (var role in roles)
+                                {
+                                    var isChecked = permissions.ContainsKey(role) && permissions[role].ContainsKey(feature.Code) && permissions[role][feature.Code];
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input perm-check"
+                                               data-role="@role" data-feature="@feature.Code"
+                                               @(isChecked ? "checked" : "")
+                                               @(role == "admin" && feature.Code == "system_permission" ? "disabled checked" : "") />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <button type="button" class="btn btn-success" id="saveBtn">儲存全部</button>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('saveBtn').addEventListener('click', async function () {
+        const roles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(roles));
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = '儲存中...';
+
+        for (const role of roles) {
+            const checkboxes = document.querySelectorAll(`.perm-check[data-role="${role}"]`);
+            const allowed = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) allowed.push(cb.dataset.feature);
+            });
+
+            const formData = new FormData();
+            formData.append('role', role);
+            allowed.forEach(f => formData.append('allowedFeatures', f));
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            if (token) formData.append('__RequestVerificationToken', token);
+
+            await fetch('@Url.Action("Save")', {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        location.reload();
+    });
+</script>
+<form method="post" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+}

@@ -1,0 +1,190 @@
+@model IEnumerable<printer.Data.Entities.PrintRecord>
+@{
+    ViewData["Title"] = "抄表記錄";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>抄表記錄</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">新增記錄</a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">客戶</label>
+                <select name="partnerId" class="form-select ts-select">
+                    <option value="">全部</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.PartnerId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">事務機</label>
+                <select name="printerId" class="form-select">
+                    <option value="">全部</option>
+                    @foreach (SelectListItem item in ViewBag.Printers)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.PrinterId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">起始日期</label>
+                <input type="date" name="startDate" class="form-control" value="@ViewBag.StartDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">結束日期</label>
+                <input type="date" name="endDate" class="form-control" value="@ViewBag.EndDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">搜尋</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            @{
+                var indexSheetTypes = ViewBag.IndexSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
+                var useDynamic = indexSheetTypes.Count > 0;
+            }
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th style="width:36px;"><input type="checkbox" id="selectAll" /></th>
+                        <th>ID</th>
+                        <th>日期</th>
+                        <th>客戶</th>
+                        <th>事務機</th>
+                        @if (useDynamic)
+                        {
+                            foreach (var st in indexSheetTypes)
+                            {
+                                <th class="text-end">@st.Name</th>
+                            }
+                        }
+                        else
+                        {
+                            <th class="text-end">黑白</th>
+                            <th class="text-end">彩色</th>
+                            <th class="text-end">大張</th>
+                        }
+                        <th class="text-end">合計</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var valueByType = item.Values.ToDictionary(v => v.SheetTypeId, v => v.Value);
+                        long total;
+                        <tr>
+                            <td><input type="checkbox" class="row-check" value="@item.Id" /></td>
+                            <td>@item.Id</td>
+                            <td>@item.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@item.Partner?.Name</td>
+                            <td>@item.Printer?.Name</td>
+                            @if (useDynamic)
+                            {
+                                long sum = 0;
+                                foreach (var st in indexSheetTypes)
+                                {
+                                    var v = valueByType.TryGetValue(st.Id, out var vv) ? vv : 0;
+                                    sum += v;
+                                    <td class="text-end">@(v == 0 ? "—" : v.ToString("N0"))</td>
+                                }
+                                total = sum;
+                            }
+                            else
+                            {
+                                <td class="text-end">@item.BlackSheets.ToString("N0")</td>
+                                <td class="text-end">@item.ColorSheets.ToString("N0")</td>
+                                <td class="text-end">@item.LargeSheets.ToString("N0")</td>
+                                total = item.BlackSheets + item.ColorSheets + item.LargeSheets;
+                            }
+                            <td class="text-end fw-bold">@total.ToString("N0")</td>
+                            <td>
+                                <span class="badge @(item.State == "auto" ? "bg-success" : "bg-secondary")">
+                                    @(item.State == "auto" ? "自動" : "手動")
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">檢視</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                      onsubmit="return confirm('確定要刪除嗎？');">
+                                    <button type="submit" class="btn btn-sm btn-danger">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <span>共 @ViewBag.Total 筆</span>
+            <nav>
+                <ul class="pagination mb-0">
+                    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-page="@i"
+                               asp-route-partnerId="@ViewBag.PartnerId"
+                               asp-route-printerId="@ViewBag.PrinterId"
+                               asp-route-startDate="@ViewBag.StartDate?.ToString("yyyy-MM-dd")"
+                               asp-route-endDate="@ViewBag.EndDate?.ToString("yyyy-MM-dd")">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "PrintRecord")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+</script>
+}

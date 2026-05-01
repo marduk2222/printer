@@ -1,0 +1,202 @@
+@model printer.Data.Entities.PrintRecord
+@{
+    ViewData["Title"] = "新增抄表記錄";
+    var allSheetTypesJson = ViewBag.AllSheetTypesJson as string ?? "[]";
+}
+
+<form asp-action="Create" method="post">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>新增抄表記錄</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">建立紀錄</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">客戶 <span class="text-danger">*</span></label>
+                    <select id="PartnerId" name="PartnerId" class="form-select ts-select" required>
+                        <option value="">請選擇客戶</option>
+                        @foreach (var item in (SelectList)ViewBag.Partners)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">事務機 <span class="text-danger">*</span></label>
+                    <select asp-for="PrinterId" class="form-select" required disabled>
+                        <option value="">請先選擇客戶</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">日期 <span class="text-danger">*</span></label>
+                    <input asp-for="Date" type="date" class="form-control" required />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">張數類別</label>
+                <table class="table table-sm align-middle mb-1">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:30px"></th>
+                            <th style="width:38%">類別</th>
+                            <th style="width:50%">張數</th>
+                            <th style="width:10%" class="text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheetValuesBody">
+                        <tr id="emptyValuesRow"><td colspan="4" class="text-muted small text-center">尚未新增張數類別</td></tr>
+                    </tbody>
+                </table>
+                <small class="text-muted d-block mb-2">先選擇事務機，系統會依該機型自動帶入；也可手動加入其他類別。可拖曳左側 ≡ 調整顯示順序。</small>
+                <div class="d-flex gap-2 align-items-center">
+                    <select id="addSheetTypeSelect" class="form-select form-select-sm" style="max-width:240px">
+                        <option value="">選擇張數類別...</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetValueRow()">+ 新增</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-0">
+                    <label class="form-label">狀態</label>
+                    <select asp-for="State" class="form-select" asp-items="@ViewBag.States"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    var allSheetTypes = @Html.Raw(allSheetTypesJson); // [{id, name}, ...]
+    var addedIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const partnerSelect = document.getElementById('PartnerId');
+        const printerSelect = document.getElementById('PrinterId');
+
+        refreshAddDropdown();
+        initSortable();
+
+        partnerSelect.addEventListener('change', async function () {
+            const partnerId = this.value;
+            printerSelect.innerHTML = '<option value="">載入中...</option>';
+
+            if (!partnerId) {
+                printerSelect.innerHTML = '<option value="">請先選擇客戶</option>';
+                printerSelect.disabled = true;
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/printers?partnerId=${partnerId}&isActive=true&pageSize=999`);
+                const printers = await res.json();
+
+                printerSelect.innerHTML = '<option value="">請選擇事務機</option>';
+                printers.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = p.name;
+                    printerSelect.appendChild(option);
+                });
+                printerSelect.disabled = false;
+            } catch {
+                printerSelect.innerHTML = '<option value="">載入失敗</option>';
+                printerSelect.disabled = true;
+            }
+        });
+
+        // 切換事務機時，自動帶入該機型的張數類別作為預設列（清空現有列）
+        printerSelect.addEventListener('change', async function () {
+            const printerId = this.value;
+            clearSheetValueRows();
+            if (!printerId) return;
+            try {
+                const res = await fetch('@Url.Action("GetPrinterSheetTypes")?printerId=' + encodeURIComponent(printerId));
+                if (!res.ok) return;
+                const types = await res.json();
+                types.forEach(t => appendSheetValueRow(t.id, t.name, 0));
+                refreshAddDropdown();
+            } catch { /* ignore */ }
+        });
+    });
+
+    function appendSheetValueRow(stId, stName, value) {
+        if (addedIds.has(stId)) return;
+        addedIds.add(stId);
+        var empty = document.getElementById('emptyValuesRow');
+        if (empty) empty.remove();
+        var tr = document.createElement('tr');
+        tr.id = 'sheetValueRow_' + stId;
+        tr.innerHTML =
+            '<td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>' +
+            '<td class="fw-bold">' + escapeHtml(stName) + '</td>' +
+            '<td><input type="number" min="0" value="' + (value || 0) + '" class="form-control form-control-sm" name="sheetValues[' + stId + ']" /></td>' +
+            '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeSheetValueRow(' + stId + ')">×</button></td>';
+        document.getElementById('sheetValuesBody').appendChild(tr);
+    }
+
+    function removeSheetValueRow(stId) {
+        addedIds.delete(stId);
+        var row = document.getElementById('sheetValueRow_' + stId);
+        if (row) row.remove();
+        var tbody = document.getElementById('sheetValuesBody');
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = '<tr id="emptyValuesRow"><td colspan="4" class="text-muted small text-center">尚未新增張數類別</td></tr>';
+        }
+        refreshAddDropdown();
+    }
+
+    function clearSheetValueRows() {
+        addedIds.clear();
+        var tbody = document.getElementById('sheetValuesBody');
+        tbody.innerHTML = '<tr id="emptyValuesRow"><td colspan="4" class="text-muted small text-center">尚未新增張數類別</td></tr>';
+        refreshAddDropdown();
+    }
+
+    function initSortable() {
+        var tbody = document.getElementById('sheetValuesBody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'table-active',
+            filter: '#emptyValuesRow'
+        });
+    }
+
+    function addSheetValueRow() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        var stId = parseInt(sel.value);
+        if (!stId) return;
+        var st = allSheetTypes.find(function (s) { return s.id === stId; });
+        if (!st || addedIds.has(stId)) return;
+        appendSheetValueRow(stId, st.name, 0);
+        refreshAddDropdown();
+        sel.value = '';
+    }
+
+    function refreshAddDropdown() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">選擇張數類別...</option>';
+        allSheetTypes.forEach(function (st) {
+            if (!addedIds.has(st.id)) {
+                var opt = document.createElement('option');
+                opt.value = st.id;
+                opt.text = st.name;
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+}

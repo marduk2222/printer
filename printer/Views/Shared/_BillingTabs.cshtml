@@ -1,0 +1,21 @@
+@*
+    計費系統頁面共用 tab — 模型傳入「current」字串：
+    - "config" 高亮事務機計費
+    - "group" 高亮計費群組
+*@
+@model string
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link @(Model == "config" ? "active" : "")"
+           asp-controller="BillingConfig" asp-action="Index">
+            事務機計費
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model == "group" ? "active" : "")"
+           asp-controller="BillingGroup" asp-action="Index">
+            計費群組
+        </a>
+    </li>
+</ul>

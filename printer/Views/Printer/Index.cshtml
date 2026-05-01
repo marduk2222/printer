@@ -1,0 +1,276 @@
+@model IEnumerable<printer.Data.Entities.Printer>
+@{
+    ViewData["Title"] = "事務機管理";
+    var totalInUse = (int)(ViewBag.TotalInUse ?? 0);
+    var totalPrinters = (int)(ViewBag.TotalPrinters ?? 0);
+    var reportedPrinters = (int)(ViewBag.ReportedPrinters ?? 0);
+    var reportRate = totalInUse > 0 ? (double)reportedPrinters / totalInUse * 100 : 0;
+    var reportCardClass = reportRate >= 80 ? "bg-secondary" : reportRate >= 50 ? "bg-warning" : "bg-danger";
+    var reportTextClass = reportRate >= 80 ? "text-white" : reportRate >= 50 ? "text-dark" : "text-white";
+    var contractAlertCount = (int)(ViewBag.ContractAlertCount ?? 0);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>事務機管理</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">新增事務機</a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" id="btnExport" href="#"><i class="bi bi-download me-2"></i>匯出 Excel</a></li>
+                <li><a class="dropdown-item" asp-action="Import"><i class="bi bi-upload me-2"></i>匯入 Excel</a></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><a class="dropdown-item" asp-action="DownloadSample"><i class="bi bi-file-earmark-text me-2"></i>下載範本</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 統計卡片 -->
+<div class="row mb-4">
+    <div class="col mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50">使用中設備</h6>
+                        <h2 class="mb-0">@totalInUse.ToString("N0") <small class="fs-6">/ @totalPrinters</small></h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128424;</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col mb-3">
+        <div class="card @reportCardClass @reportTextClass h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75">回傳狀態 (7天)</h6>
+                        <h2 class="mb-0">@reportedPrinters.ToString("N0") <small class="fs-6">/ @totalInUse</small></h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128268;</div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <span class="small">回傳率 @reportRate.ToString("N1")%</span>
+            </div>
+        </div>
+    </div>
+    <div class="col mb-3">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="opacity-75">合約到期提醒</h6>
+                        <h2 class="mb-0">@contractAlertCount.ToString("N0")</h2>
+                    </div>
+                    <div class="fs-1 opacity-50">&#128197;</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="keyword" class="form-control" placeholder="搜尋代碼/名稱/序號" value="@ViewBag.Keyword" />
+            </div>
+            <div class="col-md-2">
+                <select name="partnerId" class="form-select ts-select">
+                    <option value="">全部客戶</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@(ViewBag.PartnerId?.ToString() == item.Value)">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="isActive" class="form-select">
+                    <option value="">啟用狀態</option>
+                    <option value="true" selected="@(ViewBag.IsActive == true)">啟用</option>
+                    <option value="false" selected="@(ViewBag.IsActive == false)">停用</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">搜尋</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th style="width:36px;"><input type="checkbox" id="selectAll" /></th>
+                        <th>代碼</th>
+                        <th>名稱</th>
+                        <th>客戶</th>
+                        <th>廠牌 / 型號</th>
+                        <th>序號</th>
+                        <th>合約</th>
+                        <th>資料完整度</th>
+                        <th>啟用</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        // 資料完整度 (基本資料 + 網路資訊 + 合約資訊)
+                        var fields = new List<bool>
+                        {
+                            !string.IsNullOrEmpty(item.Name),         // 名稱
+                            item.PartnerId.HasValue,                  // 客戶
+                            item.ModelId.HasValue,                    // 型號
+                            !string.IsNullOrEmpty(item.SerialNumber), // 序號
+                            !string.IsNullOrEmpty(item.Ip),           // IP
+                            !string.IsNullOrEmpty(item.Mac),          // MAC
+                            !string.IsNullOrEmpty(item.PrinterName),  // 印表機名稱
+                            item.ContractStartDate.HasValue,          // 合約開始
+                            item.ContractEndDate.HasValue,            // 合約結束
+                            item.Deposit.HasValue,                    // 押金
+                        };
+                        var filled = fields.Count(f => f);
+                        var totalFields = fields.Count;
+                        var pct = (int)Math.Round((double)filled / totalFields * 100);
+                        var pctClass = pct >= 80 ? "bg-success" : pct >= 50 ? "bg-warning" : "bg-danger";
+
+                        // 合約天數
+                        var today = DateOnly.FromDateTime(DateTime.Today);
+                        int? contractDays = null;
+                        var contractLabel = "";
+                        var contractBadge = "";
+                        if (item.ContractEndDate.HasValue)
+                        {
+                            var diff = item.ContractEndDate.Value.DayNumber - today.DayNumber;
+                            if (diff < 0)
+                            {
+                                contractDays = Math.Abs(diff);
+                                contractLabel = $"逾期 {contractDays} 天";
+                                contractBadge = "bg-danger";
+                            }
+                            else if (diff <= item.ContractAlertDays)
+                            {
+                                contractDays = diff;
+                                contractLabel = $"剩 {contractDays} 天";
+                                contractBadge = "bg-warning text-dark";
+                            }
+                            else
+                            {
+                                contractDays = diff;
+                                contractLabel = $"剩 {contractDays} 天";
+                                contractBadge = "bg-success";
+                            }
+                        }
+
+                        <tr>
+                            <td><input type="checkbox" class="row-check" value="@item.Id" /></td>
+                            <td>@item.Code</td>
+                            <td>@item.Name</td>
+                            <td>@item.Partner?.Name</td>
+                            <td>
+                                @if (item.Model != null)
+                                {
+                                    <span class="badge bg-primary">@item.Model.Brand?.Name</span>
+                                    <span>@item.Model.Name</span>
+                                }
+                            </td>
+                            <td>@item.SerialNumber</td>
+                            <td>
+                                @if (item.ContractEndDate.HasValue)
+                                {
+                                    <span class="badge @contractBadge" title="到期日 @item.ContractEndDate?.ToString("yyyy-MM-dd")">@contractLabel</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;" title="已填 @filled / @totalFields 項">
+                                        <div class="progress-bar @pctClass" style="width: @pct%"></div>
+                                    </div>
+                                    <small class="text-muted" style="min-width: 35px;">@pct%</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-active" type="checkbox"
+                                           data-id="@item.Id" @(item.IsActive ? "checked" : "") />
+                                </div>
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">檢視</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                      onsubmit="return confirm('確定要刪除嗎？');">
+                                    <button type="submit" class="btn btn-sm btn-danger">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <span>共 @ViewBag.Total 筆</span>
+            <nav>
+                <ul class="pagination mb-0">
+                    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-page="@i"
+                               asp-route-keyword="@ViewBag.Keyword"
+                               asp-route-partnerId="@ViewBag.PartnerId"
+                               asp-route-isActive="@ViewBag.IsActive">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('.toggle-active').forEach(function(el) {
+    el.addEventListener('change', function() {
+        fetch('@Url.Action("ToggleActive")' + '?id=' + this.dataset.id, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) alert('操作失敗');
+            });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = () => document.querySelectorAll('.row-check');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => cb.checked = this.checked);
+        });
+    }
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+        btnExport.addEventListener('click', function (e) {
+            e.preventDefault();
+            const ids = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+            const baseUrl = '@Url.Action("Export", "Printer")';
+            const urlParams = new URLSearchParams(window.location.search);
+            if (ids.length > 0) {
+                urlParams.delete('ids');
+                ids.forEach(id => urlParams.append('ids', id));
+            }
+            window.location = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        });
+    }
+});
+</script>
+}

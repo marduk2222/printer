@@ -1,0 +1,133 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "帳單詳情" [level=4] [ref=e32]
+      - link "返回列表" [ref=e34] [cursor=pointer]:
+        - /url: /Invoice
+    - generic [ref=e35]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 帳單資訊
+            - generic [ref=e41]: 已確認
+          - generic [ref=e43]:
+            - term [ref=e44]: 帳單編號
+            - definition [ref=e45]:
+              - strong [ref=e46]: INV-202601-001
+            - term [ref=e47]: 客戶
+            - definition [ref=e48]: 台積電
+            - term [ref=e49]: 計費期間
+            - definition [ref=e50]: 2026/01/01 ~ 2026/03/31
+            - term [ref=e51]: 建立時間
+            - definition [ref=e52]: 2026/04/14 10:45
+            - term [ref=e53]: 確認時間
+            - definition [ref=e54]: 2026/04/14 10:45
+        - generic [ref=e55]:
+          - generic [ref=e56]: 帳單明細
+          - table [ref=e59]:
+            - rowgroup [ref=e60]:
+              - row "事務機 月租費 張數費 小計" [ref=e61]:
+                - columnheader "事務機" [ref=e62]
+                - columnheader "月租費" [ref=e63]
+                - columnheader "張數費" [ref=e64]
+                - columnheader "小計" [ref=e65]
+            - rowgroup [ref=e66]:
+              - row "Printer-001 $1,000 $12,000 $13,000" [ref=e67]:
+                - cell "Printer-001" [ref=e68]:
+                  - generic [ref=e69]: Printer-001
+                - cell "$1,000" [ref=e70]
+                - cell "$12,000" [ref=e71]
+                - cell "$13,000" [ref=e72]:
+                  - strong [ref=e73]: $13,000
+            - rowgroup [ref=e74]:
+              - row "小計 $13,000" [ref=e75]:
+                - cell "小計" [ref=e76]:
+                  - strong [ref=e77]: 小計
+                - cell "$13,000" [ref=e78]:
+                  - strong [ref=e79]: $13,000
+              - row "總計 $13,000" [ref=e80]:
+                - cell "總計" [ref=e81]:
+                  - strong [ref=e82]: 總計
+                - cell "$13,000" [ref=e83]:
+                  - strong [ref=e84]: $13,000
+        - generic [ref=e85]:
+          - generic [ref=e86]: 備註
+          - generic [ref=e87]: （無）
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]: 列印帳單
+          - generic [ref=e91]:
+            - link "列印" [ref=e92] [cursor=pointer]:
+              - /url: /Invoice/Print/4
+            - separator [ref=e93]
+            - button "標記已付款" [ref=e95] [cursor=pointer]
+            - button "取消帳單" [ref=e97] [cursor=pointer]
+            - separator [ref=e98]
+            - link "開立發票" [ref=e99] [cursor=pointer]:
+              - /url: /Einvoice/CreateFromBilling?billingInvoiceId=4
+        - generic [ref=e100]:
+          - generic [ref=e101]: 已開立發票
+          - table [ref=e103]:
+            - rowgroup [ref=e104]:
+              - row "發票號碼 金額 狀態" [ref=e105]:
+                - columnheader "發票號碼" [ref=e106]
+                - columnheader "金額" [ref=e107]
+                - columnheader "狀態" [ref=e108]
+            - rowgroup [ref=e109]:
+              - row "EI-202604-0001 $13,650 草稿" [ref=e110]:
+                - cell "EI-202604-0001" [ref=e111]:
+                  - link "EI-202604-0001" [ref=e112] [cursor=pointer]:
+                    - /url: /Einvoice/Details/2
+                - cell "$13,650" [ref=e113]
+                - cell "草稿" [ref=e114]:
+                  - generic [ref=e115]: 草稿
+        - generic [ref=e116]:
+          - generic [ref=e117]: 金額摘要
+          - generic [ref=e119]:
+            - term [ref=e120]: 設備數量
+            - definition [ref=e121]: 1 台
+            - term [ref=e122]: 月租費合計
+            - definition [ref=e123]: $1,000
+            - term [ref=e124]: 張數費合計
+            - definition [ref=e125]: $12,000
+            - term [ref=e126]: 小計
+            - definition [ref=e127]: $13,000
+            - term [ref=e128]: 總計
+            - definition [ref=e129]:
+              - strong [ref=e130]: $13,000
+  - contentinfo [ref=e131]:
+    - generic [ref=e132]: © 2026 - 印表機雲端抄表系統

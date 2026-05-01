@@ -1,0 +1,100 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "客戶端狀態" [ref=e17] [cursor=pointer]:
+                - /url: /ClientStatus
+            - listitem [ref=e18]:
+              - link "派工管理" [ref=e19] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e20]:
+              - button "計費系統" [ref=e21] [cursor=pointer]
+            - listitem [ref=e22]:
+              - link "發票系統" [ref=e23] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e24]:
+              - button "系統設定" [ref=e25] [cursor=pointer]
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: 系統管員
+              - generic [ref=e28]: 系統管理員
+            - button "登出" [ref=e30] [cursor=pointer]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - heading "開立派工單" [level=2] [ref=e34]
+      - link "返回列表" [ref=e35] [cursor=pointer]:
+        - /url: /WorkOrder
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 基本資訊
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - generic [ref=e43]: 標題 *
+                - textbox "請輸入派工標題" [ref=e44]
+              - generic [ref=e45]:
+                - generic [ref=e46]: 問題描述
+                - textbox "請詳細描述問題或需求..." [ref=e47]
+              - generic [ref=e48]:
+                - generic [ref=e49]: 預計到場時間
+                - textbox [ref=e50]
+          - generic [ref=e51]:
+            - generic [ref=e52]: 指派資訊
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - generic [ref=e56]: 客戶
+                - combobox [ref=e57]:
+                  - option "請選擇客戶" [selected]
+                  - option "台積電"
+                - generic [ref=e59] [cursor=pointer]:
+                  - generic [ref=e60]: 請選擇客戶
+                  - combobox [ref=e61]
+              - generic [ref=e62]:
+                - generic [ref=e63]: 廠牌篩選
+                - combobox [ref=e64]:
+                  - option "全部廠牌" [selected]
+                  - option "Ricoh"
+              - generic [ref=e65]:
+                - generic [ref=e66]: 型號篩選
+                - combobox [ref=e67]:
+                  - option "全部型號" [selected]
+              - generic [ref=e68]:
+                - generic [ref=e69]: 事務機（可多選）
+                - listbox [ref=e70]
+                - combobox "請選擇事務機" [ref=e73]
+              - generic [ref=e74]:
+                - generic [ref=e75]: 指派人員（可多選）
+                - listbox [ref=e76]:
+                  - option "staff" [ref=e77]
+                  - option "系統管員" [ref=e78]
+                - combobox "請選擇人員" [ref=e81]
+        - generic [ref=e83]:
+          - generic [ref=e84]: 上傳圖片
+          - generic [ref=e85]:
+            - paragraph [ref=e86]: 支援 JPG、PNG、GIF、WebP 格式
+            - button "📷 選擇或拍照上傳" [ref=e87] [cursor=pointer]
+            - textbox "圖片說明（選填，套用到所有圖片）" [ref=e88]
+      - generic [ref=e89]:
+        - button "開立派工單" [ref=e90] [cursor=pointer]
+        - link "取消" [ref=e91] [cursor=pointer]:
+          - /url: /WorkOrder
+  - contentinfo [ref=e92]:
+    - generic [ref=e93]: © 2026 - 印表機雲端抄表系統

@@ -1,0 +1,696 @@
+@model printer.Data.Entities.Printer
+@{
+    ViewData["Title"] = "事務機詳情";
+}
+
+@{
+    var fieldChecks = new[] {
+        (Label: "名稱", Done: !string.IsNullOrEmpty(Model.Name)),
+        (Label: "客戶", Done: Model.PartnerId.HasValue),
+        (Label: "廠牌", Done: Model.BrandId.HasValue),
+        (Label: "型號", Done: Model.ModelId.HasValue),
+        (Label: "序號", Done: !string.IsNullOrEmpty(Model.SerialNumber)),
+        (Label: "IP", Done: !string.IsNullOrEmpty(Model.Ip)),
+        (Label: "MAC", Done: !string.IsNullOrEmpty(Model.Mac)),
+        (Label: "印表機名稱", Done: !string.IsNullOrEmpty(Model.PrinterName)),
+        (Label: "合約開始", Done: Model.ContractStartDate.HasValue),
+        (Label: "合約結束", Done: Model.ContractEndDate.HasValue),
+        (Label: "押金", Done: Model.Deposit.HasValue),
+    };
+    var filled = fieldChecks.Count(f => f.Done);
+    var totalFields = fieldChecks.Length;
+    var pct = (int)Math.Round((double)filled / totalFields * 100);
+    var pctClass = pct >= 80 ? "bg-success" : pct >= 50 ? "bg-warning" : "bg-danger";
+    var missing = fieldChecks.Where(f => !f.Done).Select(f => f.Label).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <h4 class="mb-0">事務機詳情</h4>
+        <div class="d-flex align-items-center gap-2" style="min-width:200px;">
+            <div class="progress flex-grow-1" style="height:12px;" title="已填 @filled / @totalFields 項">
+                <div class="progress-bar @pctClass" style="width:@pct%">@pct%</div>
+            </div>
+            @if (missing.Any())
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover" data-bs-trigger="focus"
+                        data-bs-html="true" data-bs-placement="bottom"
+                        data-bs-title="未填寫欄位 (@missing.Count)"
+                        data-bs-content="@string.Join("", missing.Select(m => "<span class='badge bg-danger me-1 mb-1'>" + m + "</span>"))">
+                    @filled/@totalFields
+                </button>
+            }
+            else
+            {
+                <span class="badge bg-success">完整</span>
+            }
+        </div>
+    </div>
+    <div id="viewActions" class="gap-2" style="display:flex;">
+        <button type="button" class="btn btn-warning btn-sm" onclick="toggleEdit(true)">編輯</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+    <div id="editActions" class="gap-2" style="display:none;">
+        <button type="submit" form="editForm" class="btn btn-success btn-sm">儲存變更</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleEdit(false)">取消</button>
+    </div>
+</div>
+
+<form asp-action="Edit" method="post" id="editForm">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" name="returnTo" value="Details" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">基本資料</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">代碼</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Code</span>
+                            <input asp-for="Code" class="form-control form-control-sm edit-mode" style="display:none" required />
+                        </dd>
+                        <dt class="col-sm-4">名稱</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Name</span>
+                            <input asp-for="Name" class="form-control form-control-sm edit-mode" style="display:none" required />
+                        </dd>
+                        <dt class="col-sm-4">客戶</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Partner?.Name</span>
+                            <select asp-for="PartnerId" id="partnerSelect" class="form-select form-select-sm edit-mode" style="display:none" asp-items="@ViewBag.Partners">
+                                <option value="">請選擇</option>
+                            </select>
+                        </dd>
+                        <dt class="col-sm-4">廠牌</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Brand?.Name</span>
+                            <select asp-for="BrandId" id="detailBrandSelect" class="form-select form-select-sm edit-mode" style="display:none" asp-items="@ViewBag.Brands">
+                                <option value="">請選擇</option>
+                            </select>
+                        </dd>
+                        <dt class="col-sm-4">型號</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@(Model.Model != null ? $"{Model.Model.Brand?.Name} {Model.Model.Name}" : "")</span>
+                            <select asp-for="ModelId" id="detailModelSelect" class="form-select form-select-sm edit-mode" style="display:none">
+                                <option value="">請選擇</option>
+                            </select>
+                        </dd>
+                        <dt class="col-sm-4">序號</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.SerialNumber</span>
+                            <input asp-for="SerialNumber" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">客戶編號</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.PartnerNumber</span>
+                            <input asp-for="PartnerNumber" id="partnerNumberInput" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">啟用</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">
+                                <span class="badge @(Model.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(Model.IsActive ? "啟用" : "停用")
+                                </span>
+                            </span>
+                            <div class="form-check edit-mode" style="display:none">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label" asp-for="IsActive">啟用</label>
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">網路資訊</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">IP 位址</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Ip</span>
+                            <input asp-for="Ip" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">MAC 位址</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Mac</span>
+                            <input asp-for="Mac" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                        <dt class="col-sm-4">印表機名稱</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.PrinterName</span>
+                            <input asp-for="PrinterName" class="form-control form-control-sm edit-mode" style="display:none" />
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">合約資訊</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">合約開始日期</dt>
+                <dd class="col-sm-3">
+                    <span class="view-mode">@Model.ContractStartDate?.ToString("yyyy-MM-dd")</span>
+                    <input asp-for="ContractStartDate" type="date" class="form-control form-control-sm edit-mode" style="display:none" />
+                </dd>
+                <dt class="col-sm-3">合約結束日期</dt>
+                <dd class="col-sm-3">
+                    <span class="view-mode">
+                        @Model.ContractEndDate?.ToString("yyyy-MM-dd")
+                        @if (Model.ContractStatus == "expired")
+                        {
+                            <span class="badge bg-danger ms-1">已到期</span>
+                        }
+                        else if (Model.ContractStatus == "expiring")
+                        {
+                            <span class="badge bg-warning text-dark ms-1">即將到期</span>
+                        }
+                    </span>
+                    <input asp-for="ContractEndDate" type="date" class="form-control form-control-sm edit-mode" style="display:none" />
+                </dd>
+                <dt class="col-sm-3">押金</dt>
+                <dd class="col-sm-3">
+                    <span class="view-mode">@(Model.Deposit.HasValue ? Model.Deposit.Value.ToString("N0") : "")</span>
+                    <div class="input-group input-group-sm edit-mode" style="display:none">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="Deposit" class="form-control" type="number" step="1" min="0" />
+                    </div>
+                </dd>
+                <dt class="col-sm-3">到期前通知天數</dt>
+                <dd class="col-sm-3">
+                    <span class="view-mode">@Model.ContractAlertDays 天</span>
+                    <input asp-for="ContractAlertDays" type="number" class="form-control form-control-sm edit-mode" style="display:none" min="0" />
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">說明</div>
+        <div class="card-body">
+            <span class="view-mode">@(string.IsNullOrEmpty(Model.Description) ? "無" : Model.Description)</span>
+            <textarea asp-for="Description" class="form-control edit-mode" rows="3" style="display:none"></textarea>
+        </div>
+    </div>
+
+@{
+    // 碳粉低於閾值判斷
+    var tBlackLow = Model.TonerBlack.HasValue && Model.TonerBlack < Model.TonerBlackAlertThreshold;
+    var tCyanLow = Model.TonerCyan.HasValue && Model.TonerCyan < Model.TonerCyanAlertThreshold;
+    var tMagentaLow = Model.TonerMagenta.HasValue && Model.TonerMagenta < Model.TonerMagentaAlertThreshold;
+    var tYellowLow = Model.TonerYellow.HasValue && Model.TonerYellow < Model.TonerYellowAlertThreshold;
+    var dBlackLow = Model.DrumBlack.HasValue && Model.DrumBlack < Model.DrumBlackAlertThreshold;
+    var dCyanLow = Model.DrumCyan.HasValue && Model.DrumCyan < Model.DrumCyanAlertThreshold;
+    var dMagentaLow = Model.DrumMagenta.HasValue && Model.DrumMagenta < Model.DrumMagentaAlertThreshold;
+    var dYellowLow = Model.DrumYellow.HasValue && Model.DrumYellow < Model.DrumYellowAlertThreshold;
+}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>耗材狀態</span>
+        @if (Model.HasLowSupply)
+        {
+            <span class="badge bg-danger">耗材不足</span>
+        }
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- 碳粉狀態 -->
+            <div class="col-md-6">
+                <div class="d-flex align-items-center mb-2">
+                    <h6 class="text-muted mb-0 flex-grow-1">碳粉</h6>
+                    <h6 class="text-muted mb-0 view-mode" style="min-width:48px;text-align:center;">告警</h6>
+                    <h6 class="text-muted mb-0 edit-mode" style="display:none;min-width:90px;text-align:center;">告警</h6>
+                </div>
+                @{ var tonerItems = new[] {
+                    (Name: "黑色", Value: Model.TonerBlack, Threshold: Model.TonerBlackAlertThreshold, Low: tBlackLow, Bar: tBlackLow ? "bg-danger" : "bg-dark", For: "TonerBlackAlertThreshold"),
+                    (Name: "青色", Value: Model.TonerCyan, Threshold: Model.TonerCyanAlertThreshold, Low: tCyanLow, Bar: tCyanLow ? "bg-danger" : "bg-info", For: "TonerCyanAlertThreshold"),
+                    (Name: "洋紅", Value: Model.TonerMagenta, Threshold: Model.TonerMagentaAlertThreshold, Low: tMagentaLow, Bar: tMagentaLow ? "bg-danger" : "bg-primary", For: "TonerMagentaAlertThreshold"),
+                    (Name: "黃色", Value: Model.TonerYellow, Threshold: Model.TonerYellowAlertThreshold, Low: tYellowLow, Bar: tYellowLow ? "bg-danger" : "bg-warning", For: "TonerYellowAlertThreshold"),
+                }; }
+                @foreach (var t in tonerItems)
+                {
+                    <div class="d-flex align-items-center mb-2 @(t.Low ? "border-start border-danger border-3 ps-2" : "")">
+                        <small class="@(t.Low ? "text-danger fw-bold" : "text-muted")" style="min-width:50px;">
+                            @if (t.Low) { <span title="低於告警值">&#9888; </span> }@t.Name
+                        </small>
+                        <div class="progress flex-grow-1 mx-2" style="height:14px;">
+                            <div class="progress-bar @t.Bar" style="width: @(t.Value ?? 0)%">@(t.Value ?? 0)%</div>
+                        </div>
+                        <small class="view-mode @(t.Low ? "text-danger fw-bold" : "text-muted")" style="min-width:48px;text-align:center;">@(t.Threshold)%</small>
+                        <div class="input-group input-group-sm edit-mode" style="display:none;width:90px;">
+                            <input name="@t.For" value="@t.Threshold" class="form-control" type="number" min="0" max="100" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                }
+            </div>
+            <!-- 感光鼓狀態 -->
+            <div class="col-md-6">
+                <div class="d-flex align-items-center mb-2">
+                    <h6 class="text-muted mb-0 flex-grow-1">感光鼓</h6>
+                    <h6 class="text-muted mb-0 view-mode" style="min-width:48px;text-align:center;">告警</h6>
+                    <h6 class="text-muted mb-0 edit-mode" style="display:none;min-width:90px;text-align:center;">告警</h6>
+                </div>
+                @{ var drumItems = new[] {
+                    (Name: "黑色", Value: Model.DrumBlack, Threshold: Model.DrumBlackAlertThreshold, Low: dBlackLow, Bar: dBlackLow ? "bg-danger" : "bg-dark", For: "DrumBlackAlertThreshold"),
+                    (Name: "青色", Value: Model.DrumCyan, Threshold: Model.DrumCyanAlertThreshold, Low: dCyanLow, Bar: dCyanLow ? "bg-danger" : "bg-info", For: "DrumCyanAlertThreshold"),
+                    (Name: "洋紅", Value: Model.DrumMagenta, Threshold: Model.DrumMagentaAlertThreshold, Low: dMagentaLow, Bar: dMagentaLow ? "bg-danger" : "bg-primary", For: "DrumMagentaAlertThreshold"),
+                    (Name: "黃色", Value: Model.DrumYellow, Threshold: Model.DrumYellowAlertThreshold, Low: dYellowLow, Bar: dYellowLow ? "bg-danger" : "bg-warning", For: "DrumYellowAlertThreshold"),
+                }; }
+                @foreach (var d in drumItems)
+                {
+                    <div class="d-flex align-items-center mb-2 @(d.Low ? "border-start border-danger border-3 ps-2" : "")">
+                        <small class="@(d.Low ? "text-danger fw-bold" : "text-muted")" style="min-width:50px;">
+                            @if (d.Low) { <span title="低於告警值">&#9888; </span> }@d.Name
+                        </small>
+                        <div class="progress flex-grow-1 mx-2" style="height:14px;">
+                            <div class="progress-bar @d.Bar" style="width: @(d.Value ?? 0)%">@(d.Value ?? 0)%</div>
+                        </div>
+                        <small class="view-mode @(d.Low ? "text-danger fw-bold" : "text-muted")" style="min-width:48px;text-align:center;">@(d.Threshold)%</small>
+                        <div class="input-group input-group-sm edit-mode" style="display:none;width:90px;">
+                            <input name="@d.For" value="@d.Threshold" class="form-control" type="number" min="0" max="100" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+
+@if (ViewBag.BillingEnabled == true)
+{
+    var config = ViewBag.BillingConfig as printer.Data.Entities.PrinterBillingConfig;
+    var sheetPrices = ViewBag.SheetPrices as List<printer.Data.Entities.PrinterBillingSheetPrice> ?? new List<printer.Data.Entities.PrinterBillingSheetPrice>();
+    var sheetTiers = ViewBag.SheetTiers as List<printer.Data.Entities.PrinterBillingSheetTier> ?? new List<printer.Data.Entities.PrinterBillingSheetTier>();
+    var tiersByType = sheetTiers.GroupBy(t => t.SheetTypeId).ToDictionary(g => g.Key, g => g.ToList());
+
+    // 僅在計費啟用時顯示整個區塊；尚未設定或停用則完全不渲染
+    if (config != null && config.IsEnabled)
+    {
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>計費方式</span>
+            <a asp-controller="BillingConfig" asp-action="Edit" asp-route-printerId="@Model.Id" class="btn btn-sm btn-warning">編輯計費</a>
+        </div>
+        <div class="card-body">
+                <!-- 基本設定列 -->
+                <div class="row mb-3">
+                    @if (config.MonthlyFee > 0)
+                    {
+                        <div class="col-auto">
+                            <small class="text-muted">月租費</small>
+                            <strong class="ms-1">$@config.MonthlyFee.ToString("N0")</strong>
+                            <small class="text-muted ms-1">/ @config.MonthlyFeeCycle 個月</small>
+                        </div>
+                    }
+                    @if ((int)config.PageMethod > 0)
+                    {
+                        <div class="col-auto">
+                            <small class="text-muted">張數週期</small>
+                            <strong class="ms-1">@config.PageFeeCycle 個月</strong>
+                        </div>
+                    }
+                </div>
+
+                <!-- 張數類型定價 -->
+                @if (sheetPrices.Any())
+                {
+                    <table class="table table-sm table-bordered mb-2">
+                        <thead class="table-light">
+                            <tr>
+                                <th>張數類型</th>
+                                <th>單價</th>
+                                <th>誤印率</th>
+                                <th>贈送張數</th>
+                                <th>階梯</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sp in sheetPrices)
+                            {
+                                var hasTiers = tiersByType.TryGetValue(sp.SheetTypeId, out var tiers) && tiers!.Any();
+                                <tr>
+                                    <td class="fw-bold">@sp.SheetType?.Name</td>
+                                    <td>@(hasTiers ? "-" : $"${sp.UnitPrice:N4}")</td>
+                                    <td>@(sp.DiscountPercent > 0 ? $"{sp.DiscountPercent:N2}%" : "-")</td>
+                                    <td>@(sp.FreePages > 0 ? $"{sp.FreePages:N0} 張" : "-")</td>
+                                    <td>
+                                        @if (hasTiers)
+                                        {
+                                            <span class="badge bg-info text-dark">@tiers!.Count 階</span>
+                                            <div class="small text-muted mt-1">
+                                                @foreach (var tier in tiers!)
+                                                {
+                                                    var toStr = tier.ToPages.HasValue ? tier.ToPages.Value.ToString("N0") : "∞";
+                                                    <div>@tier.FromPages.ToString("N0")~@toStr 張：$@tier.Price.ToString("N4")</div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <small class="text-muted">計費張數 = 實際張數 × (1-誤印率%) - 贈送張數</small>
+                }
+                else
+                {
+                    <p class="text-muted small mb-2">尚未設定張數計費類型</p>
+                }
+
+                <!-- 日期資訊 -->
+                <hr class="my-2" />
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">月租起算</small>
+                        <span>@(config.MonthlyStartDate?.ToString("yyyy-MM-dd") ?? "-")</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">月租作帳</small>
+                        <span>@(config.LastMonthlyBilledDate?.ToString("yyyy-MM-dd") ?? "-")</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">張數起算</small>
+                        <span>@(config.PageStartDate?.ToString("yyyy-MM-dd") ?? "-")</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">張數作帳</small>
+                        <span>@(config.LastPageBilledDate?.ToString("yyyy-MM-dd") ?? "-")</span>
+                    </div>
+                </div>
+        </div>
+    </div>
+    } // end if (config != null && config.IsEnabled)
+}
+
+@if (ViewBag.BillingEnabled == true)
+{
+    var printerInvoices = ViewBag.PrinterInvoices as List<printer.Data.Entities.Invoice> ?? new List<printer.Data.Entities.Invoice>();
+    var invStatusNames = new Dictionary<string, (string Name, string Class)>
+    {
+        ["draft"]     = ("草稿",  "bg-secondary"),
+        ["confirmed"] = ("已確認","bg-primary"),
+        ["paid"]      = ("已付款","bg-success"),
+        ["cancelled"] = ("已取消","bg-danger"),
+    };
+    <div class="card mb-3">
+        <div class="card-header">帳單記錄</div>
+        <div class="card-body p-0">
+            @if (printerInvoices.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>帳單編號</th>
+                                <th>計費期間</th>
+                                <th>帳單日期</th>
+                                <th class="text-end">金額</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var inv in printerInvoices)
+                            {
+                                var s = invStatusNames.GetValueOrDefault(inv.Status, ("未知", "bg-secondary"));
+                                <tr>
+                                    <td><strong>@inv.InvoiceNumber</strong></td>
+                                    <td>@inv.PeriodStart.ToString("yyyy/MM/dd") ～ @inv.PeriodEnd.ToString("yyyy/MM/dd")</td>
+                                    <td>@inv.CreatedAt.ToString("yyyy/MM/dd")</td>
+                                    <td class="text-end">$@inv.GrandTotal.ToString("N0")</td>
+                                    <td><span class="badge @s.Item2">@s.Item1</span></td>
+                                    <td>
+                                        <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id"
+                                           class="btn btn-sm btn-outline-primary">查看</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-3 text-muted">尚無帳單記錄</div>
+            }
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">維護人員</div>
+    <div class="card-body">
+        @if (Model.Maintainers.Any())
+        {
+            <table class="table table-sm mb-3">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px"></th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="maintainerSortable">
+                    @foreach (var m in Model.Maintainers.OrderBy(x => x.SortOrder))
+                    {
+                        <tr data-id="@m.Id">
+                            <td class="drag-handle text-center text-muted" style="cursor:grab">&#x2630;</td>
+                            <td>@m.User?.DisplayName</td>
+                            <td>
+                                @if (m.Role == "primary")
+                                {
+                                    <span class="badge bg-primary">主要維護</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">支援</span>
+                                }
+                            </td>
+                            <td>
+                                <form asp-action="RemoveMaintainer" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@m.Id" />
+                                    <input type="hidden" name="printerId" value="@Model.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('確定移除？')">移除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted mb-3">尚未指定維護人員</p>
+        }
+
+        @{
+            var availableUsers = ViewBag.AvailableUsers as List<printer.Data.Entities.AppUser>;
+            var existingUserIds = Model.Maintainers.Select(m => m.UserId).ToHashSet();
+            var selectableUsers = availableUsers?.Where(u => !existingUserIds.Contains(u.Id)).ToList();
+        }
+        @if (selectableUsers != null && selectableUsers.Any())
+        {
+            <form asp-action="AddMaintainer" method="post" class="row g-2 align-items-end">
+                <input type="hidden" name="printerId" value="@Model.Id" />
+                <div class="col-md-4">
+                    <select name="userId" class="form-select form-select-sm" required>
+                        <option value="">選擇人員</option>
+                        @foreach (var u in selectableUsers)
+                        {
+                            <option value="@u.Id">@u.DisplayName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="role" class="form-select form-select-sm">
+                        <option value="primary">主要維護</option>
+                        <option value="support">支援</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-success w-100">建立</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">最近抄表記錄</div>
+            <div class="card-body">
+                @{
+                    var recordSheetTypes = ViewBag.RecordSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
+                }
+                @if (Model.PrintRecords.Any())
+                {
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                @if (recordSheetTypes.Count > 0)
+                                {
+                                    foreach (var st in recordSheetTypes)
+                                    {
+                                        <th class="text-end">@st.Name</th>
+                                    }
+                                }
+                                else
+                                {
+                                    <th class="text-end">黑白</th>
+                                    <th class="text-end">彩色</th>
+                                    <th class="text-end">大張</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.PrintRecords)
+                            {
+                                <tr>
+                                    <td>@r.Date.ToString("yyyy-MM-dd")</td>
+                                    @if (recordSheetTypes.Count > 0)
+                                    {
+                                        var valueByType = r.Values.ToDictionary(v => v.SheetTypeId, v => v.Value);
+                                        foreach (var st in recordSheetTypes)
+                                        {
+                                            <td class="text-end">@(valueByType.TryGetValue(st.Id, out var v) ? v.ToString("N0") : "—")</td>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <td class="text-end">@r.BlackSheets.ToString("N0")</td>
+                                        <td class="text-end">@r.ColorSheets.ToString("N0")</td>
+                                        <td class="text-end">@r.LargeSheets.ToString("N0")</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">無記錄</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">告警記錄</div>
+            <div class="card-body">
+                @if (Model.AlertRecords.Any())
+                {
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>代碼</th>
+                                <th>訊息</th>
+                                <th>狀態</th>
+                                <th>時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in Model.AlertRecords)
+                            {
+                                <tr>
+                                    <td>@a.Code</td>
+                                    <td>@a.Message</td>
+                                    <td>
+                                        <span class="badge @(a.State == "resolved" ? "bg-success" : a.State == "error" ? "bg-danger" : "bg-warning")">
+                                            @a.State
+                                        </span>
+                                    </td>
+                                    <td>@a.CreatedAt.ToString("MM-dd HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">無告警</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var el = document.getElementById('maintainerSortable');
+        if (el) {
+            Sortable.create(el, {
+                animation: 150,
+                handle: '.drag-handle',
+                onEnd: function() {
+                    var ids = Array.from(el.querySelectorAll('tr[data-id]'))
+                                 .map(function(tr) { return parseInt(tr.dataset.id); });
+                    fetch('@Url.Action("ReorderMaintainers", "Printer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(ids)
+                    });
+                }
+            });
+        }
+    });
+
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+        new bootstrap.Popover(el);
+    });
+
+    var partnerNumbers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.PartnerNumbers as Dictionary<string, string> ?? new Dictionary<string, string>()));
+    var allModels = @Html.Raw(ViewBag.ModelsJson ?? "[]");
+    var currentModelId = @(Model.ModelId.HasValue ? Model.ModelId.Value.ToString() : "null");
+    var initBrandId = @(Model.BrandId.HasValue ? Model.BrandId.Value.ToString() : "null");
+
+    document.getElementById('partnerSelect').addEventListener('change', function() {
+        var pn = partnerNumbers[this.value] || '';
+        document.getElementById('partnerNumberInput').value = pn;
+    });
+
+    function filterDetailModels(brandId) {
+        var sel = document.getElementById('detailModelSelect');
+        sel.innerHTML = '<option value="">請選擇</option>';
+        var filtered = brandId ? allModels.filter(m => m.brandId === brandId) : allModels;
+        filtered.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.id;
+            opt.text = m.name;
+            if (currentModelId !== null && m.id === currentModelId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        filterDetailModels(initBrandId);
+
+        document.getElementById('detailBrandSelect').addEventListener('change', function() {
+            filterDetailModels(this.value ? parseInt(this.value) : null);
+        });
+    });
+
+    function toggleEdit(editing) {
+        document.querySelectorAll('.view-mode').forEach(function (el) { el.style.display = editing ? 'none' : ''; });
+        document.querySelectorAll('.edit-mode').forEach(function (el) { el.style.display = editing ? '' : 'none'; });
+        document.getElementById('viewActions').style.display = editing ? 'none' : 'flex';
+        document.getElementById('editActions').style.display = editing ? 'flex' : 'none';
+    }
+</script>
+}

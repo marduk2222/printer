@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "帳單管理" [level=4] [ref=e32]
+      - generic [ref=e33]:
+        - link "建立帳單" [ref=e34] [cursor=pointer]:
+          - /url: /Invoice/Create
+        - link "更改帳單風格" [ref=e35] [cursor=pointer]:
+          - /url: /InvoicePrintSettings
+          - text: 更改帳單風格
+    - generic [ref=e36]:
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - strong [ref=e40]: 💵 未付帳單 (3)
+          - generic [ref=e41]: 待收款
+        - table [ref=e44]:
+          - rowgroup [ref=e45]:
+            - row "帳單編號 客戶 金額 狀態 操作" [ref=e46]:
+              - columnheader "帳單編號" [ref=e47]
+              - columnheader "客戶" [ref=e48]
+              - columnheader "金額" [ref=e49]
+              - columnheader "狀態" [ref=e50]
+              - columnheader "操作" [ref=e51]
+          - rowgroup [ref=e52]:
+            - row "INV-202603-002 2026-03-23 台積電 $1,000 已確認 查看" [ref=e53]:
+              - cell "INV-202603-002 2026-03-23" [ref=e54]:
+                - strong [ref=e55]: INV-202603-002
+                - text: 2026-03-23
+              - cell "台積電" [ref=e56]
+              - cell "$1,000" [ref=e57]
+              - cell "已確認" [ref=e58]:
+                - generic [ref=e59]: 已確認
+              - cell "查看" [ref=e60]:
+                - link "查看" [ref=e61] [cursor=pointer]:
+                  - /url: /Invoice/Details/2
+            - row "INV-202603-003 2026-03-23 台積電 $7,400 草稿 查看" [ref=e62]:
+              - cell "INV-202603-003 2026-03-23" [ref=e63]:
+                - strong [ref=e64]: INV-202603-003
+                - text: 2026-03-23
+              - cell "台積電" [ref=e65]
+              - cell "$7,400" [ref=e66]
+              - cell "草稿" [ref=e67]:
+                - generic [ref=e68]: 草稿
+              - cell "查看" [ref=e69]:
+                - link "查看" [ref=e70] [cursor=pointer]:
+                  - /url: /Invoice/Details/3
+            - row "INV-202601-001 2026-04-14 台積電 $13,000 已確認 查看" [ref=e71]:
+              - cell "INV-202601-001 2026-04-14" [ref=e72]:
+                - strong [ref=e73]: INV-202601-001
+                - text: 2026-04-14
+              - cell "台積電" [ref=e74]
+              - cell "$13,000" [ref=e75]
+              - cell "已確認" [ref=e76]:
+                - generic [ref=e77]: 已確認
+              - cell "查看" [ref=e78]:
+                - link "查看" [ref=e79] [cursor=pointer]:
+                  - /url: /Invoice/Details/4
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - strong [ref=e83]: 📋 近期帳單（1 筆，近 7 天）
+          - generic [ref=e84]:
+            - spinbutton [ref=e85]: "7"
+            - button "套用" [ref=e86] [cursor=pointer]
+        - table [ref=e89]:
+          - rowgroup [ref=e90]:
+            - row "帳單編號 客戶 金額 狀態 操作" [ref=e91]:
+              - columnheader "帳單編號" [ref=e92]
+              - columnheader "客戶" [ref=e93]
+              - columnheader "金額" [ref=e94]
+              - columnheader "狀態" [ref=e95]
+              - columnheader "操作" [ref=e96]
+          - rowgroup [ref=e97]:
+            - row "INV-202601-001 2026-04-14 台積電 $13,000 已確認 查看" [ref=e98]:
+              - cell "INV-202601-001 2026-04-14" [ref=e99]:
+                - strong [ref=e100]: INV-202601-001
+                - text: 2026-04-14
+              - cell "台積電" [ref=e101]
+              - cell "$13,000" [ref=e102]
+              - cell "已確認" [ref=e103]:
+                - generic [ref=e104]: 已確認
+              - cell "查看" [ref=e105]:
+                - link "查看" [ref=e106] [cursor=pointer]:
+                  - /url: /Invoice/Details/4
+    - generic [ref=e109]:
+      - generic [ref=e110]:
+        - generic [ref=e111]: 客戶
+        - combobox [ref=e112]:
+          - option "全部客戶" [selected]
+          - option "台積電"
+        - generic [ref=e114] [cursor=pointer]:
+          - generic [ref=e115]: 全部客戶
+          - combobox [ref=e116]
+      - generic [ref=e117]:
+        - generic [ref=e118]: 狀態
+        - combobox [ref=e119]:
+          - option "全部狀態" [selected]
+          - option "草稿"
+          - option "已確認"
+          - option "已付款"
+          - option "已取消"
+      - button "查詢" [ref=e121] [cursor=pointer]
+    - table [ref=e125]:
+      - rowgroup [ref=e126]:
+        - row "帳單編號 客戶 期間 金額 狀態 發票 建立時間 操作" [ref=e127]:
+          - columnheader "帳單編號" [ref=e128]
+          - columnheader "客戶" [ref=e129]
+          - columnheader "期間" [ref=e130]
+          - columnheader "金額" [ref=e131]
+          - columnheader "狀態" [ref=e132]
+          - columnheader "發票" [ref=e133]
+          - columnheader "建立時間" [ref=e134]
+          - columnheader "操作" [ref=e135]
+      - rowgroup [ref=e136]:
+        - row "INV-202603-001 台積電 2026/03/01 ~ 2026/03/31 $100 已取消 未開立 2026/03/23 16:58 檢視" [ref=e137]:
+          - cell "INV-202603-001" [ref=e138]:
+            - strong [ref=e139]: INV-202603-001
+          - cell "台積電" [ref=e140]
+          - cell "2026/03/01 ~ 2026/03/31" [ref=e141]
+          - cell "$100" [ref=e142]
+          - cell "已取消" [ref=e143]:
+            - generic [ref=e144]: 已取消
+          - cell "未開立" [ref=e145]
+          - cell "2026/03/23 16:58" [ref=e146]
+          - cell "檢視" [ref=e147]:
+            - link "檢視" [ref=e148] [cursor=pointer]:
+              - /url: /Invoice/Details/1
+        - row "INV-202603-002 台積電 2026/03/01 ~ 2026/03/31 $1,000 已確認 EI-202603-0001 (草稿) 2026/03/23 19:12 檢視" [ref=e149]:
+          - cell "INV-202603-002" [ref=e150]:
+            - strong [ref=e151]: INV-202603-002
+          - cell "台積電" [ref=e152]
+          - cell "2026/03/01 ~ 2026/03/31" [ref=e153]
+          - cell "$1,000" [ref=e154]
+          - cell "已確認" [ref=e155]:
+            - generic [ref=e156]: 已確認
+          - cell "EI-202603-0001 (草稿)" [ref=e157]:
+            - link "EI-202603-0001 (草稿)" [ref=e158] [cursor=pointer]:
+              - /url: /Einvoice/Details/1
+          - cell "2026/03/23 19:12" [ref=e159]
+          - cell "檢視" [ref=e160]:
+            - link "檢視" [ref=e161] [cursor=pointer]:
+              - /url: /Invoice/Details/2
+        - row "INV-202603-003 台積電 2026/03/01 ~ 2026/03/31 $7,400 草稿 未開立 2026/03/23 19:21 檢視" [ref=e162]:
+          - cell "INV-202603-003" [ref=e163]:
+            - strong [ref=e164]: INV-202603-003
+          - cell "台積電" [ref=e165]
+          - cell "2026/03/01 ~ 2026/03/31" [ref=e166]
+          - cell "$7,400" [ref=e167]
+          - cell "草稿" [ref=e168]:
+            - generic [ref=e169]: 草稿
+          - cell "未開立" [ref=e170]
+          - cell "2026/03/23 19:21" [ref=e171]
+          - cell "檢視" [ref=e172]:
+            - link "檢視" [ref=e173] [cursor=pointer]:
+              - /url: /Invoice/Details/3
+        - row "INV-202601-001 台積電 2026/01/01 ~ 2026/03/31 $13,000 已確認 EI-202604-0001 (草稿) 2026/04/14 10:45 檢視" [ref=e174]:
+          - cell "INV-202601-001" [ref=e175]:
+            - strong [ref=e176]: INV-202601-001
+          - cell "台積電" [ref=e177]
+          - cell "2026/01/01 ~ 2026/03/31" [ref=e178]
+          - cell "$13,000" [ref=e179]
+          - cell "已確認" [ref=e180]:
+            - generic [ref=e181]: 已確認
+          - cell "EI-202604-0001 (草稿)" [ref=e182]:
+            - link "EI-202604-0001 (草稿)" [ref=e183] [cursor=pointer]:
+              - /url: /Einvoice/Details/2
+          - cell "2026/04/14 10:45" [ref=e184]
+          - cell "檢視" [ref=e185]:
+            - link "檢視" [ref=e186] [cursor=pointer]:
+              - /url: /Invoice/Details/4
+  - contentinfo [ref=e187]:
+    - generic [ref=e188]: © 2026 - 印表機雲端抄表系統

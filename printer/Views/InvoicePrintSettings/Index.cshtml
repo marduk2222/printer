@@ -1,0 +1,752 @@
+@model printer.Data.Entities.InvoicePrintSettings
+@{
+    ViewData["Title"] = "帳單列印設定";
+
+    // IsBasic=true → 計費系統內建 3 款；IsBasic=false → 帳單風格模組 27 款
+    var templates = new[]
+    {
+        // ── 計費系統內建 3 款 ──
+        new { Code = "classic",       Name = "經典專業版",   Desc = "深綠色調，商務正式風格",     Color = "#1e6b45", IsBasic = true },
+        new { Code = "modern",        Name = "現代簡約版",   Desc = "藍色調，簡潔現代風格",       Color = "#1d4ed8", IsBasic = true },
+        new { Code = "traditional",   Name = "傳統正式版",   Desc = "黑白，台灣傳統商業文件",     Color = "#333333", IsBasic = true },
+        // ── 帳單風格模組 27 款 ──
+        new { Code = "elegant",       Name = "高端優雅版",   Desc = "深紫色調，高端奢華風格",     Color = "#7c3aed", IsBasic = false },
+        new { Code = "corporate",     Name = "企業標準版",   Desc = "深藍海軍，嚴肅企業風格",     Color = "#1e3a5f", IsBasic = false },
+        new { Code = "minimal",       Name = "極簡主義版",   Desc = "純黑白，Typography 為主",    Color = "#111111", IsBasic = false },
+        new { Code = "warm",          Name = "親切溫暖版",   Desc = "橙色系，友善親切風格",       Color = "#ea580c", IsBasic = false },
+        new { Code = "tech",          Name = "科技深色版",   Desc = "深色主題，科技感十足",       Color = "#0f172a", IsBasic = false },
+        new { Code = "nature",        Name = "自然清新版",   Desc = "森林綠，環保自然風格",       Color = "#166534", IsBasic = false },
+        new { Code = "luxury",        Name = "金色奢華版",   Desc = "金色配深棕，頂級質感",       Color = "#b45309", IsBasic = false },
+        new { Code = "compact",       Name = "緊湊商務版",   Desc = "石板藍，多項目緊湊排版",     Color = "#475569", IsBasic = false },
+        new { Code = "colorful",      Name = "活潑彩色版",   Desc = "紫粉漸層，創意設計風格",     Color = "#6366f1", IsBasic = false },
+        new { Code = "retro",         Name = "復古典雅版",   Desc = "棕色復古，經典文件風格",     Color = "#92400e", IsBasic = false },
+        new { Code = "ocean",         Name = "海洋清爽版",   Desc = "藍青色系，清新海洋風格",     Color = "#0e7490", IsBasic = false },
+        new { Code = "sunset",        Name = "夕陽暖紅版",   Desc = "暖紅橙色，活力熱情風格",     Color = "#c2410c", IsBasic = false },
+        new { Code = "scandinavian",  Name = "北歐極簡版",   Desc = "米沙白底，極度簡潔俐落",     Color = "#2d2d2d", IsBasic = false },
+        new { Code = "japanese",      Name = "日式禪風版",   Desc = "白底墨色，朱紅點綴",         Color = "#c0392b", IsBasic = false },
+        new { Code = "mediterranean", Name = "地中海版",     Desc = "藍白漸層，陽光地中海感",     Color = "#2980b9", IsBasic = false },
+        new { Code = "cyberpunk",     Name = "賽博龐克版",   Desc = "霓虹綠光，深黑科幻風格",     Color = "#00c770", IsBasic = false },
+        new { Code = "marble",        Name = "大理石版",     Desc = "石紋底色，金線點綴奢華",     Color = "#c9a84c", IsBasic = false },
+        new { Code = "arctic",        Name = "北極冰藍版",   Desc = "冰藍漸層，清透冰凜感",       Color = "#0284c7", IsBasic = false },
+        new { Code = "rose",          Name = "玫瑰粉版",     Desc = "粉紅色調，時尚優雅設計",     Color = "#be185d", IsBasic = false },
+        new { Code = "slate",         Name = "煤灰岩版",     Desc = "深煤灰底色，俐落工業風",     Color = "#334155", IsBasic = false },
+        new { Code = "teal",          Name = "深青綠版",     Desc = "青綠漸層，精緻現代感",       Color = "#0d9488", IsBasic = false },
+        new { Code = "crimson",       Name = "深紅莊嚴版",   Desc = "深紅主色，莊嚴高貴設計",     Color = "#7f1d1d", IsBasic = false },
+        new { Code = "silver",        Name = "銀色科技版",   Desc = "金屬銀漸層，科技質感",       Color = "#94a3b8", IsBasic = false },
+        new { Code = "lavender",      Name = "薰衣草版",     Desc = "紫色漸層，柔和優雅氣質",     Color = "#7c3aed", IsBasic = false },
+        new { Code = "midnight",      Name = "午夜深藍版",   Desc = "深邃星空藍，神秘沉穩感",     Color = "#4338ca", IsBasic = false },
+        new { Code = "emerald",       Name = "翡翠綠版",     Desc = "翡翠深綠，清透晶瑩光感",     Color = "#059669", IsBasic = false },
+        new { Code = "amber",         Name = "琥珀金版",     Desc = "琥珀橙黃，溫暖奢華氣息",     Color = "#d97706", IsBasic = false },
+    };
+
+    // 帳單風格模組 30 款（billingstyle 模組啟用時顯示）
+    var moduleTemplates = new[]
+    {
+        // ── 色系風格 7 款 ──
+        new { Code = "elegant",      Name = "高端優雅版",       Desc = "深紫色調，高端奢華風格",           Color = "#7c3aed" },
+        new { Code = "corporate",    Name = "企業標準版",       Desc = "深藍海軍，嚴肅企業風格",           Color = "#1e3a5f" },
+        new { Code = "minimal",      Name = "極簡主義版",       Desc = "純黑白，Typography 為主",          Color = "#111111" },
+        new { Code = "gradient",     Name = "漸層橫幅版",       Desc = "漸層色彩頁首，現代視覺張力",       Color = "#6d28d9" },
+        new { Code = "colorful",     Name = "活潑彩色版",       Desc = "紫粉漸層，創意設計風格",           Color = "#6366f1" },
+        new { Code = "japanese",     Name = "日式禪風版",       Desc = "白底墨色，朱紅點綴",               Color = "#c0392b" },
+        new { Code = "retro",        Name = "復古典雅版",       Desc = "棕色復古，經典文件風格",           Color = "#92400e" },
+        // ── 版面格式 23 款 ──
+        new { Code = "bigheader",    Name = "大型頁首式",       Desc = "滿版色塊頁首，公司名大字疊印",     Color = "#1d4ed8" },
+        new { Code = "rightbar",     Name = "右側欄式",         Desc = "右側固定欄放公司資訊",             Color = "#0891b2" },
+        new { Code = "split",        Name = "雙欄分割式",       Desc = "頂部雙欄資訊面板",                 Color = "#059669" },
+        new { Code = "landscape",    Name = "橫式三欄式",       Desc = "橫向 A4，頁首三欄佈局",           Color = "#0369a1" },
+        new { Code = "twostub",      Name = "雙存根式",         Desc = "含上下撕除存根的帳單格式",         Color = "#0369a1" },
+        new { Code = "card",         Name = "卡片區塊式",       Desc = "各區塊卡片化，立體層次感",         Color = "#0891b2" },
+        new { Code = "report",       Name = "報表標題式",       Desc = "類報表格式，橫幅標題列",           Color = "#1e40af" },
+        new { Code = "tabular",      Name = "全表格式",         Desc = "純表格結構，類試算表樣式",         Color = "#047857" },
+        new { Code = "dark",         Name = "深色主題式",       Desc = "深色底色，全黑暗模式帳單",         Color = "#38bdf8" },
+        new { Code = "stacked",      Name = "堆疊橫條式",       Desc = "各區域以橫條堆疊排版",             Color = "#0f766e" },
+        new { Code = "formal",       Name = "公文正式式",       Desc = "頂部格欄，嚴格公文格式",           Color = "#1a1a1a" },
+        new { Code = "lines",        Name = "線條分隔式",       Desc = "以線條作為主要分隔元素",           Color = "#374151" },
+        new { Code = "mono",         Name = "等寬字體式",       Desc = "ASCII 風格，等寬字體呈現",         Color = "#16a34a" },
+        new { Code = "frame",        Name = "雙邊框式",         Desc = "雙線邊框裝飾整頁邊緣",             Color = "#b45309" },
+        new { Code = "gridtop",      Name = "頂部格線式",       Desc = "頂部資訊以格線整齊呈現",           Color = "#7c3aed" },
+        new { Code = "serif",        Name = "襯線字體式",       Desc = "Serif 字體，出版物精緻風格",       Color = "#6d28d9" },
+        new { Code = "dense",        Name = "緊湊行式",         Desc = "頁首緊湊一行，最大化資訊密度",     Color = "#dc2626" },
+        new { Code = "accent",       Name = "強調色帶式",       Desc = "以色帶作為視覺強調元素",           Color = "#0891b2" },
+        new { Code = "swiss",        Name = "瑞士格線式",       Desc = "三欄格線頁首，Swiss 設計風",       Color = "#dc2626" },
+        new { Code = "stamp",        Name = "印章認證式",       Desc = "含印章元素的正式認證帳單",         Color = "#be123c" },
+        new { Code = "invoicefirst", Name = "帳單資訊優先式",   Desc = "帳單號碼放最顯眼核心位置",         Color = "#9333ea" },
+        new { Code = "hero",         Name = "英雄區塊式",       Desc = "全幅大圖頁首英雄區塊",             Color = "#7c3aed" },
+        new { Code = "centered",     Name = "置中標題式",       Desc = "標題置中，資訊對稱排列",           Color = "#2563eb" },
+    };
+
+    // 簽名版模組 12 款（含客戶簽名 + 承辦人員簽名欄位）
+    var signTemplates = new[]
+    {
+        new { Code = "sign-formal",      Name = "正式雙簽版",     Desc = "經典正式風格，雙簽名欄位",         Color = "#1e3a5f" },
+        new { Code = "sign-contract",    Name = "合約簽署版",     Desc = "甲乙方合約格式 + 公司印鑑",        Color = "#1a1a1a" },
+        new { Code = "sign-delivery",    Name = "送件簽收版",     Desc = "寄/收/簽收三方欄位 + 確認語",      Color = "#0369a1" },
+        new { Code = "sign-receipt",     Name = "正式收據版",     Desc = "傳統收據格式 + 付/收款雙印章",     Color = "#7f1d1d" },
+        new { Code = "sign-witness",     Name = "三方見證版",     Desc = "買方/賣方/見證人三欄簽名",         Color = "#7c3aed" },
+        new { Code = "sign-seal",        Name = "印章簽核版",     Desc = "經辦/覆核/會計/主管 4 印章 + 雙簽", Color = "#be123c" },
+        new { Code = "sign-compact",     Name = "緊湊簽收版",     Desc = "資訊緊湊一頁 + 雙簽名橫條",        Color = "#475569" },
+        new { Code = "sign-modern",      Name = "現代簽名版",     Desc = "卡片設計 + 雙簽名區塊",            Color = "#1d4ed8" },
+        new { Code = "sign-bordered",    Name = "雙邊框簽名版",   Desc = "雙線邊框 + 印鑑欄",                Color = "#0f766e" },
+        new { Code = "sign-report",      Name = "報表簽名版",     Desc = "報表格式 + 簽名表格欄",            Color = "#1e40af" },
+        new { Code = "sign-dual",        Name = "雙欄簽名版",     Desc = "開單方/客戶分欄 + 雙簽名",         Color = "#0e7490" },
+        new { Code = "sign-acknowledge", Name = "確認書簽收版",   Desc = "確認語句 + 勾選項目 + 雙簽名",     Color = "#166534" },
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>帳單列印設定</h4>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@{
+    var current = templates.FirstOrDefault(t => t.Code == Model.TemplateCode) ?? templates[0];
+}
+<div class="alert alert-info">
+    目前使用：<strong>@current.Name</strong>
+    <span class="badge ms-2" style="background-color:@current.Color;">@current.Desc</span>
+</div>
+
+<!-- 樣式選擇卡片 -->
+<h6 class="text-muted mb-2"><i class="bi bi-printer me-1"></i>計費系統基本風格（3 種）</h6>
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-3">
+    @foreach (var tpl in templates.Where(t => t.IsBasic))
+    {
+        var isActive = Model.TemplateCode == tpl.Code;
+        <div class="col">
+            <div class="card h-100 @(isActive ? "border-primary border-2" : "")" style="--cp: @tpl.Color">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <small class="fw-bold">@tpl.Name</small>
+                    @if (isActive) { <span class="badge bg-primary" style="font-size:10px;">使用中</span> }
+                </div>
+                <div class="card-body p-2">
+                    <!-- Mini Preview -->
+                    <div style="height:100px; border:1px solid #e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:8px; position:relative; background:@(tpl.Code == "tech" ? "#0f172a" : tpl.Code == "retro" ? "#fefce8" : "#fff");">
+                        @if (tpl.Code == "traditional")
+                        {
+                            <!-- Traditional: double border, centered title -->
+                            <div style="border:2px double #000; height:96px; margin:2px; padding:4px; display:flex; flex-direction:column; gap:2px;">
+                                <div style="text-align:center;">
+                                    <div style="background:#000; height:7px; width:60px; border-radius:1px; margin:0 auto 2px;"></div>
+                                    <div style="background:#333; height:10px; width:40px; border-radius:1px; margin:0 auto;"></div>
+                                </div>
+                                <div style="border:1px solid #000; display:grid; grid-template-columns:repeat(4,1fr);">
+                                    @for (int i = 0; i < 4; i++) {
+                                        <div style="border-right:1px solid #000; padding:1px 2px; @(i==3?"border-right:none;":"")">
+                                            <div style="background:#999; height:3px; border-radius:1px; margin-bottom:1px;"></div>
+                                            <div style="background:#ddd; height:4px; border-radius:1px;"></div>
+                                        </div>
+                                    }
+                                </div>
+                                <div style="border:1px solid #000; flex:1;">
+                                    <div style="background:#f0f0f0; height:8px; border-bottom:1px solid #ccc; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                        @for (int i = 0; i < 5; i++) { <div style="background:#999; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                    @for (int r = 0; r < 3; r++) {
+                                        <div style="height:8px; border-bottom:1px solid #eee; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                            @for (int c = 0; c < 5; c++) { <div style="background:#f0f0f0; height:4px; flex:1; border-radius:1px;"></div> }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else if (tpl.Code == "minimal")
+                        {
+                            <!-- Minimal: pure typography, no colors -->
+                            <div style="padding:8px;">
+                                <div style="background:#111; height:14px; width:70%; border-radius:1px; margin-bottom:4px;"></div>
+                                <div style="background:#888; height:6px; width:45%; border-radius:1px; margin-bottom:8px;"></div>
+                                <div style="border-bottom:1px solid #eee; margin-bottom:4px; display:flex; justify-content:flex-end;">
+                                    <div style="background:#111; height:16px; width:40%; border-radius:1px;"></div>
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="border-bottom:1px solid #f0f0f0; height:8px; display:flex; gap:2px; padding:1px 0; align-items:center; margin-bottom:1px;">
+                                        <div style="background:#ddd; height:5px; flex:2; border-radius:1px;"></div>
+                                        <div style="background:#ddd; height:5px; flex:1; border-radius:1px;"></div>
+                                    </div>
+                                }
+                                <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+                                    <div style="background:#111; height:10px; width:35%; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                        }
+                        else if (tpl.Code == "tech")
+                        {
+                            <!-- Tech: dark mode -->
+                            <div style="background:#1e293b; height:96px; margin:2px; border-radius:2px; padding:5px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <div style="background:#38bdf8; height:10px; width:50px; border-radius:2px;"></div>
+                                    <div style="border:1px solid #38bdf8; border-radius:2px; padding:2px 4px;">
+                                        <div style="background:#38bdf8; height:8px; width:35px; border-radius:1px;"></div>
+                                    </div>
+                                </div>
+                                <div style="border-top:1px solid #334155; margin-bottom:3px;"></div>
+                                <div style="background:#334155; height:8px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:#38bdf8; height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:8px; border-bottom:1px solid #334155; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#334155; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                                <div style="display:flex; justify-content:flex-end; margin-top:3px;">
+                                    <div style="background:#38bdf8; height:8px; width:40px; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                        }
+                        else if (tpl.Code == "colorful")
+                        {
+                            <!-- Colorful: gradient header -->
+                            <div style="background:linear-gradient(135deg,var(--cp),#ec4899); height:24px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:rgba(255,255,255,0.5); height:9px; width:45px; border-radius:2px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="background:rgba(255,255,255,0.3); height:14px; width:30px; border-radius:2px;"></div>
+                            </div>
+                            <div style="padding:0 5px;">
+                                <div style="background:#faf5ff; border-left:3px solid var(--cp); height:10px; padding:2px 4px; margin-bottom:3px; border-radius:0 2px 2px 0;">
+                                    <div style="background:#a5b4fc; height:5px; width:60%; border-radius:1px;"></div>
+                                </div>
+                                <div style="background:linear-gradient(90deg,var(--cp),#8b5cf6); height:8px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:rgba(255,255,255,0.5); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #f0e6ff; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#faf5ff; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "luxury")
+                        {
+                            <!-- Luxury: dark bg gold accent -->
+                            <div style="background:#1c1917; height:28px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:var(--cp); height:10px; width:50px; border-radius:1px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="border:1px solid var(--cp); padding:1px 4px; border-radius:1px;">
+                                    <div style="background:var(--cp); height:7px; width:28px; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                            <div style="border-top:2px solid var(--cp); margin:0 5px 3px;"></div>
+                            <div style="padding:0 5px;">
+                                <div style="background:#fffbeb; height:10px; margin-bottom:3px; padding:2px 3px; border-radius:1px;">
+                                    <div style="background:#fde68a; height:5px; width:65%; border-radius:1px;"></div>
+                                </div>
+                                <div style="background:#292524; height:8px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:var(--cp); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 2; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #f5f0e8; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#f9f5ef; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "retro")
+                        {
+                            <!-- Retro: cream bg, brown accent -->
+                            <div style="background:#fef9c3; height:96px; margin:2px; border:1px solid var(--cp); border-radius:2px; padding:5px;">
+                                <div style="text-align:center; margin-bottom:3px;">
+                                    <div style="background:var(--cp); height:8px; width:60px; border-radius:1px; margin:0 auto 2px;"></div>
+                                    <div style="background:var(--cp); height:11px; width:40px; border-radius:1px; margin:0 auto;"></div>
+                                </div>
+                                <div style="background:var(--cp); height:7px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:rgba(255,255,255,0.5); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #fde68a; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#fef3c7; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Generic colored preview for all other templates -->
+                            <div style="background:var(--cp); height:24px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:rgba(255,255,255,0.4); height:9px; width:45px; border-radius:2px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="background:rgba(255,255,255,0.25); height:13px; width:28px; border-radius:2px;"></div>
+                            </div>
+                            <div style="padding:0 5px;">
+                                <div style="background:var(--cp); opacity:0.12; border-left:3px solid var(--cp); height:10px; margin-bottom:3px; border-radius:0 2px 2px 0;"></div>
+                                <div style="background:var(--cp); height:7px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:rgba(255,255,255,0.45); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #f0f0f0; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#f5f5f5; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                                <div style="display:flex; justify-content:flex-end; margin-top:3px;">
+                                    <div style="background:var(--cp); height:8px; width:40px; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <p class="text-muted mb-0" style="font-size:11px;">@tpl.Desc</p>
+                </div>
+                <div class="card-footer py-2 d-flex gap-1">
+                    @if (!isActive)
+                    {
+                        <form asp-action="ActivateTemplate" method="post" class="flex-fill">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="templateCode" value="@tpl.Code" />
+                            <button type="submit" class="btn btn-sm btn-success w-100">啟用此樣式</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="btn btn-sm btn-outline-primary disabled flex-fill">已啟用</span>
+                    }
+                    <a href="@Url.Action("Preview", "InvoicePrintSettings", new { templateCode = tpl.Code })" target="_blank" class="btn btn-sm btn-outline-secondary flex-fill">
+                        <i class="bi bi-eye me-1"></i>檢視
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (ViewBag.BillingstyleEnabled == true)
+{
+    <hr class="my-3" />
+    <h6 class="text-muted mb-2"><i class="bi bi-palette me-1"></i>帳單風格模組（30 種）<span class="badge bg-success ms-2" style="font-size:11px;">已啟用</span></h6>
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
+    @foreach (var tpl in moduleTemplates)
+    {
+        var isActive = Model.TemplateCode == tpl.Code;
+        <div class="col">
+            <div class="card h-100 @(isActive ? "border-primary border-2" : "")" style="--cp: @tpl.Color">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <small class="fw-bold">@tpl.Name</small>
+                    <div class="d-flex gap-1">
+                        @if (isActive) { <span class="badge bg-primary" style="font-size:10px;">使用中</span> }
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    <div style="height:100px; border:1px solid #e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:8px; background:@(tpl.Code == "dark" ? "#0f172a" : "#fff");">
+                        @if (tpl.Code == "minimal")
+                        {
+                            <div style="padding:8px;">
+                                <div style="background:#111; height:14px; width:70%; border-radius:1px; margin-bottom:4px;"></div>
+                                <div style="background:#888; height:6px; width:45%; border-radius:1px; margin-bottom:8px;"></div>
+                                <div style="border-bottom:1px solid #eee; margin-bottom:4px; display:flex; justify-content:flex-end;">
+                                    <div style="background:#111; height:16px; width:40%; border-radius:1px;"></div>
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="border-bottom:1px solid #f0f0f0; height:8px; display:flex; gap:2px; padding:1px 0; align-items:center; margin-bottom:1px;">
+                                        <div style="background:#ddd; height:5px; flex:2; border-radius:1px;"></div>
+                                        <div style="background:#ddd; height:5px; flex:1; border-radius:1px;"></div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "luxury")
+                        {
+                            <div style="background:#1c1917; height:28px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:var(--cp); height:10px; width:50px; border-radius:1px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="border:1px solid var(--cp); padding:1px 4px; border-radius:1px;">
+                                    <div style="background:var(--cp); height:7px; width:28px; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                            <div style="border-top:2px solid var(--cp); margin:0 5px 3px;"></div>
+                            <div style="padding:0 5px;">
+                                <div style="background:#fffbeb; height:10px; margin-bottom:3px; padding:2px 3px; border-radius:1px;">
+                                    <div style="background:#fde68a; height:5px; width:65%; border-radius:1px;"></div>
+                                </div>
+                                <div style="background:#292524; height:8px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:var(--cp); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 2; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #f5f0e8; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#f9f5ef; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "colorful")
+                        {
+                            <div style="background:linear-gradient(135deg,var(--cp),#ec4899); height:24px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:rgba(255,255,255,0.5); height:9px; width:45px; border-radius:2px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="background:rgba(255,255,255,0.3); height:14px; width:30px; border-radius:2px;"></div>
+                            </div>
+                            <div style="padding:0 5px;">
+                                <div style="background:#faf5ff; border-left:3px solid var(--cp); height:10px; padding:2px 4px; margin-bottom:3px; border-radius:0 2px 2px 0;">
+                                    <div style="background:#a5b4fc; height:5px; width:60%; border-radius:1px;"></div>
+                                </div>
+                                <div style="background:linear-gradient(90deg,var(--cp),#8b5cf6); height:8px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:rgba(255,255,255,0.5); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #f0e6ff; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#faf5ff; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "japanese")
+                        {
+                            <div style="padding:5px; border-left:4px solid var(--cp);">
+                                <div style="background:#222; height:11px; width:65%; border-radius:1px; margin-bottom:3px;"></div>
+                                <div style="background:var(--cp); height:4px; width:30%; border-radius:1px; margin-bottom:6px;"></div>
+                                <div style="background:#222; height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "retro")
+                        {
+                            <div style="background:#fef9c3; height:96px; margin:2px; border:1px solid var(--cp); border-radius:2px; padding:5px;">
+                                <div style="text-align:center; margin-bottom:3px;">
+                                    <div style="background:var(--cp); height:8px; width:60px; border-radius:1px; margin:0 auto 2px;"></div>
+                                    <div style="background:var(--cp); height:11px; width:40px; border-radius:1px; margin:0 auto;"></div>
+                                </div>
+                                <div style="background:var(--cp); height:7px; border-radius:1px; margin-bottom:2px; display:flex; gap:1px; padding:0 2px; align-items:center;">
+                                    @for (int i = 0; i < 5; i++) { <div style="background:rgba(255,255,255,0.5); height:4px; flex:1; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 3; r++) {
+                                    <div style="height:7px; border-bottom:1px solid #fde68a; display:flex; gap:1px; padding:0 2px; align-items:center; margin-bottom:1px;">
+                                        @for (int c = 0; c < 5; c++) { <div style="background:#fef3c7; height:4px; flex:1; border-radius:1px;"></div> }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (tpl.Code == "rightbar")
+                        {
+                            <div style="display:flex; height:98px; margin:1px;">
+                                <div style="flex:1; padding:5px;">
+                                    <div style="background:#ddd; height:8px; border-radius:1px; margin-bottom:3px;"></div>
+                                    <div style="background:#eee; height:6px; width:70%; border-radius:1px; margin-bottom:6px;"></div>
+                                    <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                    @for (int r = 0; r < 4; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                                </div>
+                                <div style="width:28px; background:var(--cp); padding:4px 3px;">
+                                    @for (int r = 0; r < 6; r++) { <div style="background:rgba(255,255,255,0.35); height:4px; border-radius:1px; margin-bottom:3px;"></div> }
+                                </div>
+                            </div>
+                        }
+                        else if (tpl.Code == "split")
+                        {
+                            <div style="background:var(--cp); height:28px; display:flex; gap:2px; padding:4px 5px; align-items:center;">
+                                <div style="flex:1; background:rgba(255,255,255,0.35); height:14px; border-radius:2px; padding:3px 4px;"></div>
+                                <div style="flex:1; background:rgba(255,255,255,0.35); height:14px; border-radius:2px; padding:3px 4px;"></div>
+                            </div>
+                            <div style="padding:0 5px; margin-top:4px;">
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:3px;"></div>
+                                @for (int r = 0; r < 4; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "landscape")
+                        {
+                            <div style="background:var(--cp); height:16px; display:flex; gap:2px; padding:3px 5px; align-items:center;">
+                                <div style="flex:2; background:rgba(255,255,255,0.4); height:9px; border-radius:1px;"></div>
+                                <div style="flex:1; background:rgba(255,255,255,0.3); height:9px; border-radius:1px;"></div>
+                                <div style="flex:1; background:rgba(255,255,255,0.3); height:9px; border-radius:1px;"></div>
+                            </div>
+                            <div style="padding:0 5px; margin-top:3px;">
+                                <div style="display:flex; gap:2px; margin-bottom:3px;">
+                                    @for (int i = 0; i < 3; i++) { <div style="flex:1; background:#eee; height:8px; border-radius:1px;"></div> }
+                                </div>
+                                @for (int r = 0; r < 4; r++) { <div style="background:#f5f5f5; height:4px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "bigheader")
+                        {
+                            <div style="background:var(--cp); height:36px; display:flex; flex-direction:column; justify-content:center; padding:4px 6px;">
+                                <div style="background:rgba(255,255,255,0.8); height:12px; width:70%; border-radius:2px; margin-bottom:3px;"></div>
+                                <div style="background:rgba(255,255,255,0.4); height:6px; width:45%; border-radius:1px;"></div>
+                            </div>
+                            <div style="padding:0 5px; margin-top:4px;">
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:3px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "twostub")
+                        {
+                            <div style="padding:3px 5px; border-bottom:1px dashed #ccc;">
+                                <div style="background:var(--cp); height:5px; width:40%; border-radius:1px; margin-bottom:2px;"></div>
+                                <div style="background:#ddd; height:4px; width:60%; border-radius:1px;"></div>
+                            </div>
+                            <div style="padding:3px 5px; flex:1;">
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:4px; border-radius:1px; margin-bottom:2px;"></div> }
+                                <div style="display:flex; justify-content:flex-end; margin-top:2px;"><div style="background:var(--cp); height:6px; width:30%; border-radius:1px;"></div></div>
+                            </div>
+                            <div style="padding:3px 5px; border-top:1px dashed #ccc; margin-top:2px;">
+                                <div style="background:#ddd; height:4px; width:50%; border-radius:1px;"></div>
+                            </div>
+                        }
+                        else if (tpl.Code == "card")
+                        {
+                            <div style="padding:4px 5px; display:flex; gap:3px;">
+                                <div style="flex:1; border:1px solid #e5e7eb; border-radius:3px; padding:3px;">
+                                    <div style="background:var(--cp); height:5px; border-radius:1px; margin-bottom:2px;"></div>
+                                    <div style="background:#eee; height:4px; border-radius:1px;"></div>
+                                </div>
+                                <div style="flex:1; border:1px solid #e5e7eb; border-radius:3px; padding:3px;">
+                                    <div style="background:var(--cp); height:5px; border-radius:1px; margin-bottom:2px;"></div>
+                                    <div style="background:#eee; height:4px; border-radius:1px;"></div>
+                                </div>
+                            </div>
+                            <div style="padding:0 5px;">
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:4px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "dark")
+                        {
+                            <div style="background:#1e293b; height:98px; margin:1px; border-radius:2px; padding:5px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                    <div style="background:var(--cp); height:9px; width:45px; border-radius:1px;"></div>
+                                    <div style="background:var(--cp); height:9px; width:28px; border-radius:1px;"></div>
+                                </div>
+                                <div style="border-top:1px solid #334155; margin-bottom:3px;"></div>
+                                <div style="background:#334155; height:7px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 4; r++) { <div style="background:#1e293b; height:5px; border-bottom:1px solid #334155; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "formal")
+                        {
+                            <div style="padding:4px 5px;">
+                                <div style="display:grid; grid-template-columns:1fr 1fr; border:1px solid #999; margin-bottom:3px;">
+                                    <div style="border-right:1px solid #999; padding:2px 3px;"><div style="background:#ccc; height:5px; border-radius:1px;"></div></div>
+                                    <div style="padding:2px 3px;"><div style="background:#ccc; height:5px; border-radius:1px;"></div></div>
+                                </div>
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "frame")
+                        {
+                            <div style="border:2px solid var(--cp); height:96px; margin:2px; border-radius:2px; padding:4px;">
+                                <div style="border:1px solid var(--cp); height:88px; padding:3px;">
+                                    <div style="background:var(--cp); height:9px; width:55px; border-radius:1px; margin-bottom:3px;"></div>
+                                    <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:3px; opacity:0.5;"></div>
+                                    @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                                </div>
+                            </div>
+                        }
+                        else if (tpl.Code == "mono")
+                        {
+                            <div style="padding:5px; font-size:0;">
+                                <div style="background:#111; height:7px; width:80%; margin-bottom:2px;"></div>
+                                <div style="background:#555; height:5px; width:50%; margin-bottom:4px;"></div>
+                                <div style="border:1px solid #ccc; padding:2px; margin-bottom:2px; display:flex; gap:2px;">
+                                    <div style="background:#ddd; height:5px; flex:2;"></div>
+                                    <div style="background:#ddd; height:5px; flex:1;"></div>
+                                </div>
+                                @for (int r = 0; r < 3; r++) { <div style="display:flex; gap:2px; border-bottom:1px solid #eee; padding:1px 2px; margin-bottom:1px;"><div style="background:#f5f5f5; height:4px; flex:2;"></div><div style="background:#f5f5f5; height:4px; flex:1;"></div></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "swiss")
+                        {
+                            <div style="padding:4px 5px;">
+                                <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:3px; margin-bottom:4px;">
+                                    <div><div style="background:var(--cp); height:11px; border-radius:1px;"></div></div>
+                                    <div><div style="background:#ddd; height:11px; border-radius:1px;"></div></div>
+                                    <div><div style="background:#ddd; height:11px; border-radius:1px;"></div></div>
+                                </div>
+                                <div style="background:var(--cp); height:2px; margin-bottom:3px;"></div>
+                                @for (int r = 0; r < 4; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else if (tpl.Code == "centered")
+                        {
+                            <div style="padding:5px; text-align:center;">
+                                <div style="background:var(--cp); height:10px; width:60%; border-radius:1px; margin:0 auto 3px;"></div>
+                                <div style="background:#ddd; height:6px; width:40%; border-radius:1px; margin:0 auto 6px;"></div>
+                                <div style="background:var(--cp); height:6px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 3; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="background:var(--cp); height:24px; display:flex; align-items:center; padding:0 6px; margin-bottom:3px;">
+                                <div style="background:rgba(255,255,255,0.4); height:9px; width:45px; border-radius:2px;"></div>
+                                <div style="flex:1;"></div>
+                                <div style="background:rgba(255,255,255,0.25); height:13px; width:28px; border-radius:2px;"></div>
+                            </div>
+                            <div style="padding:0 5px;">
+                                <div style="background:var(--cp); height:7px; border-radius:1px; margin-bottom:2px;"></div>
+                                @for (int r = 0; r < 4; r++) { <div style="background:#f5f5f5; height:5px; border-radius:1px; margin-bottom:2px;"></div> }
+                            </div>
+                        }
+                    </div>
+                    <p class="text-muted mb-0" style="font-size:11px;">@tpl.Desc</p>
+                </div>
+                <div class="card-footer py-2 d-flex gap-1">
+                    @if (!isActive)
+                    {
+                        <form asp-action="ActivateTemplate" method="post" class="flex-fill">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="templateCode" value="@tpl.Code" />
+                            <button type="submit" class="btn btn-sm btn-success w-100">啟用此樣式</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="btn btn-sm btn-outline-primary disabled flex-fill">已啟用</span>
+                    }
+                    <a href="@Url.Action("Preview", "InvoicePrintSettings", new { templateCode = tpl.Code })" target="_blank" class="btn btn-sm btn-outline-secondary flex-fill">
+                        <i class="bi bi-eye me-1"></i>檢視
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+}
+
+<hr class="my-3" />
+<h6 class="text-muted mb-2"><i class="bi bi-pen me-1"></i>簽名版（含客戶 / 承辦人員簽名欄位）<span class="badge bg-info ms-2" style="font-size:11px;">12 款</span></h6>
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
+@foreach (var tpl in signTemplates)
+{
+    var isActive = Model.TemplateCode == tpl.Code;
+    <div class="col">
+        <div class="card h-100 @(isActive ? "border-primary border-2" : "")" style="--cp: @tpl.Color">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <small class="fw-bold">@tpl.Name</small>
+                @if (isActive) { <span class="badge bg-primary" style="font-size:10px;">使用中</span> }
+            </div>
+            <div class="card-body p-2">
+                <!-- 簽名版 mini preview：上方是常見內容，下方有 2 個簽名格 -->
+                <div style="height:100px; border:1px solid #e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:8px; background:#fff; padding:4px;">
+                    <div style="background:var(--cp); height:18px; padding:0 4px; display:flex; align-items:center; gap:2px; border-radius:2px; margin-bottom:3px;">
+                        <div style="background:rgba(255,255,255,0.6); height:7px; width:30px; border-radius:1px;"></div>
+                        <div style="flex:1;"></div>
+                        <div style="background:rgba(255,255,255,0.4); height:8px; width:24px; border-radius:1px;"></div>
+                    </div>
+                    <div style="background:var(--cp); opacity:0.15; height:5px; border-radius:1px; margin-bottom:2px;"></div>
+                    @for (int r = 0; r < 2; r++) { <div style="background:#f3f4f6; height:4px; border-radius:1px; margin-bottom:2px;"></div> }
+                    <div style="display:flex; gap:3px; margin-top:4px; padding-top:3px; border-top:1px dashed #d1d5db;">
+                        <div style="flex:1; height:24px; border:1px solid var(--cp); border-radius:2px; padding:2px 3px;">
+                            <div style="background:var(--cp); height:3px; width:50%; margin-bottom:2px; border-radius:1px;"></div>
+                            <div style="background:#9ca3af; height:1px; margin-top:6px;"></div>
+                        </div>
+                        <div style="flex:1; height:24px; border:1px solid var(--cp); border-radius:2px; padding:2px 3px;">
+                            <div style="background:var(--cp); height:3px; width:60%; margin-bottom:2px; border-radius:1px;"></div>
+                            <div style="background:#9ca3af; height:1px; margin-top:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted mb-0" style="font-size:11px;">@tpl.Desc</p>
+            </div>
+            <div class="card-footer py-2 d-flex gap-1">
+                @if (!isActive)
+                {
+                    <form asp-action="ActivateTemplate" method="post" class="flex-fill">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="templateCode" value="@tpl.Code" />
+                        <button type="submit" class="btn btn-sm btn-success w-100">啟用此樣式</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="btn btn-sm btn-outline-primary disabled flex-fill">已啟用</span>
+                }
+                <a href="@Url.Action("Preview", "InvoicePrintSettings", new { templateCode = tpl.Code })" target="_blank" class="btn btn-sm btn-outline-secondary flex-fill">
+                    <i class="bi bi-eye me-1"></i>檢視
+                </a>
+            </div>
+        </div>
+    </div>
+}
+</div>
+
+<!-- 公司資訊 + 匯款資訊 -->
+<form asp-action="Save" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="TemplateCode" />
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">公司資訊</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">公司名稱</label>
+                    <input type="text" class="form-control" asp-for="CompanyName" placeholder="例：XX 科技有限公司" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">公司標語</label>
+                    <input type="text" class="form-control" asp-for="CompanySlogan" placeholder="例：您的最佳印務夥伴" />
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">公司地址</label>
+                    <input type="text" class="form-control" asp-for="CompanyAddress" placeholder="例：台北市信義區信義路五段7號" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">電話</label>
+                    <input type="text" class="form-control" asp-for="CompanyPhone" placeholder="02-1234-5678" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input type="text" class="form-control" asp-for="CompanyEmail" placeholder="info@example.com" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">網站</label>
+                    <input type="text" class="form-control" asp-for="CompanyWebsite" placeholder="https://www.example.com" />
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">公司 Logo</label>
+                    @if (!string.IsNullOrEmpty(Model.CompanyLogoUrl))
+                    {
+                        <div class="mb-2">
+                            <img src="@Model.CompanyLogoUrl" alt="Logo" style="max-height:60px; max-width:200px; object-fit:contain; border:1px solid #dee2e6; border-radius:4px; padding:4px; background:#fff;" />
+                            <div class="form-text">目前 Logo，上傳新圖片將會取代</div>
+                        </div>
+                    }
+                    <input type="file" class="form-control" name="logoFile" accept="image/*" />
+                    <div class="form-text">支援 JPG、PNG、GIF、WebP、SVG，建議尺寸 200×80 px 以內</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">匯款資訊</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">銀行名稱</label>
+                    <input type="text" class="form-control" asp-for="BankName" placeholder="例：台灣銀行" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">分行</label>
+                    <input type="text" class="form-control" asp-for="BankBranch" placeholder="例：信義分行" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">帳號</label>
+                    <input type="text" class="form-control" asp-for="BankAccount" placeholder="例：123-456-789012" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">付款條件</label>
+                    <input type="text" class="form-control" asp-for="PaymentTerms" placeholder="例：立即付款 / 30 天內付款" />
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">頁尾備註</label>
+                    <textarea class="form-control" asp-for="FooterNote" rows="2" placeholder="列印在帳單底部的補充說明文字…"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">儲存設定</button>
+    </div>
+</form>

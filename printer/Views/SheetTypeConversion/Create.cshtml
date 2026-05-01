@@ -1,0 +1,76 @@
+@model printer.Data.Entities.SheetTypeConversionRate
+@{
+    ViewData["Title"] = "新增張數互換比例";
+}
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>新增張數互換比例</h2>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">建立比例</button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">被折抵類型（目標） <span class="text-danger">*</span></label>
+                        <select asp-for="FromSheetTypeId" class="form-select ts-select"
+                                asp-items="ViewBag.FromSheetTypes" required>
+                            <option value="">請選擇類型</option>
+                        </select>
+                        <div class="form-text">此類型的張數費用會被折抵（例如：黑白）</div>
+                        <span asp-validation-for="FromSheetTypeId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">折抵來源（贈送類型） <span class="text-danger">*</span></label>
+                        <select asp-for="ToSheetTypeId" class="form-select ts-select"
+                                asp-items="ViewBag.ToSheetTypes" required>
+                            <option value="">請選擇類型</option>
+                        </select>
+                        <div class="form-text">用此類型的剩餘贈送張數來折抵目標類型（例如：彩色）</div>
+                        <span asp-validation-for="ToSheetTypeId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">換算比例 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">1 贈送 =</span>
+                            <input asp-for="Ratio" type="number" class="form-control" min="0.0001"
+                                   step="0.5" placeholder="例如：10" required />
+                            <span class="input-group-text" id="ratioUnit">張折抵</span>
+                        </div>
+                        <div class="form-text">例如：10 表示 1 張彩色贈送 = 10 張黑白可被折抵</div>
+                        <span asp-validation-for="Ratio" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">備註說明</label>
+                        <input asp-for="Note" class="form-control" placeholder="選填" />
+                    </div>
+
+                    <div class="mb-0 form-check">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        <label asp-for="IsActive" class="form-check-label">啟用</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

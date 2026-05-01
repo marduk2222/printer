@@ -1,0 +1,300 @@
+@model printer.Data.Entities.PrintRecord
+@{
+    ViewData["Title"] = "抄表記錄詳情";
+    var allSheetTypesJson = ViewBag.AllSheetTypesJson as string ?? "[]";
+    var existingValuesJson = ViewBag.ExistingValuesJson as string ?? "[]";
+    // 顯示用：優先 PrintRecordValues；無則由 legacy 欄位轉成同樣 (Id, Name, Value) 結構
+    var displayItems = Model.Values
+        .Where(v => v.SheetType != null)
+        .OrderBy(v => v.SortOrder).ThenBy(v => v.SheetType!.SortOrder).ThenBy(v => v.SheetTypeId)
+        .Select(v => (Id: (int?)v.SheetTypeId, Name: v.SheetType!.Name, Value: v.Value))
+        .ToList();
+    if (displayItems.Count == 0)
+    {
+        if (Model.BlackSheets > 0) displayItems.Add((null, "黑白", Model.BlackSheets));
+        if (Model.ColorSheets > 0) displayItems.Add((null, "彩色", Model.ColorSheets));
+        if (Model.LargeSheets > 0) displayItems.Add((null, "大張", Model.LargeSheets));
+    }
+    long displayTotal = displayItems.Sum(i => (long)i.Value);
+    bool sortable = displayItems.All(i => i.Id.HasValue);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>抄表記錄詳情</h4>
+    <div id="viewActions" class="gap-2" style="display:flex;">
+        <button type="button" class="btn btn-warning btn-sm" onclick="toggleEdit(true)">編輯</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+    </div>
+    <div id="editActions" class="gap-2" style="display:none;">
+        <button type="submit" form="editForm" class="btn btn-success btn-sm">儲存變更</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleEdit(false)">取消</button>
+    </div>
+</div>
+
+<form asp-action="Edit" method="post" id="editForm">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" name="returnTo" value="Details" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">記錄資訊</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">ID</dt>
+                        <dd class="col-sm-8">@Model.Id</dd>
+                        <dt class="col-sm-4">事務機</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">
+                                @if (Model.Printer != null)
+                                {
+                                    <a asp-controller="Printer" asp-action="Details" asp-route-id="@Model.PrinterId">
+                                        @Model.Printer.Name
+                                    </a>
+                                }
+                            </span>
+                            <select asp-for="PrinterId" class="form-select form-select-sm edit-mode" style="display:none" asp-items="@ViewBag.Printers" required>
+                                <option value="">請選擇</option>
+                            </select>
+                        </dd>
+                        <dt class="col-sm-4">日期</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">@Model.Date.ToString("yyyy-MM-dd")</span>
+                            <input asp-for="Date" type="date" class="form-control form-control-sm edit-mode" style="display:none" required />
+                        </dd>
+                        <dt class="col-sm-4">狀態</dt>
+                        <dd class="col-sm-8">
+                            <span class="view-mode">
+                                <span class="badge @(Model.State == "auto" ? "bg-success" : "bg-secondary")">
+                                    @(Model.State == "auto" ? "自動回傳" : "手動輸入")
+                                </span>
+                            </span>
+                            <select asp-for="State" class="form-select form-select-sm edit-mode" style="display:none" asp-items="@ViewBag.States"></select>
+                        </dd>
+                        <dt class="col-sm-4">回傳次數</dt>
+                        <dd class="col-sm-8">@Model.Count</dd>
+                        <dt class="col-sm-4">建立時間</dt>
+                        <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                        <dt class="col-sm-4">更新時間</dt>
+                        <dd class="col-sm-8">@Model.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">關聯資訊</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">客戶</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.Partner != null)
+                            {
+                                <a asp-controller="Partner" asp-action="Details" asp-route-id="@Model.PartnerId">
+                                    @Model.Partner.Name
+                                </a>
+                            }
+                        </dd>
+                        <dt class="col-sm-4">型號</dt>
+                        <dd class="col-sm-8">
+                            @(Model.Printer?.Model != null ? $"{Model.Printer.Model.Brand?.Name} {Model.Printer.Model.Name}" : "")
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">列印張數</div>
+        <div class="card-body">
+            <!-- View mode: 與新增/編輯頁同款的「類別 / 張數」表格，可拖曳排序 -->
+            <div class="view-mode">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            @if (sortable && displayItems.Count > 0)
+                            {
+                                <th style="width:30px"></th>
+                            }
+                            <th>類別</th>
+                            <th class="text-end" style="width:40%">張數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="displayValuesBody">
+                        @if (displayItems.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-muted small text-center py-3">無張數資料</td></tr>
+                        }
+                        else
+                        {
+                            foreach (var it in displayItems)
+                            {
+                                <tr data-id="@(it.Id?.ToString() ?? "")">
+                                    @if (sortable)
+                                    {
+                                        <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                                    }
+                                    <td class="fw-bold">@it.Name</td>
+                                    <td class="text-end">@it.Value.ToString("N0")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    @if (displayItems.Count > 0)
+                    {
+                        <tfoot class="table-light">
+                            <tr>
+                                @if (sortable) { <td></td> }
+                                <td class="fw-bold">合計</td>
+                                <td class="text-end fw-bold text-primary">@displayTotal.ToString("N0")</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+                @if (sortable && displayItems.Count > 1)
+                {
+                    <small class="text-muted d-block mt-1">可拖曳左側 ≡ 調整顯示順序，會自動儲存。</small>
+                }
+            </div>
+
+            <!-- Edit mode: 與 Create / Edit 一致的動態列 + 拖曳排序 -->
+            <div class="edit-mode" style="display:none">
+                <table class="table table-sm align-middle mb-1">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:30px"></th>
+                            <th style="width:38%">類別</th>
+                            <th style="width:50%">張數</th>
+                            <th style="width:10%" class="text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheetValuesBody">
+                        <tr id="emptyValuesRow"><td colspan="4" class="text-muted small text-center">尚未新增張數類別</td></tr>
+                    </tbody>
+                </table>
+                <small class="text-muted d-block mb-2">可拖曳左側 ≡ 調整顯示順序。</small>
+                <div class="d-flex gap-2 align-items-center">
+                    <select id="addSheetTypeSelect" class="form-select form-select-sm" style="max-width:240px">
+                        <option value="">選擇張數類別...</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSheetValueRow()">+ 新增</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    var allSheetTypes = @Html.Raw(allSheetTypesJson);
+    var existingValues = @Html.Raw(existingValuesJson);
+    var addedIds = new Set();
+
+    function toggleEdit(editing) {
+        document.querySelectorAll('.view-mode').forEach(function (el) { el.style.display = editing ? 'none' : ''; });
+        document.querySelectorAll('.edit-mode').forEach(function (el) { el.style.display = editing ? '' : 'none'; });
+        document.getElementById('viewActions').style.display = editing ? 'none' : 'flex';
+        document.getElementById('editActions').style.display = editing ? 'flex' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        existingValues.forEach(function (v) { appendSheetValueRow(v.id, v.name, v.value); });
+        refreshAddDropdown();
+        initSortable();
+        initDisplaySortable();
+    });
+
+    function initDisplaySortable() {
+        var tbody = document.getElementById('displayValuesBody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+        // 至少 2 筆且全有 data-id 才啟用
+        var rows = tbody.querySelectorAll('tr[data-id]');
+        if (rows.length < 2) return;
+        var allHaveId = Array.from(rows).every(function (tr) { return tr.dataset.id; });
+        if (!allHaveId) return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'table-active',
+            onEnd: function () {
+                var ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                    .map(function (tr) { return tr.dataset.id; })
+                    .filter(function (s) { return s; });
+                var data = new FormData();
+                data.append('recordId', '@Model.Id');
+                ids.forEach(function (id) { data.append('sheetTypeIds', id); });
+                fetch('@Url.Action("ReorderRecordValues")', { method: 'POST', body: data })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d || !d.success) alert('排序儲存失敗，重新整理後可能恢復原順序');
+                    })
+                    .catch(function () { alert('排序儲存失敗'); });
+            }
+        });
+    }
+
+    function appendSheetValueRow(stId, stName, value) {
+        if (addedIds.has(stId)) return;
+        addedIds.add(stId);
+        var empty = document.getElementById('emptyValuesRow');
+        if (empty) empty.remove();
+        var tr = document.createElement('tr');
+        tr.id = 'sheetValueRow_' + stId;
+        tr.innerHTML =
+            '<td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>' +
+            '<td class="fw-bold">' + escapeHtml(stName) + '</td>' +
+            '<td><input type="number" min="0" value="' + (value || 0) + '" class="form-control form-control-sm" name="sheetValues[' + stId + ']" /></td>' +
+            '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeSheetValueRow(' + stId + ')">×</button></td>';
+        document.getElementById('sheetValuesBody').appendChild(tr);
+    }
+
+    function removeSheetValueRow(stId) {
+        addedIds.delete(stId);
+        var row = document.getElementById('sheetValueRow_' + stId);
+        if (row) row.remove();
+        var tbody = document.getElementById('sheetValuesBody');
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = '<tr id="emptyValuesRow"><td colspan="4" class="text-muted small text-center">尚未新增張數類別</td></tr>';
+        }
+        refreshAddDropdown();
+    }
+
+    function addSheetValueRow() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        var stId = parseInt(sel.value);
+        if (!stId) return;
+        var st = allSheetTypes.find(function (s) { return s.id === stId; });
+        if (!st || addedIds.has(stId)) return;
+        appendSheetValueRow(stId, st.name, 0);
+        refreshAddDropdown();
+        sel.value = '';
+    }
+
+    function refreshAddDropdown() {
+        var sel = document.getElementById('addSheetTypeSelect');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">選擇張數類別...</option>';
+        allSheetTypes.forEach(function (st) {
+            if (!addedIds.has(st.id)) {
+                var opt = document.createElement('option');
+                opt.value = st.id;
+                opt.text = st.name;
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    function initSortable() {
+        var tbody = document.getElementById('sheetValuesBody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'table-active',
+            filter: '#emptyValuesRow'
+        });
+    }
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>

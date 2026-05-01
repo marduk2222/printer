@@ -1,0 +1,88 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "印表機雲端抄表" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - list [ref=e7]:
+            - listitem [ref=e8]:
+              - link "首頁" [ref=e9] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e10]:
+              - link "客戶管理" [ref=e11] [cursor=pointer]:
+                - /url: /Partner
+            - listitem [ref=e12]:
+              - link "事務機管理" [ref=e13] [cursor=pointer]:
+                - /url: /Printer
+            - listitem [ref=e14]:
+              - link "抄表記錄" [ref=e15] [cursor=pointer]:
+                - /url: /PrintRecord
+            - listitem [ref=e16]:
+              - link "派工管理" [ref=e17] [cursor=pointer]:
+                - /url: /WorkOrder
+            - listitem [ref=e18]:
+              - button "計費系統" [ref=e19] [cursor=pointer]
+            - listitem [ref=e20]:
+              - link "發票系統" [ref=e21] [cursor=pointer]:
+                - /url: /Einvoice
+            - listitem [ref=e22]:
+              - button "系統設定" [ref=e23] [cursor=pointer]
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - text: 系統管員
+              - generic [ref=e26]: 系統管理員
+            - button "登出" [ref=e28] [cursor=pointer]
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - heading "抄表記錄" [level=4] [ref=e32]
+      - generic [ref=e33]:
+        - link "新增記錄" [ref=e34] [cursor=pointer]:
+          - /url: /PrintRecord/Create
+        - link "匯入 Excel" [ref=e35] [cursor=pointer]:
+          - /url: /PrintRecord/Import
+        - link "匯出 Excel" [ref=e36] [cursor=pointer]:
+          - /url: /PrintRecord/Export?startDate=2026-04-14&endDate=2026-04-14
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]: 客戶
+        - combobox [ref=e42]:
+          - option "全部" [selected]
+          - option "台積電"
+        - generic [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: 全部
+          - combobox [ref=e46]
+      - generic [ref=e47]:
+        - generic [ref=e48]: 事務機
+        - combobox [ref=e49]:
+          - option "全部" [selected]
+          - option "Printer-001"
+          - option "Printer-002"
+      - generic [ref=e50]:
+        - generic [ref=e51]: 起始日期
+        - textbox [ref=e52]: 2026-04-14
+      - generic [ref=e53]:
+        - generic [ref=e54]: 結束日期
+        - textbox [ref=e55]: 2026-04-14
+      - button "搜尋" [ref=e57] [cursor=pointer]
+    - generic [ref=e59]:
+      - table [ref=e61]:
+        - rowgroup [ref=e62]:
+          - row "ID 日期 客戶 事務機 黑白 彩色 大張 合計 狀態 操作" [ref=e63]:
+            - columnheader "ID" [ref=e64]
+            - columnheader "日期" [ref=e65]
+            - columnheader "客戶" [ref=e66]
+            - columnheader "事務機" [ref=e67]
+            - columnheader "黑白" [ref=e68]
+            - columnheader "彩色" [ref=e69]
+            - columnheader "大張" [ref=e70]
+            - columnheader "合計" [ref=e71]
+            - columnheader "狀態" [ref=e72]
+            - columnheader "操作" [ref=e73]
+        - rowgroup
+      - generic [ref=e74]:
+        - generic [ref=e75]: 共 0 筆
+        - navigation:
+          - list
+  - contentinfo [ref=e76]:
+    - generic [ref=e77]: © 2026 - 印表機雲端抄表系統

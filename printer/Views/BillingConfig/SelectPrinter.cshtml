@@ -1,0 +1,100 @@
+@model List<printer.Data.Entities.Printer>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "新增計費設定";
+    var configuredIds = ViewBag.ConfiguredPrinterIds as HashSet<int> ?? new HashSet<int>();
+    var unconfiguredCount = Model.Count(p => !configuredIds.Contains(p.Id));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>新增計費設定</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">搜索客戶</label>
+                <select name="partnerId" class="form-select ts-select" onchange="this.form.submit()">
+                    <option value="">全部客戶</option>
+                    @foreach (SelectListItem item in ViewBag.Partners)
+                    {
+                        <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted mb-3">
+            共 @Model.Count 台事務機，其中 <strong class="text-warning">@unconfiguredCount 台尚未設定計費</strong>。
+            點「設定計費」建立新的計費資料；對已有計費的事務機點「編輯」可進入修改。
+        </p>
+
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>事務機</th>
+                            <th>客戶</th>
+                            <th>計費狀態</th>
+                            <th>所屬群組</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var printer in Model)
+                        {
+                            var isConfigured = configuredIds.Contains(printer.Id);
+                            <tr>
+                                <td>
+                                    <strong>@printer.Name</strong><br />
+                                    <small class="text-muted">@printer.Code</small>
+                                </td>
+                                <td>@printer.Partner?.Name</td>
+                                <td>
+                                    @if (isConfigured)
+                                    {
+                                        <span class="badge bg-success">已設定</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">未設定</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (printer.BillingGroup != null)
+                                    {
+                                        <span class="badge bg-info text-dark">@printer.BillingGroup.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">獨立計費</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-printerId="@printer.Id"
+                                       class="btn btn-sm @(isConfigured ? "btn-outline-primary" : "btn-primary")">
+                                        @(isConfigured ? "編輯" : "設定計費")
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted">
+                <p>尚無啟用中的事務機，請先到「事務機管理」新增。</p>
+            </div>
+        }
+    </div>
+</div>
