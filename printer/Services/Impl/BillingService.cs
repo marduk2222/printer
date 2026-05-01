@@ -1058,8 +1058,11 @@ public class BillingService : IBillingService
     #region 私有方法
 
     /// <summary>
-    /// 套用「等價單位池折抵」：剩餘贈送 × Weight = 等價池，依 OffsetOrder 折抵其他類型計費（不足 1 張不計）
-    /// 使用後 sheetCalc 的 Billed 與 FreePagesLeft 會被更新，並把折抵張數記到 outOffsetPages（key=SheetTypeId）
+    /// 套用「等價單位池折抵」：以「換算值 = 1 個基本單位需幾張本類型」為基準。
+    /// 每張紙的價值 = 1 / Weight；剩餘贈送轉為等價池 (FreePagesLeft / Weight)，
+    /// 計費張數依 OffsetOrder 升序折抵：1 個單位可換 Weight 張本類型。
+    /// 例：彩色 Weight=1, 大張=2, 黑白=10 → 1 張彩色 = 2 張大張 = 10 張黑白。
+    /// 不足 1 張不計。
     /// </summary>
     private static Dictionary<int, int> ApplyWeightedOffset(
         Dictionary<int, (int Raw, int AfterDiscount, int FreePagesLeft, int Billed)> sheetCalc,
@@ -1070,8 +1073,9 @@ public class BillingService : IBillingService
         decimal pool = 0;
         foreach (var kv in sheetCalc)
         {
+            // 1 張本類型 = 1/Weight 個基本單位
             if (sheetMeta.TryGetValue(kv.Key, out var meta) && meta.Weight > 0)
-                pool += kv.Value.FreePagesLeft * meta.Weight;
+                pool += kv.Value.FreePagesLeft / meta.Weight;
         }
         if (pool <= 0) return offsetByType;
 
@@ -1087,13 +1091,16 @@ public class BillingService : IBillingService
             if (calc.Billed <= 0) continue;
             if (!sheetMeta.TryGetValue(key, out var meta) || meta.Weight <= 0) continue;
 
-            var billedEqu = calc.Billed * meta.Weight;
+            // 計費張數轉等價單位：Billed × (1/Weight) = Billed / Weight
+            var billedEqu = calc.Billed / meta.Weight;
             var available = Math.Min(pool, billedEqu);
-            var offsetPages = (int)Math.Floor(available / meta.Weight); // 不足 1 不計
+            // 1 個單位可換 Weight 張本類型，不足 1 張不計
+            var offsetPages = (int)Math.Floor(available * meta.Weight);
             if (offsetPages <= 0) continue;
 
             sheetCalc[key] = (calc.Raw, calc.AfterDiscount, calc.FreePagesLeft, calc.Billed - offsetPages);
-            pool -= offsetPages * meta.Weight;
+            // 扣回相應單位
+            pool -= offsetPages / meta.Weight;
             offsetByType[key] = offsetPages;
             if (pool <= 0) break;
         }

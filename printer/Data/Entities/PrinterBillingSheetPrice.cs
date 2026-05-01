@@ -41,7 +41,9 @@ public class PrinterBillingSheetPrice
     public int FreePages { get; set; } = 0;
 
     /// <summary>
-    /// 換算值（null 或 0 = 不參與互換）；例：黑白 1、彩色 5、彩色大張 10
+    /// 換算值：1 個基本單位等於幾張本類型紙（值越小越貴）。
+    /// 例：彩色 1、大張 2、黑白 10 → 1 張彩色 = 2 張大張 = 10 張黑白。
+    /// null 或 0 = 不參與互換。
     /// </summary>
     [Column("weight")]
     [Precision(10, 4)]
