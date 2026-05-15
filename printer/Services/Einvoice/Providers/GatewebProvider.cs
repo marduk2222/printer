@@ -62,9 +62,10 @@ public class GatewebProvider : IEinvoiceProvider
         if (string.IsNullOrEmpty(sellerIdentifier) || string.IsNullOrEmpty(sellerName))
             return EinvoiceProviderResult.Fail("Gateweb 開立需要 sellerIdentifier/sellerName，請至平台設定填寫");
 
+        var relateNumber = $"INV{e.Id:D6}{DateTime.UtcNow:HHmmss}";
         var body = new Dictionary<string, object?>
         {
-            ["relateNumber"] = $"INV{e.Id:D6}{DateTime.UtcNow:HHmmss}",
+            ["relateNumber"] = relateNumber,
             ["invoiceDate"] = e.InvoiceDate.ToString("yyyyMMdd"),
             ["invoiceTime"] = "23:59:59",
             ["sellerDepartment"] = sellerDepartment,
@@ -98,12 +99,14 @@ public class GatewebProvider : IEinvoiceProvider
         // 開立成功但 typeCode/Success 回應沒帶 invoiceNumber，需要異步查詢
         if (result.Success && string.IsNullOrEmpty(result.Number))
         {
-            var relateNumber = body["relateNumber"] as string ?? string.Empty;
             var queried = await QueryInvoiceNumberAsync(sellerIdentifier, relateNumber, p, ct);
             if (!string.IsNullOrEmpty(queried))
-                return EinvoiceProviderResult.Ok(queried, result.Code, result.Message, result.RawResponse);
+                return EinvoiceProviderResult.Ok(queried, result.Code, result.Message, result.RawResponse, providerRelateNumber: relateNumber);
         }
-        return result;
+        // 成功則回傳含 ProviderRelateNumber，後續折讓/作廢用得到
+        return result.Success
+            ? EinvoiceProviderResult.Ok(result.Number, result.Code, result.Message, result.RawResponse, result.IssueDate, relateNumber)
+            : result;
     }
 
     /// <summary>
@@ -181,10 +184,10 @@ public class GatewebProvider : IEinvoiceProvider
 
     public async Task<EinvoiceProviderResult> InvalidAsync(Einvoice e, string reason, EinvoicePlatform p, CancellationToken ct = default)
     {
-        // Gateweb C0503 用「原發票的 relateNumber」對應，從 Note ORDERNO=... 取
-        var originalRelateNumber = ExtractOriginalRelateNumber(e.Note) ?? e.InvoiceNumber;
+        // Gateweb C0503 用「原發票的 relateNumber」對應，優先用 ProviderRelateNumber（Issue 時寫入）
+        var originalRelateNumber = e.ProviderRelateNumber ?? ExtractOriginalRelateNumber(e.Note) ?? e.InvoiceNumber;
         if (string.IsNullOrEmpty(originalRelateNumber))
-            return EinvoiceProviderResult.Fail("缺少原發票 relateNumber（透過 Note=ORDERNO=...傳入）");
+            return EinvoiceProviderResult.Fail("缺少原發票 relateNumber");
 
         var body = new Dictionary<string, object?>
         {
@@ -210,7 +213,7 @@ public class GatewebProvider : IEinvoiceProvider
     public async Task<EinvoiceProviderResult> AllowanceAsync(EinvoiceAllowance a, Einvoice e, EinvoicePlatform p, CancellationToken ct = default)
     {
         // Gateweb D0403 用 originalRelateNumber + relateNumber + sellerId
-        var originalRelateNumber = ExtractOriginalRelateNumber(a.Note ?? e.Note) ?? e.InvoiceNumber;
+        var originalRelateNumber = e.ProviderRelateNumber ?? ExtractOriginalRelateNumber(a.Note ?? e.Note) ?? e.InvoiceNumber;
         if (string.IsNullOrEmpty(originalRelateNumber))
             return EinvoiceProviderResult.Fail("缺少原發票 relateNumber");
 
@@ -249,7 +252,7 @@ public class GatewebProvider : IEinvoiceProvider
     public async Task<EinvoiceProviderResult> AllowanceInvalidAsync(EinvoiceAllowance a, string reason, EinvoicePlatform p, CancellationToken ct = default)
     {
         // D0503 需要 originalRelateNumber + relateNumber(折讓單自己)
-        var originalRelateNumber = ExtractOriginalRelateNumber(a.Note ?? a.Einvoice?.Note) ?? a.Einvoice?.InvoiceNumber;
+        var originalRelateNumber = a.Einvoice?.ProviderRelateNumber ?? ExtractOriginalRelateNumber(a.Note ?? a.Einvoice?.Note) ?? a.Einvoice?.InvoiceNumber;
         if (string.IsNullOrEmpty(originalRelateNumber))
             return EinvoiceProviderResult.Fail("缺少原發票 relateNumber");
         if (string.IsNullOrEmpty(a.AllowanceNumber))

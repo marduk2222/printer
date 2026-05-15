@@ -206,6 +206,8 @@ public class EinvoiceController : Controller
                         einvoice.InvoiceNumber = result.Number;
                     if (result.IssueDate.HasValue)
                         einvoice.InvoiceDate = result.IssueDate.Value;
+                    if (!string.IsNullOrEmpty(result.ProviderRelateNumber))
+                        einvoice.ProviderRelateNumber = result.ProviderRelateNumber;
                     einvoice.Status = "issued";
                     einvoice.IssuedAt = DateTime.UtcNow;
                     einvoice.UpdatedAt = DateTime.UtcNow;
@@ -380,6 +382,8 @@ public class EinvoiceController : Controller
                 einvoice.InvoiceNumber = result.Number;
             if (result.IssueDate.HasValue)
                 einvoice.InvoiceDate = result.IssueDate.Value;
+            if (!string.IsNullOrEmpty(result.ProviderRelateNumber))
+                einvoice.ProviderRelateNumber = result.ProviderRelateNumber;
             einvoice.PlatformId = active.Value.Platform.Id;
             einvoice.Status = "issued";
             einvoice.IssuedAt = DateTime.UtcNow;

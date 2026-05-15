@@ -158,6 +158,15 @@ public class Einvoice
     public string Status { get; set; } = "draft";
 
     /// <summary>
+    /// 平台側用於對應「原發票」的識別碼：
+    /// ezPay 的 MerchantOrderNo（INV{Id}{HHmmss}），Gateweb 的 relateNumber。
+    /// 開立成功時由 provider 寫回；後續折讓/作廢 API 需要帶這個值才能找到原發票。
+    /// </summary>
+    [Column("provider_relate_number")]
+    [MaxLength(50)]
+    public string? ProviderRelateNumber { get; set; }
+
+    /// <summary>
     /// 作廢原因
     /// </summary>
     [Column("void_reason")]

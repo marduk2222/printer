@@ -48,8 +48,14 @@ public class EinvoiceProviderResult
     /// </summary>
     public DateOnly? IssueDate { get; init; }
 
-    public static EinvoiceProviderResult Ok(string? number = null, string? code = null, string? message = null, string? raw = null, DateOnly? issueDate = null) =>
-        new() { Success = true, Number = number, Code = code, Message = message, RawResponse = raw, IssueDate = issueDate };
+    /// <summary>
+    /// Provider 端用來對應原發票的識別碼（如 ezPay MerchantOrderNo、Gateweb relateNumber）。
+    /// Controller 寫入 Einvoice.ProviderRelateNumber，折讓/作廢時 Provider 取回送出。
+    /// </summary>
+    public string? ProviderRelateNumber { get; init; }
+
+    public static EinvoiceProviderResult Ok(string? number = null, string? code = null, string? message = null, string? raw = null, DateOnly? issueDate = null, string? providerRelateNumber = null) =>
+        new() { Success = true, Number = number, Code = code, Message = message, RawResponse = raw, IssueDate = issueDate, ProviderRelateNumber = providerRelateNumber };
 
     public static EinvoiceProviderResult Fail(string message, string? code = null, string? raw = null) =>
         new() { Success = false, Message = message, Code = code, RawResponse = raw };

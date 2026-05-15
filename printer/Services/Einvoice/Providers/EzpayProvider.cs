@@ -33,12 +33,13 @@ public class EzpayProvider : IEinvoiceProvider
         if (string.IsNullOrEmpty(p.MerchantId) || string.IsNullOrEmpty(p.ApiKey) || string.IsNullOrEmpty(p.ApiSecret))
             return EinvoiceProviderResult.Fail("ezPay 設定不完整：需 MerchantID / HashKey(32) / HashIV(16)");
 
+        var orderNo = $"INV{e.Id:D6}{DateTime.UtcNow:HHmmss}";
         var fields = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             ["RespondType"] = "JSON",
             ["Version"] = "1.5",
             ["TimeStamp"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-            ["MerchantOrderNo"] = $"INV{e.Id:D6}{DateTime.UtcNow:HHmmss}",
+            ["MerchantOrderNo"] = orderNo,
             ["Status"] = "1", // 即時開立
             ["Category"] = string.IsNullOrEmpty(e.BuyerTaxId) ? "B2C" : "B2B",
             ["BuyerName"] = e.BuyerName,
@@ -59,12 +60,18 @@ public class EzpayProvider : IEinvoiceProvider
 
         if (!string.IsNullOrEmpty(e.BuyerTaxId)) fields["BuyerUBN"] = e.BuyerTaxId;
 
+        // 零稅率必填海關標記：1=非經海關（service export），2=經海關
+        if (e.TaxType == "zero") fields["CustomsClearance"] = "1";
+
         if (e.CarrierType == "mobile") { fields["CarrierType"] = "0"; fields["CarrierNum"] = e.CarrierId ?? string.Empty; }
         else if (e.CarrierType == "citizen") { fields["CarrierType"] = "1"; fields["CarrierNum"] = e.CarrierId ?? string.Empty; }
         else if (e.CarrierType == "donate") { fields["LoveCode"] = e.DonationCode ?? string.Empty; }
 
         var json = await PostAsync($"{BaseUrl(p)}/Api/invoice_issue", fields, p, ct);
-        return ParseResult(json, "InvoiceNumber");
+        var result = ParseResult(json, "InvoiceNumber");
+        return result.Success
+            ? EinvoiceProviderResult.Ok(result.Number, result.Code, result.Message, result.RawResponse, result.IssueDate, orderNo)
+            : result;
     }
 
     public async Task<EinvoiceProviderResult> InvalidAsync(Einvoice e, string reason, EinvoicePlatform p, CancellationToken ct = default)
@@ -90,14 +97,19 @@ public class EzpayProvider : IEinvoiceProvider
         if (string.IsNullOrEmpty(e.InvoiceNumber))
             return EinvoiceProviderResult.Fail("原發票尚未取得發票號碼");
 
-        var taxAmtPerItem = a.Items.Select(i => 0).ToArray(); // 含稅單價，單品稅額 = 0
-        // 取原發票的 MerchantOrderNo：優先使用 a.Note 開頭 "ORDERNO=" 標記
-        var originalOrderNo = $"INV{e.Id:D6}";
-        if (!string.IsNullOrEmpty(a.Note) && a.Note.StartsWith("ORDERNO="))
+        // 各 item 稅額：item.Subtotal × rate（必須與 TotalAmt 對得上，否則 ezPay 回「折讓單加總金額與系統計算不符」）
+        var rate = e.TaxType == "taxable" ? e.TaxRate / 100m : 0m;
+        var taxAmtPerItem = a.Items.Select(i => (int)Math.Round(i.Subtotal * rate)).ToArray();
+        // 原發票 MerchantOrderNo：優先取 einvoice.ProviderRelateNumber（Issue 時寫入）；
+        // 其次 fallback 至 a.Note 的舊「ORDERNO=」格式（向後相容）
+        var originalOrderNo = e.ProviderRelateNumber;
+        if (string.IsNullOrEmpty(originalOrderNo) && !string.IsNullOrEmpty(a.Note) && a.Note.StartsWith("ORDERNO="))
         {
             var idx = a.Note.IndexOf(';');
             originalOrderNo = idx > 0 ? a.Note.Substring(8, idx - 8) : a.Note.Substring(8);
         }
+        if (string.IsNullOrEmpty(originalOrderNo))
+            originalOrderNo = $"INV{e.Id:D6}";
 
         var fields = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
