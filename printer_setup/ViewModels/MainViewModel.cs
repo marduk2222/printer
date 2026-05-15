@@ -216,7 +216,7 @@ namespace printer_setup.ViewModels
             }
             _logger?.Write(new LogInfo { Category = "ComboBox", Function = "GetPrinter", Option = "response", Message = $"事務機數量=>{printers.Count}筆（partner_id={_partnerId}）" });
             foreach (var p in printers)
-                _logger?.Write(new LogInfo { Category = "ComboBox", Function = "GetPrinter", Option = "printer", Message = $"code={p.code} / name={p.name} / serial={p.serial_number} / ip={p.ip} / model={p.model}" });
+                _logger?.Write(new LogInfo { Category = "ComboBox", Function = "GetPrinter", Option = "printer", Message = $"code={p.code} / name={p.name} / serial={p.serial_number} / ip={p.ip} / brand={p.brand} / model={p.model}" });
 
             List.Clear();
             foreach (var p in printers) List.Add(new MfpItem(p));
@@ -229,18 +229,21 @@ namespace printer_setup.ViewModels
                 var targets = new List<MfpItem>();
                 foreach (var item in List) if (item.check) targets.Add(item);
 
+                var hostName = AutoUpdater.GetHostName();
+                var hostIp   = AutoUpdater.GetHostIp();
+
                 await Task.Run(() =>
                 {
                     foreach (var item in targets)
                     {
-                        _logger?.Write(new LogInfo { Category = "Test", Option = item.ip, Message = $"[Test] ip:{item.ip} / serial:{item.serial_number} / name:{item.name} / model:{item.model}" });
+                        _logger?.Write(new LogInfo { Category = "Test", Option = item.ip, Message = $"[Test] ip:{item.ip} / serial:{item.serial_number} / name:{item.name} / brand:{item.brand} / model:{item.model}" });
                         try
                         {
                             item.Inner.items.Clear();
                             item.Inner.supply_items.Clear();
                             item.Inner.alerts.Clear();
 
-                            var ok = _scanner.Scan(item.Inner);
+                            var ok = _scanner.Scan(item.Inner, hostName, hostIp);
                             item.connect = ok ? 2 : 1;
                             item.PopulateSheetsFromItems();
                             if (item.connect == 1) item.upload = 1;
@@ -263,25 +266,45 @@ namespace printer_setup.ViewModels
         {
             using (BusyScope())
             {
+                var skipped = new List<string>();
+                var hostName = AutoUpdater.GetHostName();
+                var hostIp   = AutoUpdater.GetHostIp();
                 await Task.Run(() =>
                 {
                     foreach (var item in List2)
                     {
+                        // 必須先在「測試」頁面通過 SNMP 識別驗證（connect == 2）才允許 UpdateDevice/WriteMeter
+                        if (item.connect != 2)
+                        {
+                            item.upload = 1;
+                            skipped.Add(item.code);
+                            _logger?.Write(new LogInfo { File = "Error", Category = "Run", Function = "Install", Option = "skip", Identity = item.code, Message = "scan 未成功，跳過 UpdateDevice/UpdateSupplies/WriteMeter" });
+                            continue;
+                        }
                         try
                         {
                             _logger?.Write(new LogInfo { Category = "Run", Function = "Install", Option = "request", Identity = item.code });
 
                             _rest?.UpdateDevice(code: item.code, mac: item.mac, ip: item.ip,
-                                                serialNumber: item.serial_number, printerName: item.printer_name, isActive: true);
+                                                serialNumber: item.serial_number, printerName: item.printer_name, isActive: true,
+                                                hostName: hostName, hostIp: hostIp);
 
                             if (item.Inner.supply_items?.Count > 0)
-                                _rest?.UpdateSupplies(new SuppliesRequest { code = item.code, items = item.Inner.supply_items });
+                                _rest?.UpdateSupplies(new SuppliesRequest
+                                {
+                                    code = item.code,
+                                    host_name = hostName,
+                                    host_ip   = hostIp,
+                                    items = item.Inner.supply_items
+                                });
 
                             var ok = _rest?.WriteMeter(new RecordRequest
                             {
                                 code = item.code,
                                 date = DateTime.Now.ToString("yyyy-MM-dd"),
                                 state = 1,
+                                host_name = hostName,
+                                host_ip   = hostIp,
                                 data = item.Inner.snmp_data,
                                 black_print = item.black_sheets,
                                 color_print = item.color_sheets,
@@ -301,8 +324,26 @@ namespace printer_setup.ViewModels
 
                 Setup.General.Partner = _partnerId;
                 _configSync.CopyConfigToSubModules();
-                _configSync.RunCommand("Service.bat");
-                MessageBox.Show("您所選擇的設備已 新增成功!!!", "新增設備");
+                // 安裝 / 重裝並啟動 printer_info Windows Service（取代舊 Service.bat 流程）
+                var serviceOk = await Task.Run(() => _configSync.InstallPrinterInfoService());
+                if (skipped.Count > 0)
+                {
+                    MessageBox.Show(
+                        "以下事務機尚未通過 SNMP 識別驗證，已跳過上傳：\n\n  • " + string.Join("\n  • ", skipped) +
+                        "\n\n請回到「測試」頁面重新檢查（mac/序號需與設備實際讀取一致）。",
+                        "識別驗證未通過", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else if (!serviceOk)
+                {
+                    MessageBox.Show(
+                        "事務機資料已上傳，但 printer_info 服務安裝或啟動失敗。\n" +
+                        "請以「系統管理員」身分重啟本程式再試一次，或手動執行 sc create printer_info。\n\n詳細訊息請查看 Log。",
+                        "服務安裝失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    MessageBox.Show("您所選擇的設備已 新增成功，printer_info 服務已啟動。", "新增設備");
+                }
                 GoToSelectDevice();
             }
         }
@@ -311,22 +352,36 @@ namespace printer_setup.ViewModels
         {
             using (BusyScope())
             {
+                var skipped = new List<string>();
+                var hostName = AutoUpdater.GetHostName();
+                var hostIp   = AutoUpdater.GetHostIp();
                 await Task.Run(() =>
                 {
                     foreach (var item in List2)
                     {
+                        // 必須先在「測試」頁面通過 SNMP 識別驗證（connect == 2）才允許 UpdateDevice/WriteMeter
+                        if (item.connect != 2)
+                        {
+                            item.upload = 1;
+                            skipped.Add(item.code);
+                            _logger?.Write(new LogInfo { File = "Error", Category = "Run", Function = "Remove", Option = "skip", Identity = item.code, Message = "scan 未成功，跳過 UpdateDevice/WriteMeter" });
+                            continue;
+                        }
                         try
                         {
                             _logger?.Write(new LogInfo { Category = "Run", Function = "Remove", Option = "request", Identity = item.code });
 
                             _rest?.UpdateDevice(code: item.code, mac: item.mac, ip: item.ip,
-                                                serialNumber: item.serial_number, printerName: item.printer_name, isActive: false);
+                                                serialNumber: item.serial_number, printerName: item.printer_name, isActive: false,
+                                                hostName: hostName, hostIp: hostIp);
 
                             var ok = _rest?.WriteMeter(new RecordRequest
                             {
                                 code = item.code,
                                 date = DateTime.Now.ToString("yyyy-MM-dd"),
                                 state = 2,
+                                host_name = hostName,
+                                host_ip   = hostIp,
                                 data = item.Inner.snmp_data,
                                 black_print = item.black_sheets,
                                 color_print = item.color_sheets,
@@ -344,7 +399,17 @@ namespace printer_setup.ViewModels
                     }
                 });
 
-                MessageBox.Show("您所選擇的設備已 移除成功!!!", "移除設備");
+                if (skipped.Count > 0)
+                {
+                    MessageBox.Show(
+                        "以下事務機尚未通過 SNMP 識別驗證，已跳過退機：\n\n  • " + string.Join("\n  • ", skipped) +
+                        "\n\n請回到「測試」頁面重新檢查（mac/序號需與設備實際讀取一致）。",
+                        "識別驗證未通過", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    MessageBox.Show("您所選擇的設備已 移除成功!!!", "移除設備");
+                }
                 GoToSelectDevice();
             }
         }

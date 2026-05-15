@@ -14,6 +14,13 @@ public class Brand
     public int Id { get; set; }
 
     /// <summary>
+    /// 廠牌代碼（OID 分派用，例如 ricoh / ricoh_imc / xerox / toshiba / kyocera / common）
+    /// </summary>
+    [Column("code")]
+    [MaxLength(50)]
+    public string? Code { get; set; }
+
+    /// <summary>
     /// 品牌名稱
     /// </summary>
     [Column("name")]

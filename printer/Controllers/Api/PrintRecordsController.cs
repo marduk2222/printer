@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using printer.Data;
@@ -13,10 +14,12 @@ namespace printer.Controllers.Api;
 public class PrintRecordsController : ControllerBase
 {
     private readonly PrinterDbContext _context;
+    private readonly ILogger<PrintRecordsController> _logger;
 
-    public PrintRecordsController(PrinterDbContext context)
+    public PrintRecordsController(PrinterDbContext context, ILogger<PrintRecordsController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     /// <summary>
@@ -25,12 +28,72 @@ public class PrintRecordsController : ControllerBase
     [HttpPost("upload")]
     public async Task<ActionResult> Upload([FromBody] PrintRecordUploadRequest request)
     {
+        if (request == null)
+            return BadRequest(new { message = "請求內容不可為空" });
+
+        // 記錄收到的原始上傳內容（含上傳 agent 識別），便於事後追蹤
+        var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+        _logger.LogInformation(
+            "PrintRecord upload received from remote={RemoteIp} hostName={HostName} hostIp={HostIp} payload={Payload}",
+            remoteIp,
+            request.HostName,
+            request.HostIp,
+            JsonSerializer.Serialize(request));
+
         var printer = await _context.Printers
             .Include(p => p.Model)
             .FirstOrDefaultAsync(p => p.Id == request.PrinterId);
 
         if (printer == null)
             return NotFound(new { message = "找不到事務機" });
+
+        // 驗證 MAC / 序號：避免 PrinterId 填錯把計數寫到錯的事務機
+        // 規則（與 printer_info / printer_setup 對齊）：
+        //   1. server 與 request 兩邊都有的識別欄位，任一不符 → 拒絕
+        //   2. 請求的 mac 與 serialNumber 不可同時為空（雙空 = 無從驗證或無法首次寫入）
+        bool printerHasMac    = !string.IsNullOrWhiteSpace(printer.Mac);
+        bool printerHasSerial = !string.IsNullOrWhiteSpace(printer.SerialNumber);
+        bool requestHasMac    = !string.IsNullOrWhiteSpace(request.Mac);
+        bool requestHasSerial = !string.IsNullOrWhiteSpace(request.SerialNumber);
+
+        bool macMismatch = printerHasMac && requestHasMac &&
+            !string.Equals(printer.Mac!.Trim(), request.Mac!.Trim(), StringComparison.OrdinalIgnoreCase);
+        bool serialMismatch = printerHasSerial && requestHasSerial &&
+            !string.Equals(printer.SerialNumber!.Trim(), request.SerialNumber!.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        if (macMismatch || serialMismatch)
+        {
+            return BadRequest(new
+            {
+                message = "事務機 MAC 或序號不符",
+                expected = new { mac = printer.Mac, serialNumber = printer.SerialNumber },
+                received = new { mac = request.Mac, serialNumber = request.SerialNumber }
+            });
+        }
+
+        if (!requestHasMac && !requestHasSerial)
+        {
+            return BadRequest(new
+            {
+                message = (printerHasMac || printerHasSerial)
+                    ? "事務機已有 mac/序號紀錄，請於請求中提供 mac 或 serialNumber 以驗證身分"
+                    : "首次抄表請於請求中提供 mac 或 serialNumber 以建立識別"
+            });
+        }
+
+        bool printerIdentityChanged = false;
+        if (!printerHasMac && requestHasMac)
+        {
+            printer.Mac = request.Mac!.Trim();
+            printerIdentityChanged = true;
+        }
+        if (!printerHasSerial && requestHasSerial)
+        {
+            printer.SerialNumber = request.SerialNumber!.Trim();
+            printerIdentityChanged = true;
+        }
+        if (printerIdentityChanged)
+            printer.UpdatedAt = DateTime.UtcNow;
 
         // 取得此機型的張數類型與驅動參數對應
         Dictionary<string, int> keyToSheetType = new();
@@ -110,6 +173,12 @@ public class PrintRecordsController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+
+        // sheetTotals 是 Dictionary<int,int>，System.Text.Json 預設不接受非 string key，先轉成 string-key dict 再序列化
+        var sheetTotalsForLog = sheetTotals.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
+        _logger.LogInformation(
+            "PrintRecord upload succeeded: recordId={RecordId} printerId={PrinterId} hostName={HostName} hostIp={HostIp} sheetTotals={SheetTotals}",
+            record.Id, request.PrinterId, request.HostName, request.HostIp, JsonSerializer.Serialize(sheetTotalsForLog));
 
         return Ok(new { recordId = record.Id, sheetTotals });
     }
@@ -288,6 +357,26 @@ public class PrintRecordUploadRequest
     /// 事務機 ID
     /// </summary>
     public int PrinterId { get; set; }
+
+    /// <summary>
+    /// 事務機 MAC（用於識別驗證；首次抄表至少須帶 mac 或 serialNumber 其一）
+    /// </summary>
+    public string? Mac { get; set; }
+
+    /// <summary>
+    /// 事務機序號（用於識別驗證；首次抄表至少須帶 mac 或 serialNumber 其一）
+    /// </summary>
+    public string? SerialNumber { get; set; }
+
+    /// <summary>
+    /// 上傳 agent 主機名稱（用於追蹤是哪台機器上傳）
+    /// </summary>
+    public string? HostName { get; set; }
+
+    /// <summary>
+    /// 上傳 agent 主機 IP（用於追蹤是哪台機器上傳）
+    /// </summary>
+    public string? HostIp { get; set; }
 
     /// <summary>
     /// 記錄日期（選填，預設今日）

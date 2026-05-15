@@ -343,6 +343,22 @@ public class BillingGroupController : Controller
     }
 
     /// <summary>
+    /// 切換「自動調整贈送張數共用池」旗標：不必整單儲存即生效（AJAX）
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SetAutoAdjustGiftPool(int id, bool enabled)
+    {
+        var group = await _context.PrinterBillingGroups.FindAsync(id);
+        if (group == null) return NotFound();
+
+        group.AutoAdjustGiftPool = enabled;
+        group.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true, enabled });
+    }
+
+    /// <summary>
     /// 群組成員 / 成員月租明細 拖曳排序：依傳入 printerIds 順序寫回 BillingGroupSortOrder
     /// </summary>
     [HttpPost]

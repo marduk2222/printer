@@ -25,6 +25,70 @@
     </div>
 }
 
+@{
+    var startStr = ((DateOnly)ViewBag.StartDate).ToString("yyyy-MM-dd");
+    var endStr   = ((DateOnly)ViewBag.EndDate).ToString("yyyy-MM-dd");
+}
+<div class="row mb-4">
+    <div class="col mb-3">
+        <a asp-action="Index" asp-route-status="issued"
+           asp-route-partnerId="@ViewBag.PartnerId"
+           asp-route-startDate="@startStr"
+           asp-route-endDate="@endStr"
+           class="text-decoration-none">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">已開發票</h6>
+                            <h2 class="mb-0">@(((int)(ViewBag.CountIssued ?? 0)).ToString("N0"))</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">&#129534;</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col mb-3">
+        <a asp-action="Index" asp-route-status="draft"
+           asp-route-partnerId="@ViewBag.PartnerId"
+           asp-route-startDate="@startStr"
+           asp-route-endDate="@endStr"
+           class="text-decoration-none">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="opacity-75">未開發票</h6>
+                            <h2 class="mb-0">@(((int)(ViewBag.CountDraft ?? 0)).ToString("N0"))</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">&#128221;</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col mb-3">
+        <a asp-action="Index" asp-route-status="void"
+           asp-route-partnerId="@ViewBag.PartnerId"
+           asp-route-startDate="@startStr"
+           asp-route-endDate="@endStr"
+           class="text-decoration-none">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50">作廢發票</h6>
+                            <h2 class="mb-0">@(((int)(ViewBag.CountVoid ?? 0)).ToString("N0"))</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">&#9888;</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <div class="card mb-3">
     <div class="card-body">
         <form method="get" class="row g-3">
@@ -81,7 +145,13 @@
                         var status = statusNames.GetValueOrDefault(inv.Status, ("未知", "bg-secondary"));
                         <tr>
                             <td><strong>@inv.InvoiceNumber</strong></td>
-                            <td>@inv.InvoiceDate.ToString("yyyy/MM/dd")</td>
+                            <td>
+                                @inv.InvoiceDate.ToString("yyyy/MM/dd")
+                                @{
+                                    var ts = inv.IssuedAt ?? inv.CreatedAt;
+                                }
+                                <br /><small class="text-muted">@ts.ToString("HH:mm:ss")</small>
+                            </td>
                             <td>@inv.Partner?.Name</td>
                             <td>@inv.BuyerTaxId</td>
                             <td class="text-end">@inv.Amount.ToString("N0")</td>

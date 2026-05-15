@@ -42,12 +42,21 @@
                 <div class="card-body">
                     <p class="text-muted small mb-3">@platform.Description</p>
 
+                    @{
+                        var (mLabel, kLabel, sLabel) = platform.Code switch
+                        {
+                            "gateweb" => ("companyKey", "username", "password"),
+                            "ezpay" => ("MerchantID", "HashKey(32)", "HashIV(16)"),
+                            "ecpay" or "ecpay_b2c" or "ecpay_b2b" => ("MerchantID", "HashKey", "HashIV"),
+                            _ => ("商店代號", "API Key", "API Secret")
+                        };
+                    }
                     <dl class="row mb-0 small">
-                        <dt class="col-5">商店代號</dt>
+                        <dt class="col-5">@mLabel</dt>
                         <dd class="col-7">@(string.IsNullOrEmpty(platform.MerchantId) ? "未設定" : platform.MerchantId)</dd>
-                        <dt class="col-5">API Key</dt>
+                        <dt class="col-5">@kLabel</dt>
                         <dd class="col-7">@(string.IsNullOrEmpty(platform.ApiKey) ? "未設定" : "已設定")</dd>
-                        <dt class="col-5">API Secret</dt>
+                        <dt class="col-5">@sLabel</dt>
                         <dd class="col-7">@(string.IsNullOrEmpty(platform.ApiSecret) ? "未設定" : "已設定")</dd>
                         <dt class="col-5">模式</dt>
                         <dd class="col-7">

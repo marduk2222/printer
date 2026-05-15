@@ -33,7 +33,7 @@ namespace DataClass
 
     // ──────────────────────────────────────────────────────────────────────────
     // SNMP Counter 結構
-    // OID 直接映射為 CounterItem（job_type / color / size / sheets），
+    // OID 直接映射為 CounterItem（output / category / color / size / sheets），
     // 不再經過 Counter → Sheets → PrintCount 多層中間結構。
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -70,14 +70,15 @@ namespace DataClass
     public class Printer
     {
         // ── 識別資訊（由 /api/period 填入）──────────────────────────────────
-        public int    id            { get; set; }   // Odoo record id
+        public int    id            { get; set; }   // record id
         public string code          { get; set; }   // 主要識別碼（REST API key）
         public string name          { get; set; }   // 顯示名稱
         public string printer_name  { get; set; }   // 型號名稱
         public string serial_number { get; set; }   // 序號
         public string mac           { get; set; }   // MAC
         public string ip            { get; set; }   // IP
-        public string model         { get; set; }   // 型號代碼（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
+        public string brand         { get; set; }   // 廠牌代碼（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
+        public string model         { get; set; }   // 具體型號代碼（如 "2555c"、"3515ac"；廠牌內若有多種對應規則時用此分派）
         public int    state         { get; set; }   // 狀態（0=正常,1=新裝機,2=退機,3=換機）
 
         // ── 排程設定（由 /api/period 填入）─────────────────────────────────
@@ -131,7 +132,8 @@ namespace DataClass
         public string code          { get; set; }   // 主要識別碼
         public string company_id    { get; set; }
         public string number        { get; set; }   // Partner number
-        public string model         { get; set; }   // 型號代碼（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
+        public string brand         { get; set; }   // 廠牌代碼（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
+        public string model         { get; set; }   // 具體型號代碼（如 "2555c"、"3515ac"）
         public string name          { get; set; }
         public string description   { get; set; }
         public string printer_name  { get; set; }
@@ -143,7 +145,7 @@ namespace DataClass
         public int    priority      { get; set; }
         public string date_start    { get; set; }
         public string date_end      { get; set; }
-        public int state { get; set; }   // 0=正常, 1=新裝機, 2=退機, 3=換機（對應 Odoo printer.data.state）
+        public int state { get; set; }   // 0=正常, 1=新裝機, 2=退機, 3=換機
     }
 
     // ── /api/supplies 請求 ────────────────────────────────────────────────────
@@ -169,6 +171,12 @@ namespace DataClass
     public class SuppliesRequest
     {
         public string code { get; set; }
+
+        // 上傳 agent 識別
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_name { get; set; }
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_ip   { get; set; }
 
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public List<SupplyItem> items { get; set; }
@@ -206,20 +214,30 @@ namespace DataClass
     public class AlertsRequest
     {
         public string       code   { get; set; }
+
+        // 上傳 agent 識別
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_name { get; set; }
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_ip   { get; set; }
+
         public List<Alert>  alerts { get; set; }
     }
 
     // ── /api/record 請求 ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// 計數器明細項目（新維度格式）
-    /// job_type : print / copy / fax / scan / total
-    /// color    : black / color_full / mono / duotone
-    /// size     : normal / large
+    /// 計數器明細項目（四維格式）
+    /// output   : printed（已列印） / scanned（已掃描）
+    /// category : print（列印） / copy（影印） / fax（傳真） / network（網路） / list（清單） / scan（掃描）
+    /// color    : color_full（高彩） / duotone（雙彩） / mono（單彩） / black（黑白）
+    /// size     : large（大張） / normal（小張）
+    /// driver_key 編碼為 "{output}.{category}.{color}.{size}"
     /// </summary>
     public class CounterItem
     {
-        public string job_type { get; set; }
+        public string output   { get; set; }
+        public string category { get; set; }
         public string color    { get; set; }
         public string size     { get; set; }
         public int    sheets   { get; set; }
@@ -227,7 +245,7 @@ namespace DataClass
 
     /// <summary>
     /// 抄表紀錄請求（新格式）
-    /// items 為 CounterItem list，包含完整的 job_type / color / size / sheets 維度。
+    /// items 為 CounterItem list，包含完整的 output / category / color / size / sheets 維度。
     /// data  為 SNMP 抓回的原始 JSON，供 Odoo 端除錯用。
     /// 舊格式欄位（black_print 等）保留供向下相容，items 有值時不送。
     ///
@@ -238,6 +256,12 @@ namespace DataClass
         public string code  { get; set; }
         public string date  { get; set; }   // yyyy-MM-dd
         public int    state { get; set; }   // 0=一般, 1=起表, 2=尾表, 3=換機
+
+        // 上傳 agent 識別
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_name { get; set; }
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string host_ip   { get; set; }
 
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string data  { get; set; }   // SNMP 原始 JSON（來自 Printer.snmp_data，除錯用）

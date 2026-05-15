@@ -51,3 +51,14 @@ logs/
 .DS_Store
 Thumbs.db
 nul
+
+# Claude / Playwright 暫存
+.claude/
+.playwright-mcp/
+
+# 開發過程截圖
+/create-billing-layout.png
+/edit-draft-layout.png
+
+# 使用者上傳檔案
+printer/wwwroot/uploads/

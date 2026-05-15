@@ -187,9 +187,9 @@ public class WorkOrderService : IWorkOrderService
         Directory.CreateDirectory(folder);
 
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var safeExts = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+        var safeExts = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf" };
         if (!safeExts.Contains(ext))
-            throw new ArgumentException("不支援的圖片格式");
+            throw new ArgumentException("不支援的檔案格式（僅支援 JPG/PNG/GIF/WebP/BMP/PDF）");
 
         var fileName = $"{Guid.NewGuid()}{ext}";
         var fullPath = Path.Combine(folder, fileName);

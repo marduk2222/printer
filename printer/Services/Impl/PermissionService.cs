@@ -17,7 +17,7 @@ public class PermissionService : IPermissionService
         new() { Code = "work_order", Name = "派工管理", Controller = "WorkOrder" },
         new() { Code = "billing", Name = "計費系統", Controller = "BillingConfig" },
         new() { Code = "invoice", Name = "帳單管理", Controller = "Invoice" },
-        new() { Code = "billing_report", Name = "計費報表", Controller = "BillingReport" },
+        new() { Code = "billing_report", Name = "帳單報表", Controller = "BillingReport" },
         new() { Code = "system_brand", Name = "廠牌管理", Controller = "Brand" },
         new() { Code = "system_model", Name = "型號管理", Controller = "PrinterModel" },
         new() { Code = "system_user", Name = "人員管理", Controller = "AppUser" },

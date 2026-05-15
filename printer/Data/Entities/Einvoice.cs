@@ -136,6 +136,21 @@ public class Einvoice
     public string TaxType { get; set; } = "taxable";
 
     /// <summary>
+    /// 發票對象: B2C=消費者, B2B=營業人（強制需有買方統編）
+    /// </summary>
+    [Column("invoice_type")]
+    [MaxLength(10)]
+    public string InvoiceType { get; set; } = "B2C";
+
+    /// <summary>
+    /// 金額是否含稅輸入:
+    /// false=稅外加（明細為未稅、平台正常計算）；
+    /// true=稅內含（明細輸入為含稅，建立時自動拆分為未稅 + 稅額存進 DB）
+    /// </summary>
+    [Column("tax_included")]
+    public bool TaxIncluded { get; set; } = false;
+
+    /// <summary>
     /// 狀態: draft=草稿, issued=已開立, void=已作廢
     /// </summary>
     [Column("status")]

@@ -510,6 +510,11 @@ namespace printer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("code");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -535,6 +540,8 @@ namespace printer.Migrations
                         .HasColumnName("sort_order");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code");
 
                     b.HasIndex("Name");
 
@@ -604,6 +611,12 @@ namespace printer.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("invoice_number");
 
+                    b.Property<string>("InvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("invoice_type");
+
                     b.Property<DateTime?>("IssuedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("issued_at");
@@ -641,6 +654,10 @@ namespace printer.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)")
                         .HasColumnName("tax_amount");
+
+                    b.Property<bool>("TaxIncluded")
+                        .HasColumnType("bit")
+                        .HasColumnName("tax_included");
 
                     b.Property<int>("TaxRate")
                         .HasColumnType("int")
@@ -685,6 +702,140 @@ namespace printer.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("einvoices");
+                });
+
+            modelBuilder.Entity("printer.Data.Entities.EinvoiceAllowance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("AllowanceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("allowance_date");
+
+                    b.Property<string>("AllowanceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("allowance_number");
+
+                    b.Property<string>("AllowanceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("allowance_type");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("EinvoiceId")
+                        .HasColumnType("int")
+                        .HasColumnName("einvoice_id");
+
+                    b.Property<DateTime?>("IssuedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("note");
+
+                    b.Property<int?>("PlatformId")
+                        .HasColumnType("int")
+                        .HasColumnName("platform_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasColumnName("tax_amount");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)")
+                        .HasColumnName("total_amount");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime?>("VoidAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("void_at");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("void_reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AllowanceDate");
+
+                    b.HasIndex("AllowanceNumber");
+
+                    b.HasIndex("EinvoiceId");
+
+                    b.HasIndex("PlatformId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("einvoice_allowances");
+                });
+
+            modelBuilder.Entity("printer.Data.Entities.EinvoiceAllowanceItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AllowanceId")
+                        .HasColumnType("int")
+                        .HasColumnName("allowance_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int")
+                        .HasColumnName("quantity");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("unit_price");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AllowanceId");
+
+                    b.ToTable("einvoice_allowance_items");
                 });
 
             modelBuilder.Entity("printer.Data.Entities.EinvoiceFieldMapping", b =>
@@ -2620,6 +2771,35 @@ namespace printer.Migrations
                     b.Navigation("Platform");
                 });
 
+            modelBuilder.Entity("printer.Data.Entities.EinvoiceAllowance", b =>
+                {
+                    b.HasOne("printer.Data.Entities.Einvoice", "Einvoice")
+                        .WithMany()
+                        .HasForeignKey("EinvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("printer.Data.Entities.EinvoicePlatform", "Platform")
+                        .WithMany()
+                        .HasForeignKey("PlatformId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Einvoice");
+
+                    b.Navigation("Platform");
+                });
+
+            modelBuilder.Entity("printer.Data.Entities.EinvoiceAllowanceItem", b =>
+                {
+                    b.HasOne("printer.Data.Entities.EinvoiceAllowance", "Allowance")
+                        .WithMany("Items")
+                        .HasForeignKey("AllowanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Allowance");
+                });
+
             modelBuilder.Entity("printer.Data.Entities.EinvoiceFieldMapping", b =>
                 {
                     b.HasOne("printer.Data.Entities.EinvoicePlatform", "Platform")
@@ -3006,6 +3186,11 @@ namespace printer.Migrations
                 });
 
             modelBuilder.Entity("printer.Data.Entities.Einvoice", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("printer.Data.Entities.EinvoiceAllowance", b =>
                 {
                     b.Navigation("Items");
                 });

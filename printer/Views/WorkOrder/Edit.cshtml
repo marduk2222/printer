@@ -7,7 +7,7 @@
     var selectedUserIds = ViewBag.SelectedUserIds as List<int> ?? new();
 }
 
-<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
 
@@ -66,18 +66,6 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">事務機（可多選）</label>
-                            <select name="printerIds" multiple class="form-select ts-multi"
-                                    data-placeholder="請選擇事務機">
-                                @foreach (var p in allPrinters)
-                                {
-                                    <option value="@p.Id" selected="@(selectedPrinterIds.Contains(p.Id) ? "selected" : null)">
-                                        @p.Name@(p.Partner != null ? $" ({p.Partner.Name})" : "")
-                                    </option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label">指派人員（可多選）</label>
                             <select name="userIds" multiple class="form-select ts-multi"
                                     data-placeholder="請選擇人員">
@@ -89,10 +77,193 @@
                                 }
                             </select>
                         </div>
+
+                        <!-- 事務機：清單呈現，加入時顯示廠牌與型號 -->
+                        <div class="col-12">
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span>事務機（可多台）</span>
+                                <span class="small text-muted fw-normal" id="printerCountText">已選 0 台</span>
+                            </label>
+                            <div class="d-flex gap-2 mb-2">
+                                <select id="printerPicker" class="form-select form-select-sm ts-select" style="max-width:420px">
+                                    <option value="">選擇事務機加入...</option>
+                                    @foreach (var p in allPrinters)
+                                    {
+                                        <option value="@p.Id">@(p.Partner != null ? $"{p.Partner.Name} - " : "")@p.Name</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPrinterRow()">＋ 加入</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>事務機</th>
+                                            <th>客戶</th>
+                                            <th>廠牌</th>
+                                            <th>型號</th>
+                                            <th style="width:60px"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="printerListBody">
+                                        <tr id="printerEmptyRow">
+                                            <td colspan="5" class="text-center text-muted small">尚未選擇事務機</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右欄：追加上傳圖片 / PDF -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">追加上傳圖片 / PDF</div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">支援 JPG、PNG、GIF、WebP、BMP、PDF（既有檔案不會被移除，請至明細頁刪除）</p>
+
+                    <button type="button" class="btn btn-outline-primary w-100 mb-2"
+                            onclick="document.getElementById('imageInput').click()">
+                        📷 選擇圖片或 PDF
+                    </button>
+                    <input type="file" id="imageInput" name="images" accept="image/*,application/pdf"
+                           multiple class="d-none" onchange="previewImages(this)" />
+
+                    <input type="text" name="imageCaption" class="form-control form-control-sm mb-2"
+                           placeholder="說明（選填，套用到所有檔案）" />
+
+                    <div id="imagePreviewContainer"></div>
                 </div>
             </div>
         </div>
     </div>
 
 </form>
+
+@section Scripts {
+<script>
+    function previewImages(input) {
+        const container = document.getElementById('imagePreviewContainer');
+        container.innerHTML = '';
+        for (const file of input.files) {
+            const isPdf = (file.type === 'application/pdf') || /\.pdf$/i.test(file.name);
+            const div = document.createElement('div');
+            div.className = 'mb-1';
+            if (isPdf) {
+                div.innerHTML = `<div class="border rounded p-2 small bg-light d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem">📄</span>
+                    <span class="text-truncate">${file.name}</span>
+                </div>`;
+                container.appendChild(div);
+            } else {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    div.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" style="max-height:100px;object-fit:cover;width:100%"/>`;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+
+    var allPrintersData = @Html.Raw(ViewBag.AllPrintersJson ?? "[]");
+    var initialSelectedPrinterIds = @Html.Raw(ViewBag.SelectedPrinterIdsJson ?? "[]");
+    var printerById = {};
+    allPrintersData.forEach(function (p) { printerById[p.id] = p; });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initialSelectedPrinterIds.forEach(function (id) { addPrinterRowById(id); });
+        refreshPickerOptions();
+        updatePrinterEmptyRow();
+        updatePrinterCount();
+    });
+
+    function addPrinterRow() {
+        var sel = document.getElementById('printerPicker');
+        var ts = sel.tomselect;
+        var idStr = ts ? ts.getValue() : sel.value;
+        var id = parseInt(idStr);
+        if (!id) return;
+        addPrinterRowById(id);
+        if (ts) ts.clear();
+        refreshPickerOptions();
+        updatePrinterEmptyRow();
+        updatePrinterCount();
+    }
+
+    function addPrinterRowById(id) {
+        var p = printerById[id];
+        if (!p) return;
+        var tbody = document.getElementById('printerListBody');
+        if (tbody.querySelector('tr[data-pid="' + id + '"]')) return;
+        var tr = document.createElement('tr');
+        tr.dataset.pid = id;
+        tr.innerHTML =
+            '<td>' + escapeHtml(p.name) +
+                '<input type="hidden" name="printerIds" value="' + id + '" /></td>' +
+            '<td><small>' + escapeHtml(p.partnerName) + '</small></td>' +
+            '<td><small>' + escapeHtml(p.brandName || '-') + '</small></td>' +
+            '<td><small>' + escapeHtml(p.modelName || '-') + '</small></td>' +
+            '<td><button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removePrinterRow(' + id + ')">×</button></td>';
+        tbody.appendChild(tr);
+    }
+
+    function removePrinterRow(id) {
+        var tr = document.querySelector('#printerListBody tr[data-pid="' + id + '"]');
+        if (tr) tr.remove();
+        refreshPickerOptions();
+        updatePrinterEmptyRow();
+        updatePrinterCount();
+    }
+
+    function refreshPickerOptions() {
+        var sel = document.getElementById('printerPicker');
+        var ts = sel.tomselect;
+        if (!ts) return;
+        var taken = new Set(Array.from(document.querySelectorAll('#printerListBody tr[data-pid]'))
+            .map(function (tr) { return parseInt(tr.dataset.pid); }));
+        Object.keys(printerById).forEach(function (idKey) {
+            var id = parseInt(idKey);
+            var p = printerById[id];
+            if (taken.has(id)) {
+                ts.removeOption(id);
+            } else if (!ts.options[id]) {
+                ts.addOption({ value: id, text: (p.partnerName ? (p.partnerName + ' - ') : '') + p.name });
+            }
+        });
+        ts.refreshOptions(false);
+    }
+
+    function updatePrinterEmptyRow() {
+        var tbody = document.getElementById('printerListBody');
+        var hasItems = tbody.querySelector('tr[data-pid]');
+        var empty = document.getElementById('printerEmptyRow');
+        if (hasItems) {
+            if (empty) empty.style.display = 'none';
+        } else {
+            if (empty) empty.style.display = '';
+            else {
+                var tr = document.createElement('tr');
+                tr.id = 'printerEmptyRow';
+                tr.innerHTML = '<td colspan="5" class="text-center text-muted small">尚未選擇事務機</td>';
+                tbody.appendChild(tr);
+            }
+        }
+    }
+
+    function updatePrinterCount() {
+        var n = document.querySelectorAll('#printerListBody tr[data-pid]').length;
+        var el = document.getElementById('printerCountText');
+        if (el) el.textContent = '已選 ' + n + ' 台';
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+</script>
+}

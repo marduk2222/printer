@@ -14,17 +14,12 @@ namespace Lib
     /// 差異摘要（與舊版 CPIC / Odoo 版本比對）：
     ///   1. Authenticate 端點改為 /api/auth，無 session cookie；帳密驗證成功即回 true。
     ///   2. 所有 POST body 用 camelCase 序列化（CamelCasePropertyNamesContractResolver）。
-    ///   3. /api/printer、/api/period 參數改 partnerId (string)；回傳 PrinterDataDto（modelId 為 int）。
+    ///   3. /api/printer、/api/period 參數改 partnerId (string)；回傳 PrinterDataDto。
+    ///      brand / model 為字串代碼（Brand.Code / PrinterModel.Code），供 SNMP OID 兩層分派使用。
     ///   4. /api/supplies 只接受扁平欄位（tonerBlack/…/drumYellow），CPIC 的 items 由 FlattenSupplies 壓平。
     ///   5. /api/alerts 只接受 int[]，Alert.code 非數字者會被丟棄。
     ///   6. /api/record 不再支援 state / data；state 改由 UpdateDevice 或 CreateInstall 傳遞。
     ///   7. UpdateDevice 改用 isActive (bool?) 控制啟用/停用；wire 欄位為 isActive。
-    ///
-    /// 已知限制：
-    ///   - PrinterDataDto.modelId 為數字，PrinterScanner.Scan() 需要字串 model code（如 "ricoh"）。
-    ///     Printer.model 目前直接填 modelId.ToString()，SNMP switch 將落到 default → 不做 Counter。
-    ///     若需啟用 SNMP，後端 PrinterModel.Code 應設為 "common"/"ricoh"/"xerox"/"toshiba"/"kyocera"
-    ///     且 PrinterDataDto 需要增設字串 model 欄位，或新增 /api/model/code 查詢端點。
     /// </summary>
     internal class RestClient
     {
@@ -135,7 +130,8 @@ namespace Lib
                         ip              = p.ip ?? "",
                         printer_name    = p.printerName ?? "",
                         serial_number   = p.serialNumber ?? "",
-                        model           = p.modelId > 0 ? p.modelId.ToString() : "",
+                        brand           = p.brand ?? "",
+                        model           = p.model ?? "",
                         is_active       = p.isActive,
                         printer_counter = false
                     });
@@ -150,7 +146,7 @@ namespace Lib
         #region Device / Supplies / Alerts / Record / Install
 
         /// <summary>POST /api/device — 更新設備識別欄位 + isActive（啟用/停用）</summary>
-        public bool UpdateDevice(string code, string mac = null, string ip = null, string serialNumber = null, string printerName = null, bool? isActive = null)
+        public bool UpdateDevice(string code, string mac = null, string ip = null, string serialNumber = null, string printerName = null, bool? isActive = null, string hostName = null, string hostIp = null)
         {
             try
             {
@@ -161,7 +157,9 @@ namespace Lib
                     ip,
                     serialNumber,
                     printerName,
-                    isActive
+                    isActive,
+                    hostName,
+                    hostIp
                 }, CamelSettings);
                 var body = Post("/api/device", json);
                 if (body == null) return false;
@@ -197,7 +195,13 @@ namespace Lib
                     foreach (var a in request.alerts)
                         if (int.TryParse(a.code, out var ci)) codes.Add(ci);
                 }
-                var json = JsonConvert.SerializeObject(new { code = request.code, alerts = codes }, CamelSettings);
+                var json = JsonConvert.SerializeObject(new
+                {
+                    code     = request.code,
+                    hostName = request.host_name,
+                    hostIp   = request.host_ip,
+                    alerts   = codes
+                }, CamelSettings);
                 var body = Post("/api/alerts", json);
                 if (body == null) return false;
                 var response = Deserialize<ApiResponse>(body);
@@ -206,7 +210,7 @@ namespace Lib
             catch (Exception ex) { Log("UpdateAlerts", "exception", "alerts", ex.Message); return false; }
         }
 
-        /// <summary>POST /api/record — 只送 code / date / blackPrint / colorPrint / largePrint</summary>
+        /// <summary>POST /api/record — 送四維 items（含 output/category/color/size），舊扁平欄位保留以向下相容</summary>
         public bool WriteMeter(RecordRequest request)
         {
             try
@@ -215,6 +219,11 @@ namespace Lib
                 {
                     code       = request.code,
                     date       = request.date,
+                    state      = request.state,
+                    hostName   = request.host_name,
+                    hostIp     = request.host_ip,
+                    data       = request.data,
+                    items      = request.items,
                     blackPrint = request.black_print,
                     colorPrint = request.color_print,
                     largePrint = request.large_print
@@ -327,6 +336,8 @@ namespace Lib
             return new
             {
                 code         = req.code,
+                hostName     = req.host_name,
+                hostIp       = req.host_ip,
                 tonerBlack   = tBlk,
                 tonerCyan    = tCyn,
                 tonerMagenta = tMag,
@@ -351,7 +362,8 @@ namespace Lib
         public string code { get; set; }
         public int? partnerId { get; set; }
         public int? userId { get; set; }
-        public int modelId { get; set; }
+        public string brand { get; set; }   // 廠牌代碼（OID 分派用）
+        public string model { get; set; }   // 具體型號代碼（廠牌內細分用）
         public string name { get; set; }
         public string description { get; set; }
         public bool isActive { get; set; }

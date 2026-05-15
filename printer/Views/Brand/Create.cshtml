@@ -17,6 +17,10 @@
             <div class="row">
                 <div class="col-md-8">
                     <div class="mb-3">
+                        <label class="form-label">廠牌代碼</label>
+                        <input asp-for="Code" class="form-control" placeholder="如 ricoh / xerox / toshiba（OID 分派用）" />
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">廠牌名稱 <span class="text-danger">*</span></label>
                         <input asp-for="Name" class="form-control" required />
                     </div>

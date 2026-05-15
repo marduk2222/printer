@@ -397,9 +397,9 @@ namespace printer_info
                     date = DateTime.Now.ToString("yyyy-MM-dd"),
                     items = new[]
                     {
-                        new { job_type = "total", color = "black",      size = "normal", sheets = 12345 },
-                        new { job_type = "total", color = "color_full", size = "normal", sheets = 6789  },
-                        new { job_type = "total", color = "black",      size = "large",  sheets = 100   }
+                        new { output = "printed", category = "print", color = "black",      size = "normal", sheets = 12345 },
+                        new { output = "printed", category = "print", color = "color_full", size = "normal", sheets = 6789  },
+                        new { output = "printed", category = "print", color = "black",      size = "large",  sheets = 100   }
                     }
                 };
 

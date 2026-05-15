@@ -66,13 +66,15 @@
                         </div>
                         <div class="col-md-12">
                             <div class="form-check form-switch">
-                                <input asp-for="AutoAdjustGiftPool" class="form-check-input" type="checkbox" />
+                                <input asp-for="AutoAdjustGiftPool" class="form-check-input" type="checkbox" id="autoAdjustGiftPoolToggle" />
                                 <label class="form-check-label" asp-for="AutoAdjustGiftPool">
                                     新增/移除成員時自動調整贈送張數共用池
                                 </label>
+                                <span id="autoAdjustGiftPoolStatus" class="ms-2 small"></span>
                             </div>
                             <small class="text-muted d-block">
                                 打開時：加入成員 → 將該機台各類別贈送張數加進共用池；移除成員 → 從共用池扣抵（最低為 0）。
+                                <span class="text-info">（此項勾選即生效，無須儲存）</span>
                             </small>
                         </div>
                     </div>
@@ -309,7 +311,41 @@
         initSheetPriceSortable();
         initMemberSortable('memberFeesBody');
         initMemberSortable('membersBody');
+        initAutoAdjustToggle();
     });
+
+    function initAutoAdjustToggle() {
+        var cb = document.getElementById('autoAdjustGiftPoolToggle');
+        var status = document.getElementById('autoAdjustGiftPoolStatus');
+        if (!cb) return;
+        cb.addEventListener('change', function () {
+            cb.disabled = true;
+            status.textContent = '儲存中…';
+            status.className = 'ms-2 small text-muted';
+            var data = new FormData();
+            data.append('id', '@Model.Id');
+            data.append('enabled', cb.checked ? 'true' : 'false');
+            fetch('@Url.Action("SetAutoAdjustGiftPool")', { method: 'POST', body: data })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (d && d.success) {
+                        status.textContent = '已生效';
+                        status.className = 'ms-2 small text-success';
+                        setTimeout(function () { status.textContent = ''; }, 2000);
+                    } else {
+                        cb.checked = !cb.checked;
+                        status.textContent = '儲存失敗';
+                        status.className = 'ms-2 small text-danger';
+                    }
+                })
+                .catch(function () {
+                    cb.checked = !cb.checked;
+                    status.textContent = '儲存失敗';
+                    status.className = 'ms-2 small text-danger';
+                })
+                .finally(function () { cb.disabled = false; });
+        });
+    }
 
     function initMemberSortable(tbodyId) {
         var tbody = document.getElementById(tbodyId);

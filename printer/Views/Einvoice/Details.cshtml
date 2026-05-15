@@ -65,6 +65,11 @@
                             <dd class="col-sm-8">@(Model.BuyerTaxId ?? "-")</dd>
                             <dt class="col-sm-4">買方 Email</dt>
                             <dd class="col-sm-8">@(Model.BuyerEmail ?? "-")</dd>
+                            <dt class="col-sm-4">發票對象</dt>
+                            <dd class="col-sm-8">
+                                @(Model.InvoiceType == "B2B" ? "B2B 營業人" : "B2C 消費者")
+                                <span class="text-muted small ms-2">（@(Model.TaxIncluded ? "稅內含" : "稅外加")）</span>
+                            </dd>
                             <dt class="col-sm-4">課稅類別</dt>
                             <dd class="col-sm-8">@(taxTypeNames.GetValueOrDefault(Model.TaxType, "未知")) (@Model.TaxRate%)</dd>
                             <dt class="col-sm-4">載具</dt>
@@ -119,13 +124,21 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @{
+                            // 稅內含發票顯示含稅單價/小計（DB 存的是未稅），與使用者當時輸入一致
+                            var displayMultiplier = Model.TaxIncluded && Model.TaxType == "taxable"
+                                ? 1m + Model.TaxRate / 100m
+                                : 1m;
+                        }
                         @foreach (var item in Model.Items)
                         {
+                            var displayUnit = Math.Round(item.UnitPrice * displayMultiplier, 0);
+                            var displaySub = displayUnit * item.Quantity;
                             <tr>
                                 <td>@item.Description</td>
                                 <td class="text-end">@item.Quantity</td>
-                                <td class="text-end">@item.UnitPrice.ToString("N2")</td>
-                                <td class="text-end"><strong>@item.Subtotal.ToString("N0")</strong></td>
+                                <td class="text-end">@displayUnit.ToString("N0")</td>
+                                <td class="text-end"><strong>@displaySub.ToString("N0")</strong></td>
                             </tr>
                         }
                     </tbody>
@@ -157,6 +170,44 @@
                 <div class="card-body">@Model.Note</div>
             </div>
         }
+
+        @{
+            var allowances = ViewBag.Allowances as List<printer.Data.Entities.EinvoiceAllowance> ?? new();
+        }
+        @if (allowances.Any())
+        {
+            <div class="card mb-3">
+                <div class="card-header">折讓記錄</div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>折讓單號</th>
+                                <th>日期</th>
+                                <th>類型</th>
+                                <th class="text-end">金額</th>
+                                <th>狀態</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in allowances)
+                            {
+                                var aStatus = a.Status switch { "draft" => ("草稿", "secondary"), "issued" => ("已開立", "success"), "void" => ("已作廢", "danger"), _ => ("未知", "secondary") };
+                                <tr>
+                                    <td>@(string.IsNullOrEmpty(a.AllowanceNumber) ? "-" : a.AllowanceNumber)</td>
+                                    <td>@a.AllowanceDate.ToString("yyyy/MM/dd")</td>
+                                    <td>@(a.AllowanceType == "online" ? "線上" : "紙本")</td>
+                                    <td class="text-end">@a.TotalAmount.ToString("N0")</td>
+                                    <td><span class="badge bg-@aStatus.Item2">@aStatus.Item1</span></td>
+                                    <td><a asp-action="AllowanceDetails" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary">明細</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
     </div>
 
     <div class="col-md-4">
@@ -175,6 +226,7 @@
                 }
                 @if (Model.Status == "issued")
                 {
+                    <a asp-action="CreateAllowance" asp-route-einvoiceId="@Model.Id" class="btn btn-warning w-100 mb-2">開立折讓</a>
                     <form asp-action="Void" asp-route-id="@Model.Id" method="post">
                         <div class="mb-2">
                             <input type="text" name="voidReason" class="form-control" placeholder="作廢原因" required />

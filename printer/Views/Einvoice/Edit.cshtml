@@ -1,6 +1,9 @@
 @model printer.Data.Entities.Einvoice
 @{
     ViewData["Title"] = $"編輯發票草稿 - {Model.InvoiceNumber}";
+    var isB2B = Model.InvoiceType == "B2B";
+    var isTaxIn = Model.TaxIncluded;
+    var multiplier = isTaxIn && Model.TaxType == "taxable" ? 1m + Model.TaxRate / 100m : 1m;
 }
 
 <form asp-action="Edit" method="post">
@@ -27,35 +30,17 @@
                     <input type="date" name="invoiceDate" class="form-control" value="@Model.InvoiceDate.ToString("yyyy-MM-dd")" required />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">買方統編</label>
-                    <input type="text" name="buyerTaxId" class="form-control" value="@Model.BuyerTaxId" />
+                    <label class="form-label">客戶</label>
+                    <input type="text" class="form-control" value="@Model.Partner?.Name" readonly />
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">買方名稱</label>
-                    <input type="text" name="buyerName" class="form-control" value="@Model.BuyerName" required />
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">買方 Email</label>
-                    <input type="email" name="buyerEmail" class="form-control" value="@Model.BuyerEmail" />
-                </div>
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">載具類型</label>
-                    <select name="carrierType" class="form-select">
-                        <option value="" selected="@(string.IsNullOrEmpty(Model.CarrierType))">紙本</option>
-                        <option value="mobile" selected="@(Model.CarrierType == "mobile")">手機條碼</option>
-                        <option value="citizen" selected="@(Model.CarrierType == "citizen")">自然人憑證</option>
-                        <option value="donate" selected="@(Model.CarrierType == "donate")">捐贈</option>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">載具號碼</label>
-                    <input type="text" name="carrierId" class="form-control" value="@Model.CarrierId" placeholder="如 /AB+12.3" />
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">愛心碼</label>
-                    <input type="text" name="donationCode" class="form-control" value="@Model.DonationCode" placeholder="3-7 位數字" />
+                    <label class="form-label d-block">發票對象</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="invoiceType" id="invType_B2C" value="B2C" @(!isB2B ? "checked" : "") />
+                        <label class="btn btn-outline-primary" for="invType_B2C">B2C 消費者</label>
+                        <input type="radio" class="btn-check" name="invoiceType" id="invType_B2B" value="B2B" @(isB2B ? "checked" : "") />
+                        <label class="btn btn-outline-primary" for="invType_B2B">B2B 營業人</label>
+                    </div>
                 </div>
             </div>
             <div class="row">
@@ -71,9 +56,58 @@
                     <label class="form-label">稅率 (%)</label>
                     <input type="number" name="taxRate" id="taxRate" class="form-control" value="@Model.TaxRate" min="0" />
                 </div>
-                <div class="col-md-8 mb-3">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label d-block">金額輸入方式</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="taxIncluded" id="taxOut" value="false" @(!isTaxIn ? "checked" : "") />
+                        <label class="btn btn-outline-secondary" for="taxOut">稅外加</label>
+                        <input type="radio" class="btn-check" name="taxIncluded" id="taxIn" value="true" @(isTaxIn ? "checked" : "") />
+                        <label class="btn btn-outline-secondary" for="taxIn">稅內含</label>
+                    </div>
+                    <small class="text-muted d-block">「稅內含」=明細為含稅，儲存時自動拆稅</small>
+                </div>
+                <div class="col-md-5 mb-3">
                     <label class="form-label">備註</label>
                     <input type="text" name="note" class="form-control" value="@Model.Note" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">買方資訊</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">買方名稱</label>
+                    <input type="text" name="buyerName" class="form-control" value="@Model.BuyerName" required />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">買方統編</label>
+                    <input type="text" name="buyerTaxId" class="form-control" value="@Model.BuyerTaxId" placeholder="B2B 必填" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">買方 Email</label>
+                    <input type="email" name="buyerEmail" class="form-control" value="@Model.BuyerEmail" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">載具類型</label>
+                    <select name="carrierType" class="form-select">
+                        <option value="" selected="@(string.IsNullOrEmpty(Model.CarrierType))">紙本</option>
+                        <option value="mobile" selected="@(Model.CarrierType == "mobile")">手機條碼</option>
+                        <option value="citizen" selected="@(Model.CarrierType == "citizen")">自然人憑證</option>
+                        <option value="donate" selected="@(Model.CarrierType == "donate")">捐贈</option>
+                    </select>
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label class="form-label">載具號碼</label>
+                    <input type="text" name="carrierId" class="form-control" value="@Model.CarrierId" placeholder="如 /AB+12.3" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">愛心碼 (捐贈用)</label>
+                    <input type="text" name="donationCode" class="form-control" value="@Model.DonationCode" placeholder="3-7 位數字" />
                 </div>
             </div>
         </div>
@@ -133,15 +167,17 @@
         const taxRateInput = document.getElementById('taxRate');
         let itemIndex = 0;
 
-        // 載入現有明細
+        // 載入現有明細：DB 存的是未稅；若原本是「稅內含」顯示，要乘回含稅
+        const multiplier = @multiplier.ToString(System.Globalization.CultureInfo.InvariantCulture);
         const existingItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.Items.Select(i => new { desc = i.Description, qty = i.Quantity, price = i.UnitPrice, subtotal = i.Subtotal }).ToList()));
+            Model.Items.Select(i => new { desc = i.Description, qty = i.Quantity, price = i.UnitPrice }).ToList()));
 
-        existingItems.forEach(i => addItem(i.desc, i.qty, i.price));
+        existingItems.forEach(i => addItem(i.desc, i.qty, Math.round(i.price * multiplier * 100) / 100));
 
         addItemBtn.addEventListener('click', () => addItem());
         taxTypeSelect.addEventListener('change', updateTotal);
         taxRateInput.addEventListener('input', updateTotal);
+        document.querySelectorAll('input[name="taxIncluded"]').forEach(r => r.addEventListener('change', updateTotal));
 
         function addItem(desc, qty, price) {
             const idx = itemIndex++;
@@ -150,8 +186,8 @@
             tr.innerHTML = `
                 <td><input name="items[${idx}].Description" class="form-control form-control-sm" value="${desc || ''}" required /></td>
                 <td><input name="items[${idx}].Quantity" type="number" class="form-control form-control-sm text-end item-qty" min="1" value="${qty || 1}" /></td>
-                <td><input name="items[${idx}].UnitPrice" type="number" class="form-control form-control-sm text-end item-price" min="0" step="0.01" value="${price || 0}" /></td>
-                <td><input name="items[${idx}].Subtotal" type="number" class="form-control form-control-sm text-end item-subtotal" min="0" step="0.01" value="${sub.toFixed(2)}" readonly /></td>
+                <td><input name="items[${idx}].UnitPrice" type="number" class="form-control form-control-sm text-end item-price" min="0" step="1" value="${Math.round(price || 0)}" /></td>
+                <td><input name="items[${idx}].Subtotal" type="number" class="form-control form-control-sm text-end item-subtotal" min="0" step="1" value="${Math.round(sub)}" readonly /></td>
                 <td><button type="button" class="btn btn-sm btn-outline-danger remove-item">X</button></td>
             `;
 
@@ -173,12 +209,27 @@
         }
 
         function updateTotal() {
-            let amount = 0;
-            document.querySelectorAll('.item-subtotal').forEach(el => { amount += parseFloat(el.value) || 0; });
-            const tax = taxTypeSelect.value === 'taxable' ? Math.round(amount * (parseInt(taxRateInput.value) || 0) / 100) : 0;
-            totalAmountEl.textContent = amount.toLocaleString('zh-TW');
+            let sum = 0;
+            document.querySelectorAll('.item-subtotal').forEach(el => { sum += parseFloat(el.value) || 0; });
+            const rate = parseInt(taxRateInput.value) || 0;
+            const taxable = taxTypeSelect.value === 'taxable';
+            const included = document.querySelector('input[name="taxIncluded"]:checked')?.value === 'true';
+
+            let untaxed, tax, grand;
+            if (!taxable) {
+                untaxed = sum; tax = 0; grand = sum;
+            } else if (included) {
+                untaxed = Math.round(sum / (1 + rate / 100));
+                tax = sum - untaxed;
+                grand = sum;
+            } else {
+                untaxed = sum;
+                tax = Math.round(sum * rate / 100);
+                grand = sum + tax;
+            }
+            totalAmountEl.textContent = untaxed.toLocaleString('zh-TW');
             taxAmountEl.textContent = tax.toLocaleString('zh-TW');
-            grandTotalEl.textContent = (amount + tax).toLocaleString('zh-TW');
+            grandTotalEl.textContent = grand.toLocaleString('zh-TW');
         }
     });
 </script>

@@ -77,6 +77,7 @@ public class BrandController : Controller
             var existing = await _context.Brands.FindAsync(id);
             if (existing == null) return NotFound();
 
+            existing.Code = brand.Code;
             existing.Name = brand.Name;
             existing.Description = brand.Description;
 
@@ -152,15 +153,16 @@ public class BrandController : Controller
         using var workbook = new ClosedXML.Excel.XLWorkbook();
         var ws = workbook.Worksheets.Add("廠牌資料");
 
-        var headers = new[] { "名稱", "說明" };
+        var headers = new[] { "代碼", "名稱", "說明" };
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
         int row = 2;
         foreach (var item in items)
         {
-            ws.Cell(row, 1).Value = item.Name;
-            ws.Cell(row, 2).Value = item.Description;
+            ws.Cell(row, 1).Value = item.Code;
+            ws.Cell(row, 2).Value = item.Name;
+            ws.Cell(row, 3).Value = item.Description;
             row++;
         }
 
@@ -181,14 +183,16 @@ public class BrandController : Controller
         using var workbook = new ClosedXML.Excel.XLWorkbook();
         var ws = workbook.Worksheets.Add("廠牌資料");
 
-        var headers = new[] { "名稱", "說明" };
+        var headers = new[] { "代碼", "名稱", "說明" };
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
-        ws.Cell(2, 1).Value = "Canon";
-        ws.Cell(2, 2).Value = "Canon 廠牌說明";
-        ws.Cell(3, 1).Value = "Ricoh";
-        ws.Cell(3, 2).Value = "Ricoh 廠牌說明";
+        ws.Cell(2, 1).Value = "ricoh";
+        ws.Cell(2, 2).Value = "Ricoh";
+        ws.Cell(2, 3).Value = "Ricoh 廠牌說明";
+        ws.Cell(3, 1).Value = "xerox";
+        ws.Cell(3, 2).Value = "Xerox";
+        ws.Cell(3, 3).Value = "Xerox 廠牌說明";
 
         var headerRange = ws.Range(1, 1, 1, headers.Length);
         headerRange.Style.Font.Bold = true;
@@ -248,16 +252,19 @@ public class BrandController : Controller
                         continue;
                     }
 
+                    var code = GetCellValue(worksheet, row, headers, "代碼");
                     var description = GetCellValue(worksheet, row, headers, "說明");
                     var existing = await _context.Brands.FirstOrDefaultAsync(b => b.Name == name);
                     if (existing != null)
                     {
+                        if (!string.IsNullOrWhiteSpace(code)) existing.Code = code;
                         existing.Description = description;
                     }
                     else
                     {
                         _context.Brands.Add(new Brand
                         {
+                            Code = code,
                             Name = name,
                             Description = description,
                             CreatedAt = DateTime.UtcNow

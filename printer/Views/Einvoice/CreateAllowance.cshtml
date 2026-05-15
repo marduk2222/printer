@@ -1,0 +1,176 @@
+@model printer.Data.Entities.EinvoiceAllowance
+@{
+    ViewData["Title"] = "開立折讓";
+    var einvoice = ViewBag.Einvoice as printer.Data.Entities.Einvoice;
+    var taxIncluded = einvoice?.TaxIncluded ?? false;
+    var taxRate = einvoice?.TaxRate ?? 5;
+    var taxType = einvoice?.TaxType ?? "taxable";
+    var multiplier = taxIncluded && taxType == "taxable" ? 1m + taxRate / 100m : 1m;
+    var taxTypeLabel = taxType switch
+    {
+        "taxable" => "應稅",
+        "zero" => "零稅率",
+        "free" => "免稅",
+        _ => taxType
+    };
+}
+
+<form asp-action="CreateAllowance" method="post">
+    <input type="hidden" name="einvoiceId" value="@einvoice?.Id" />
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>開立折讓 — 對應發票 @einvoice?.InvoiceNumber</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-sm">儲存草稿</button>
+            <a asp-action="Details" asp-route-id="@einvoice?.Id" class="btn btn-outline-secondary btn-sm">取消</a>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">折讓資訊</div>
+        <div class="card-body">
+            <div class="alert alert-info py-2 mb-3 small">
+                <strong>繼承原發票稅率：</strong>@taxTypeLabel · 稅率 @taxRate% · @(taxIncluded ? "稅內含" : "稅外加")
+                — 修改「折讓未稅金額」會依此規則自動換算折讓稅額（仍可手動覆寫）
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">折讓類型</label>
+                    <select name="allowanceType" class="form-select">
+                        <option value="paper">紙本（賣方開立）</option>
+                        <option value="online">線上（買方通知開立）</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">折讓未稅金額</label>
+                    <input name="amount" type="number" min="0" step="1" class="form-control" id="amount" required />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">折讓稅額</label>
+                    <input name="taxAmount" type="number" min="0" step="1" class="form-control" id="taxAmount" required />
+                </div>
+            </div>
+            <div class="mb-0">
+                <label class="form-label">備註</label>
+                <input name="note" class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>折讓明細</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-item-btn">＋ 新增明細</button>
+        </div>
+        <div class="card-body p-0">
+            <table class="table mb-0" id="items-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>品名</th>
+                        <th class="text-end" style="width: 100px">數量</th>
+                        <th class="text-end" style="width: 140px">單價@(taxIncluded ? "（含稅）" : "（未稅）")</th>
+                        <th class="text-end" style="width: 140px">小計@(taxIncluded ? "（含稅）" : "（未稅）")</th>
+                        <th style="width: 60px"></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body">
+                    @if (einvoice != null)
+                    {
+                        var idx = 0;
+                        foreach (var it in einvoice.Items)
+                        {
+                            // 顯示與原發票輸入一致：稅內含 → 把 DB 的未稅乘回含稅
+                            var displayUnit = Math.Round(it.UnitPrice * multiplier, 0);
+                            var displaySubtotal = displayUnit * it.Quantity;
+                            <tr>
+                                <td><input name="items[@idx].Description" class="form-control" value="@it.Description" /></td>
+                                <td><input name="items[@idx].Quantity" type="number" min="1" step="1" class="form-control text-end item-qty" value="@it.Quantity" /></td>
+                                <td><input name="items[@idx].UnitPrice" type="number" min="0" step="1" class="form-control text-end item-price" value="@displayUnit" /></td>
+                                <td><input name="items[@idx].Subtotal" type="number" min="0" step="1" class="form-control text-end item-subtotal" value="@displaySubtotal" readonly /></td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">刪</button></td>
+                            </tr>
+                            idx++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    (function () {
+        const taxRate = @taxRate;
+        const taxIncluded = @(taxIncluded ? "true" : "false");
+        const taxable = '@taxType' === 'taxable';
+
+        const amountEl = document.getElementById('amount');
+        const taxAmountEl = document.getElementById('taxAmount');
+        let userOverrode = false;
+        taxAmountEl.addEventListener('input', () => { userOverrode = true; });
+
+        // 自動算折讓稅額（依原發票規則；user 手動改過則不再覆寫）
+        function recalcTax() {
+            if (userOverrode) return;
+            const amount = parseFloat(amountEl.value) || 0;
+            if (!taxable) { taxAmountEl.value = 0; return; }
+            taxAmountEl.value = Math.round(amount * taxRate / 100);
+        }
+        amountEl.addEventListener('input', recalcTax);
+
+        // 從明細小計合算 Amount（總 = sum，若 稅內含 則 sum 為含稅 → 拆成未稅）
+        function recalcAmountFromItems() {
+            let sum = 0;
+            document.querySelectorAll('.item-subtotal').forEach(el => { sum += parseFloat(el.value) || 0; });
+            let untaxed;
+            if (!taxable) { untaxed = sum; }
+            else if (taxIncluded) { untaxed = Math.round(sum / (1 + taxRate / 100)); }
+            else { untaxed = sum; }
+            amountEl.value = untaxed;
+            recalcTax();
+        }
+
+        // 列改動時：subtotal = qty × unit，並重算 Amount
+        function bindRow(tr) {
+            const qty = tr.querySelector('.item-qty');
+            const unit = tr.querySelector('.item-price');
+            const sub = tr.querySelector('.item-subtotal');
+            function calcRow() {
+                sub.value = Math.round((parseInt(qty.value) || 0) * (parseInt(unit.value) || 0));
+                recalcAmountFromItems();
+            }
+            qty?.addEventListener('input', calcRow);
+            unit?.addEventListener('input', calcRow);
+        }
+        document.querySelectorAll('#items-body tr').forEach(bindRow);
+        recalcAmountFromItems();
+
+        let rowIdx = @(einvoice?.Items.Count ?? 0);
+        document.getElementById('add-item-btn').addEventListener('click', () => {
+            const tbody = document.getElementById('items-body');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input name="items[${rowIdx}].Description" class="form-control" /></td>
+                <td><input name="items[${rowIdx}].Quantity" type="number" min="1" step="1" class="form-control text-end item-qty" value="1" /></td>
+                <td><input name="items[${rowIdx}].UnitPrice" type="number" min="0" step="1" class="form-control text-end item-price" /></td>
+                <td><input name="items[${rowIdx}].Subtotal" type="number" min="0" step="1" class="form-control text-end item-subtotal" readonly /></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">刪</button></td>`;
+            tbody.appendChild(tr);
+            bindRow(tr);
+            rowIdx++;
+        });
+        document.addEventListener('click', e => {
+            if (e.target.matches('.remove-row')) {
+                e.target.closest('tr').remove();
+                recalcAmountFromItems();
+            }
+        });
+    })();
+</script>
+}

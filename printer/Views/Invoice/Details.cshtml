@@ -223,7 +223,7 @@
                 @if (ViewBag.EinvoiceEnabled == true)
                 {
                     <hr />
-                    <a asp-controller="Einvoice" asp-action="CreateFromBilling" asp-route-billingInvoiceId="@Model.Id"
+                    <a asp-controller="Einvoice" asp-action="Create" asp-route-billingInvoiceId="@Model.Id"
                        class="btn btn-outline-primary w-100">開立發票</a>
                 }
             </div>

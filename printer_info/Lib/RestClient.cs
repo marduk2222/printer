@@ -382,7 +382,7 @@ namespace Lib
         /// Update printer device information (mac, ip, serial_number, printer_name, state)
         /// POST /api/device
         /// </summary>
-        public bool UpdateDevice(string code, string mac = null, string ip = null, string serialNumber = null, string printerName = null, int? state = null)
+        public bool UpdateDevice(string code, string mac = null, string ip = null, string serialNumber = null, string printerName = null, int? state = null, string hostName = null, string hostIp = null)
         {
             try
             {
@@ -392,6 +392,8 @@ namespace Lib
                 if (!string.IsNullOrEmpty(serialNumber)) request["serial_number"] = serialNumber;
                 if (!string.IsNullOrEmpty(printerName)) request["printer_name"] = printerName;
                 if (state.HasValue) request["state"] = state.Value;
+                if (!string.IsNullOrEmpty(hostName)) request["host_name"] = hostName;
+                if (!string.IsNullOrEmpty(hostIp))   request["host_ip"]   = hostIp;
 
                 var json = Newtonsoft.Json.JsonConvert.SerializeObject(request);
                 var result = PostJsonAsync("/api/device", json).Result;

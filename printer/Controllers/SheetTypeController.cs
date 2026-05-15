@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using printer.Data;
@@ -8,6 +9,15 @@ namespace printer.Controllers;
 public class SheetTypeController : Controller
 {
     private readonly PrinterDbContext _context;
+
+    /// <summary>
+    /// driver_key 四維格式：{output}.{category}.{color}.{size}
+    /// output=printed 時 category 可為 print/copy/fax/network/list；output=scanned 時 category 必為 scan
+    /// 與 printer_info / printer_setup 送上來的 CounterItem 維度一致
+    /// </summary>
+    private static readonly Regex DriverKeyPattern = new Regex(
+        @"^(?:printed\.(?:print|copy|fax|network|list)|scanned\.scan)\.(?:black|mono|duotone|color_full)\.(?:normal|large)$",
+        RegexOptions.Compiled);
 
     public SheetTypeController(PrinterDbContext context)
     {
@@ -103,26 +113,48 @@ public class SheetTypeController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddKey(int sheetTypeId, string driverKey)
+    public async Task<IActionResult> AddKey([FromForm] int sheetTypeId, [FromForm] List<string>? driverKeys)
     {
-        driverKey = driverKey.Trim();
-        var exists = await _context.SheetTypeKeys
-            .AnyAsync(k => k.SheetTypeId == sheetTypeId && k.DriverKey == driverKey);
+        var requested = (driverKeys ?? new List<string>())
+            .Select(k => (k ?? string.Empty).Trim().ToLowerInvariant())
+            .Where(k => !string.IsNullOrEmpty(k))
+            .Distinct()
+            .ToList();
 
-        if (!exists)
+        if (requested.Count == 0)
+        {
+            TempData["Error"] = "尚未選擇任何 driver_key";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var invalid = requested.Where(k => !DriverKeyPattern.IsMatch(k)).ToList();
+        if (invalid.Count > 0)
+        {
+            TempData["Error"] = $"以下格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}）：{string.Join(", ", invalid)}";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var existing = await _context.SheetTypeKeys
+            .Where(k => k.SheetTypeId == sheetTypeId)
+            .Select(k => k.DriverKey)
+            .ToListAsync();
+        var existingSet = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+
+        var toInsert = requested.Where(k => !existingSet.Contains(k)).ToList();
+        foreach (var k in toInsert)
         {
             _context.SheetTypeKeys.Add(new SheetTypeKey
             {
                 SheetTypeId = sheetTypeId,
-                DriverKey = driverKey
+                DriverKey = k
             });
-            await _context.SaveChangesAsync();
-            TempData["Success"] = "驅動參數已新增";
         }
-        else
-        {
-            TempData["Error"] = "此驅動參數已存在";
-        }
+        await _context.SaveChangesAsync();
+
+        var skipped = requested.Count - toInsert.Count;
+        TempData["Success"] = skipped > 0
+            ? $"已新增 {toInsert.Count} 筆 driver_key（{skipped} 筆已存在跳過）"
+            : $"已新增 {toInsert.Count} 筆 driver_key";
         return RedirectToAction(nameof(Index));
     }
 
@@ -284,16 +316,23 @@ public class SheetTypeController : Controller
                     if (!string.IsNullOrWhiteSpace(driverKeyStr))
                     {
                         var keys = driverKeyStr.Split(new[] { ',', ';', '，' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(k => k.Trim())
+                            .Select(k => k.Trim().ToLowerInvariant())
                             .Where(k => !string.IsNullOrWhiteSpace(k))
                             .Distinct()
                             .ToList();
 
+                        var invalid = keys.Where(k => !DriverKeyPattern.IsMatch(k)).ToList();
+                        if (invalid.Count > 0)
+                        {
+                            errors.Add($"第 {row} 列: 以下 driver_key 格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}）: {string.Join(", ", invalid)}");
+                        }
+
+                        var validKeys = keys.Where(k => DriverKeyPattern.IsMatch(k)).ToList();
                         var existingKeys = await _context.SheetTypeKeys
                             .Where(k => k.SheetTypeId == target.Id)
                             .ToListAsync();
 
-                        foreach (var k in keys)
+                        foreach (var k in validKeys)
                         {
                             if (!existingKeys.Any(e => e.DriverKey == k))
                             {

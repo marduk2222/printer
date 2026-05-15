@@ -18,6 +18,7 @@ namespace printer_setup.Models
         public int id => Inner.id;
         public string code => Inner.code;
         public string name => Inner.name;
+        public string brand => Inner.brand;
         public string model => Inner.model;
         public bool printer_counter => Inner.printer_counter;
 

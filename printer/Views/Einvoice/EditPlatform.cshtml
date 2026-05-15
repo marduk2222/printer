@@ -1,6 +1,52 @@
 @model printer.Data.Entities.EinvoicePlatform
 @{
     ViewData["Title"] = $"設定 {Model.Name}";
+
+    // 從 ExtraParams JSON 取出 Gateweb 賣方資訊
+    string? gatewebSellerId = null, gatewebSellerName = null, gatewebSellerDept = null;
+    if (Model.Code == "gateweb" && !string.IsNullOrWhiteSpace(Model.ExtraParams))
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(Model.ExtraParams);
+            if (doc.RootElement.TryGetProperty("sellerIdentifier", out var si) && si.ValueKind == System.Text.Json.JsonValueKind.String)
+                gatewebSellerId = si.GetString();
+            if (doc.RootElement.TryGetProperty("sellerName", out var sn) && sn.ValueKind == System.Text.Json.JsonValueKind.String)
+                gatewebSellerName = sn.GetString();
+            if (doc.RootElement.TryGetProperty("sellerDepartment", out var sd) && sd.ValueKind == System.Text.Json.JsonValueKind.String)
+                gatewebSellerDept = sd.GetString();
+        }
+        catch { }
+    }
+
+    var (merchantLabel, apiKeyLabel, apiSecretLabel, helpText) = Model.Code switch
+    {
+        "gateweb" => (
+            "公司金鑰 companyKey",
+            "API 帳號 username",
+            "API 密碼 password",
+            "Gateweb 註冊後提供 username/password 用於 /api/authenticate 取得 id_token；companyKey 為呼叫開立/作廢 API 必帶的查詢字串參數。"
+        ),
+        "ezpay" => (
+            "商店代號 MerchantID",
+            "Hash Key（32 字元）",
+            "Hash IV（16 字元）",
+            "藍新 ezPay 商店後台「商店資料設定」取得 MerchantID、HashKey(32)、HashIV(16)。AES-256-CBC，PostData_ 為小寫 hex。"
+        ),
+        "ecpay" => (
+            "特店編號 MerchantID",
+            "Hash Key",
+            "Hash IV",
+            "綠界 ECPay：買方有統編自動走 B2B 交換模式，否則走 B2C；AES-128-CBC + URLEncode + Base64。"
+        ),
+        "ecpay_b2c" or "ecpay_b2b" => (
+            "特店編號 MerchantID",
+            "Hash Key",
+            "Hash IV",
+            "綠界 ECPay 子模式（建議使用整合的 ecpay）。"
+        ),
+        _ => ("商店代號 / Merchant ID", "API Key / Hash Key", "API Secret / Hash IV", null as string)
+    };
 }
 
 <form asp-action="EditPlatform" method="post">
@@ -19,22 +65,27 @@
             <div class="alert alert-info mb-3">
                 <strong>正式 API：</strong> @(Model.ApiUrl ?? "-")<br />
                 <strong>測試 API：</strong> @(Model.SandboxUrl ?? "-")
+                @if (!string.IsNullOrEmpty(helpText))
+                {
+                    <hr class="my-2" />
+                    <small>@helpText</small>
+                }
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">商店代號 / Merchant ID</label>
+                    <label class="form-label">@merchantLabel</label>
                     <input name="merchantId" class="form-control" value="@Model.MerchantId" />
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">API Key / Hash Key</label>
-                    <input name="apiKey" class="form-control" type="password" value="@Model.ApiKey" />
+                    <label class="form-label">@apiKeyLabel</label>
+                    <input name="apiKey" class="form-control" type="password" value="@Model.ApiKey" autocomplete="off" />
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">API Secret / Hash IV</label>
-                    <input name="apiSecret" class="form-control" type="password" value="@Model.ApiSecret" />
+                    <label class="form-label">@apiSecretLabel</label>
+                    <input name="apiSecret" class="form-control" type="password" value="@Model.ApiSecret" autocomplete="off" />
                 </div>
             </div>
             <div class="row">
@@ -46,6 +97,30 @@
                     </div>
                 </div>
             </div>
+
+            @if (Model.Code == "gateweb")
+            {
+                <hr />
+                <h6 class="mb-2">賣方資訊（Gateweb 開立必填）</h6>
+                <p class="text-muted small mb-3">Gateweb 開立發票需帶 sellerIdentifier / sellerName；sellerDepartment 為部門代號（選填）。儲存後將寫入 ExtraParams JSON 由 Provider 讀取。</p>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">sellerIdentifier <span class="text-danger">*</span></label>
+                        <input name="sellerIdentifier" class="form-control" value="@gatewebSellerId" placeholder="例：70570263" />
+                        <small class="text-muted">賣方統編（8 碼）</small>
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label">sellerName <span class="text-danger">*</span></label>
+                        <input name="sellerName" class="form-control" value="@gatewebSellerName" placeholder="公司全名" />
+                        <small class="text-muted">賣方名稱</small>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">sellerDepartment</label>
+                        <input name="sellerDepartment" class="form-control" value="@gatewebSellerDept" placeholder="例：70570263_API" />
+                        <small class="text-muted">部門代號（選填）</small>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </form>

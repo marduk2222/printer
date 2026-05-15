@@ -23,6 +23,7 @@ public class PrinterService : IPrinterService
     {
         var query = _context.Printers
             .Include(p => p.Partner)
+            .Include(p => p.Brand)
             .Include(p => p.Model)
             .Where(p => p.IsActive);
 
@@ -48,7 +49,8 @@ public class PrinterService : IPrinterService
             Code = p.Code,
             PartnerId = p.PartnerId,
             UserId = p.UserId,
-            ModelId = int.TryParse(p.Model?.Code, out var _mc) ? _mc : 0,
+            Brand = p.Brand?.Code ?? "",
+            Model = p.Model?.Code ?? "",
             Name = p.Name,
             Description = p.Description ?? "",
             IsActive = p.IsActive,
@@ -63,6 +65,7 @@ public class PrinterService : IPrinterService
     {
         var query = _context.Printers
             .Include(p => p.Partner)
+            .Include(p => p.Brand)
             .Include(p => p.Model)
             .Where(p => p.IsActive);
 
@@ -85,7 +88,8 @@ public class PrinterService : IPrinterService
             PartnerId = p.PartnerId,
             IsActive = p.IsActive,
             Number = p.PartnerNumber ?? "",
-            ModelId = int.TryParse(p.Model?.Code, out var _mc) ? _mc : 0,
+            Brand = p.Brand?.Code ?? "",
+            Model = p.Model?.Code ?? "",
             Name = p.Name,
             Description = p.Description ?? "",
             PrinterName = p.PrinterName ?? "",
@@ -173,55 +177,95 @@ public class PrinterService : IPrinterService
 
         // 查找當日記錄
         var record = await _context.PrintRecords
+            .Include(r => r.Values)
             .FirstOrDefaultAsync(r =>
                 r.PrinterId == printer.Id &&
                 r.Date == date &&
                 r.State == "auto");
 
-        if (record != null)
+        if (record == null)
         {
-            // 更新現有記錄
-            record.BlackSheets = request.BlackPrint ?? 0;
-            record.ColorSheets = request.ColorPrint ?? 0;
-            record.LargeSheets = request.LargePrint ?? 0;
-            record.Count++;
-            record.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return (new RecordResponse
-            {
-                Id = printer.Id,
-                Code = printer.Code,
-                RecordId = record.Id
-            }, null);
-        }
-        else
-        {
-            // 建立新記錄
-            var newRecord = new PrintRecord
+            record = new PrintRecord
             {
                 PrinterId = printer.Id,
                 PartnerId = printer.PartnerId,
                 Date = date,
-                BlackSheets = request.BlackPrint ?? 0,
-                ColorSheets = request.ColorPrint ?? 0,
-                LargeSheets = request.LargePrint ?? 0,
                 State = "auto",
                 Count = 1,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+            _context.PrintRecords.Add(record);
+        }
+        else
+        {
+            record.Count++;
+            record.UpdatedAt = DateTime.UtcNow;
+        }
 
-            _context.PrintRecords.Add(newRecord);
-            await _context.SaveChangesAsync();
+        // 優先以四維 items 落地到 PrintRecordValue
+        if (request.Items != null && request.Items.Count > 0)
+        {
+            await ApplyItemsToRecordAsync(record, request.Items);
+        }
+        else
+        {
+            // 舊格式相容：以扁平欄位寫入 PrintRecord
+            record.BlackSheets = request.BlackPrint ?? record.BlackSheets;
+            record.ColorSheets = request.ColorPrint ?? record.ColorSheets;
+            record.LargeSheets = request.LargePrint ?? record.LargeSheets;
+        }
 
-            return (new RecordResponse
+        await _context.SaveChangesAsync();
+
+        return (new RecordResponse
+        {
+            Id = printer.Id,
+            Code = printer.Code,
+            RecordId = record.Id
+        }, null);
+    }
+
+    /// <summary>
+    /// 把四維 CounterItem 合計到 PrintRecordValue。
+    /// 規則：
+    ///   1. 以 driver_key（output.category.color.size）查 SheetTypeKey 對應 SheetType
+    ///   2. 同一 SheetType 的多筆 driver_key 累加
+    ///   3. 找不到對應 SheetType 的 item 略過（不報錯，由前端 SheetType 設定補齊）
+    /// 既有 record 的 PrintRecordValue 會以本次 items 重新覆寫（同一 SheetType 取最新值）。
+    /// </summary>
+    private async Task ApplyItemsToRecordAsync(PrintRecord record, List<CounterItemDto> items)
+    {
+        var keys = items.Select(i => i.ToDriverKey()).Distinct().ToList();
+        var sheetTypeKeys = await _context.SheetTypeKeys
+            .Where(k => keys.Contains(k.DriverKey))
+            .ToListAsync();
+
+        var keyToSheetTypeId = sheetTypeKeys.ToDictionary(k => k.DriverKey, k => k.SheetTypeId);
+
+        var perSheetTypeTotals = new Dictionary<int, int>();
+        foreach (var item in items)
+        {
+            if (!keyToSheetTypeId.TryGetValue(item.ToDriverKey(), out var sheetTypeId)) continue;
+            if (!perSheetTypeTotals.ContainsKey(sheetTypeId)) perSheetTypeTotals[sheetTypeId] = 0;
+            perSheetTypeTotals[sheetTypeId] += item.Sheets;
+        }
+
+        var existingValues = record.Values.ToDictionary(v => v.SheetTypeId);
+        foreach (var (sheetTypeId, total) in perSheetTypeTotals)
+        {
+            if (existingValues.TryGetValue(sheetTypeId, out var existing))
             {
-                Id = printer.Id,
-                Code = printer.Code,
-                RecordId = newRecord.Id
-            }, null);
+                existing.Value = total;
+            }
+            else
+            {
+                record.Values.Add(new PrintRecordValue
+                {
+                    SheetTypeId = sheetTypeId,
+                    Value = total
+                });
+            }
         }
     }
 

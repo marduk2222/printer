@@ -9,6 +9,30 @@
         ["cancelled"] = ("已取消", "bg-danger"),
     };
     var allItems = Model.SelectMany(i => i.Items).ToList();
+
+    // 扁平明細：每筆 InvoiceItem 一列，預設依「月份 → 事務機」排序
+    var flatRows = Model
+        .SelectMany(i => i.Items.Select(it => new
+        {
+            Period       = i.PeriodStart.ToString("yyyy/MM"),
+            PeriodKey    = i.PeriodStart,
+            PrinterId    = it.PrinterId,
+            PrinterName  = it.IsGroupSummary
+                              ? ($"[群組] " + (it.BillingGroup?.Name ?? "群組合併"))
+                              : (it.Printer?.Name ?? "-"),
+            PartnerName  = i.Partner?.Name ?? "-",
+            BlackPages   = it.BlackPages,
+            ColorPages   = it.ColorPages,
+            LargePages   = it.LargePages,
+            MonthlyFee   = it.MonthlyFee,
+            PageFee      = it.PageFee,
+            Subtotal     = it.Subtotal,
+            InvoiceNo    = i.InvoiceNumber,
+            Status       = i.Status,
+        }))
+        .OrderBy(r => r.PeriodKey)
+        .ThenBy(r => r.PrinterName)
+        .ToList();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -75,6 +99,54 @@
     </div>
 </div>
 
+<!-- 扁平明細表（可依月份／事務機等任意欄位點擊欄位標題排序） -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>明細彙總（共 @flatRows.Count 列。點擊欄位標題切換排序）</span>
+        <small class="text-muted">預設依「月份 → 事務機」排序</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0" id="flatReportTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="sortable" data-sort-type="string" onclick="sortFlatTable(this)" style="cursor:pointer;white-space:nowrap;">月份 <span class="sort-indicator">▲</span></th>
+                        <th class="sortable" data-sort-type="string" onclick="sortFlatTable(this)" style="cursor:pointer;">事務機 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort-type="string" onclick="sortFlatTable(this)" style="cursor:pointer;">客戶 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">黑白 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">彩色 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">大張 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">月租費 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">張數費 <span class="sort-indicator"></span></th>
+                        <th class="sortable text-end" data-sort-type="number" onclick="sortFlatTable(this)" style="cursor:pointer;">小計 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort-type="string" onclick="sortFlatTable(this)" style="cursor:pointer;white-space:nowrap;">帳單號 <span class="sort-indicator"></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in flatRows)
+                    {
+                        <tr>
+                            <td data-sort-value="@r.PeriodKey.ToString("yyyy-MM-dd")">@r.Period</td>
+                            <td>@r.PrinterName</td>
+                            <td><small>@r.PartnerName</small></td>
+                            <td class="text-end" data-sort-value="@r.BlackPages">@r.BlackPages.ToString("N0")</td>
+                            <td class="text-end" data-sort-value="@r.ColorPages">@r.ColorPages.ToString("N0")</td>
+                            <td class="text-end" data-sort-value="@r.LargePages">@r.LargePages.ToString("N0")</td>
+                            <td class="text-end" data-sort-value="@r.MonthlyFee">@(r.MonthlyFee > 0 ? "$" + r.MonthlyFee.ToString("N0") : "-")</td>
+                            <td class="text-end" data-sort-value="@r.PageFee">@(r.PageFee > 0 ? "$" + r.PageFee.ToString("N0") : "-")</td>
+                            <td class="text-end fw-bold" data-sort-value="@r.Subtotal">@r.Subtotal.ToString("N0")</td>
+                            <td><small><code>@r.InvoiceNo</code></small></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 原本依帳單卡片群組顯示（保留：方便檢視整張帳單與狀態） -->
+<details class="mb-3">
+    <summary class="text-muted small" style="cursor:pointer;">📋 依帳單分組顯示（@Model.Count 張）</summary>
 @foreach (var invoice in Model)
 {
     var status = statusNames.GetValueOrDefault(invoice.Status, ("未知", "bg-secondary"));
@@ -152,6 +224,8 @@
     </div>
 }
 
+</details>
+
 @if (!Model.Any())
 {
     <div class="card">
@@ -159,4 +233,42 @@
             <p>此期間無帳單資料</p>
         </div>
     </div>
+}
+
+@section Scripts {
+<script>
+    function sortFlatTable(th) {
+        var table = th.closest('table');
+        var tbody = table.querySelector('tbody');
+        var ths = th.parentElement.children;
+        var idx = Array.prototype.indexOf.call(ths, th);
+        var dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+        // 重設所有指示符
+        for (var i = 0; i < ths.length; i++) {
+            ths[i].dataset.dir = '';
+            var ind = ths[i].querySelector('.sort-indicator');
+            if (ind) ind.textContent = '';
+        }
+        th.dataset.dir = dir;
+        var ind2 = th.querySelector('.sort-indicator');
+        if (ind2) ind2.textContent = dir === 'asc' ? '▲' : '▼';
+
+        var type = th.dataset.sortType || 'string';
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        rows.sort(function (a, b) {
+            var av = a.children[idx].dataset.sortValue;
+            if (av == null) av = a.children[idx].textContent.trim();
+            var bv = b.children[idx].dataset.sortValue;
+            if (bv == null) bv = b.children[idx].textContent.trim();
+            var r;
+            if (type === 'number') {
+                r = parseFloat(av || '0') - parseFloat(bv || '0');
+            } else {
+                r = String(av).localeCompare(String(bv), 'zh-Hant');
+            }
+            return dir === 'asc' ? r : -r;
+        });
+        rows.forEach(function (row) { tbody.appendChild(row); });
+    }
+</script>
 }

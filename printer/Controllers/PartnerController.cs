@@ -50,6 +50,7 @@ public class PartnerController : Controller
         ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
         ViewBag.Total = total;
         ViewBag.ActiveCount = await _context.Partners.CountAsync(p => p.IsActive);
+        ViewBag.InactiveCount = await _context.Partners.CountAsync(p => !p.IsActive);
 
         // 合約到期提醒 (該客戶下的事務機)
         var contractPrinters = await _context.Printers

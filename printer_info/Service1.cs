@@ -562,21 +562,25 @@ namespace printer_info
                 if (list == null || list.Count == 0) return false;
                 _lastPrinterCount = list.Count;
 
+                // 整批共用一份 host 識別（避免每筆每種上傳重複呼叫 NetworkInterface 列舉，與 printer_setup 對齊）
+                var hostName = Lib.AutoUpdater.GetHostName();
+                var hostIp   = Lib.AutoUpdater.GetHostIp();
+
                 // ==================== 連線事務機 & 回傳Server ====================
                 foreach (var item in list)
                 {
-                    Trace(new LogInfo() { Category = "Run", Function = "Printer", Option = "connect", Identity = "printer", Message = $"code:{item?.code}/ip:{item?.ip}/model:{item?.model}/printer_counter:{item?.printer_counter}" });
+                    Trace(new LogInfo() { Category = "Run", Function = "Printer", Option = "connect", Identity = "printer", Message = $"code:{item?.code}/ip:{item?.ip}/brand:{item?.brand}/model:{item?.model}/printer_counter:{item?.printer_counter}" });
 
                     // ========== 連線事務機（SNMP 抓取）==========
-                    if (Printer(item)) continue;        // 若 SNMP 失敗則跳過此台
+                    if (Printer(item, hostName, hostIp)) continue;        // 若 SNMP 失敗則跳過此台
 
                     // ========== 回傳Server ==========
-                    SendSupplies(item);                 // 碳粉/感光鼓
-                    SendAlerts(item);                   // 告警
+                    SendSupplies(item, hostName, hostIp);                 // 碳粉/感光鼓
+                    SendAlerts(item, hostName, hostIp);                   // 告警
 
                     // 抄表：只有 printer_counter=true 的機器才需送計數
                     if (item.printer_counter)
-                        SendCounter(item);
+                        SendCounter(item, hostName, hostIp);
                 }
                 Trace(new LogInfo() { Category = "printer_upload", Message = $"done count:{list?.Count}" });
 
@@ -592,7 +596,7 @@ namespace printer_info
         /// <summary>
         /// 回傳碳粉/感光鼓資訊給 Server
         /// </summary>
-        private void SendSupplies(Printer item)
+        private void SendSupplies(Printer item, string hostName, string hostIp)
         {
             if (_restClient == null) return;
             try
@@ -600,6 +604,8 @@ namespace printer_info
                 var restRequest = new DataClass.SuppliesRequest
                 {
                     code = item.code,
+                    host_name = hostName,
+                    host_ip   = hostIp,
                     items = item.supply_items?.Count > 0 ? item.supply_items : null,
                 };
                 var success = _restClient.UpdateSupplies(restRequest);
@@ -614,7 +620,7 @@ namespace printer_info
         /// <summary>
         /// 回傳告警資訊給 Server
         /// </summary>
-        private void SendAlerts(Printer item)
+        private void SendAlerts(Printer item, string hostName, string hostIp)
         {
             if (_restClient == null) return;
             try
@@ -622,6 +628,8 @@ namespace printer_info
                 var restRequest = new DataClass.AlertsRequest
                 {
                     code = item.code,
+                    host_name = hostName,
+                    host_ip   = hostIp,
                     alerts = item.alerts,
                 };
                 var success = _restClient.UpdateAlerts(restRequest);
@@ -634,9 +642,9 @@ namespace printer_info
         }
 
         /// <summary>
-        /// 回傳抄表計數給 Server（新格式：含 job_type/color/size 維度的 items list）
+        /// 回傳抄表計數給 Server（含 output/category/color/size 四維的 items list）
         /// </summary>
-        private void SendCounter(Printer item)
+        private void SendCounter(Printer item, string hostName, string hostIp)
         {
             if (_restClient == null) return;
             try
@@ -652,6 +660,8 @@ namespace printer_info
                     code = item.code,
                     date = DateTime.Now.ToString("yyyy-MM-dd"),
                     state = item.state,
+                    host_name = hostName,
+                    host_ip   = hostIp,
                     data = item.snmp_data,
                     items = item.items,
                 };
@@ -667,16 +677,17 @@ namespace printer_info
         #endregion
 
         #region Printer
-        private bool Printer(Printer mfp)
+        private bool Printer(Printer mfp, string hostName, string hostIp)
         {
             try
             {
                 var mac = mfp.mac;
                 var ip = mfp.ip;
                 if (string.IsNullOrEmpty(ip)) return true;
+                var brand = mfp.brand;
                 var model = mfp.model;
                 var printer_counter = mfp.printer_counter;
-                Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "ready", Message = $"ip:{ip}/model:{model}/printer_counter:{printer_counter}" });
+                Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "ready", Message = $"ip:{ip}/brand:{brand}/model:{model}/printer_counter:{printer_counter}" });
 
                 var _mac = string.Empty;
                 var macs = Printer_MAC(ip);
@@ -688,7 +699,28 @@ namespace printer_info
                 var _serial_number = string.Empty;
                 foreach (var obj in serial_names) { if (_serial_number == string.Empty) _serial_number = obj.Value.ToString(); }
 
-                //if (mac != _mac && mac != string.Empty) return true;
+                // 驗證 SNMP 抓到的 mac/serial 是否與 server 紀錄一致；任一識別欄位不符就跳過此台，避免抄表寫到錯誤的事務機
+                bool macMismatch    = !string.IsNullOrEmpty(mac) && !string.IsNullOrEmpty(_mac) &&
+                                      !string.Equals(mac.Trim(), _mac.Trim(), StringComparison.OrdinalIgnoreCase);
+                bool serialMismatch = !string.IsNullOrEmpty(mfp.serial_number) && !string.IsNullOrEmpty(_serial_number) &&
+                                      !string.Equals(mfp.serial_number.Trim(), _serial_number.Trim(), StringComparison.OrdinalIgnoreCase);
+                if (macMismatch || serialMismatch)
+                {
+                    Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Printer", Option = "mismatch", Identity = mfp.code,
+                        Message = $"server.mac={mac}/snmp.mac={_mac}/server.serial={mfp.serial_number}/snmp.serial={_serial_number}" });
+                    return true;
+                }
+
+                // server 已有任一識別欄位，但 SNMP 連 mac 與 serial 都讀不到 → 無法驗證設備身分，視為異常並跳過
+                bool serverHasAnyId = !string.IsNullOrEmpty(mac) || !string.IsNullOrEmpty(mfp.serial_number);
+                bool snmpGotAnyId   = !string.IsNullOrEmpty(_mac) || !string.IsNullOrEmpty(_serial_number);
+                if (serverHasAnyId && !snmpGotAnyId)
+                {
+                    Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Printer", Option = "no_identity", Identity = mfp.code,
+                        Message = $"server.mac={mac}/server.serial={mfp.serial_number}/snmp 未讀到任何識別欄位" });
+                    return true;
+                }
+
                 if (mac == string.Empty || mfp.printer_name == string.Empty || mfp.serial_number == string.Empty)
                 {
                     mfp.mac = _mac;
@@ -704,21 +736,34 @@ namespace printer_info
                             ip: mfp.ip,
                             serialNumber: mfp.serial_number,
                             printerName: mfp.printer_name,
-                            state: 1
+                            state: 1,
+                            hostName: hostName,
+                            hostIp: hostIp
                         );
                         Trace(new LogInfo() { Category = "REST", Function = "Printer", Option = "UpdateDevice", Message = $"code={mfp.code}, success={success}" });
                     }
                 }
 
-                // ── 依 model 呼叫對應品牌的 Counter + Supplies 方法 ─────────────
-                switch (mfp.model)
+                // ── 依 brand / model 呼叫對應的 Counter + Supplies 方法 ─────────
+                // brand：廠牌（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
+                // model：具體型號（toshiba 內細分 2555c / 3515ac 等）
+                // 向後相容：brand 為空時，退回讀 mfp.model 當廠牌
+                var brandKey = (!string.IsNullOrEmpty(mfp.brand) ? mfp.brand : mfp.model)?.ToLowerInvariant();
+                var modelKey = (mfp.model ?? string.Empty).ToLowerInvariant();
+                switch (brandKey)
                 {
-                    case "common": { Counter_Common(mfp); } break;
-                    case "ricoh": { Counter_Ricoh(mfp); } break;
+                    case "common":    { Counter_Common(mfp); } break;
+                    case "ricoh":     { Counter_Ricoh(mfp); } break;
                     case "ricoh_imc": { Counter_RicohIMC(mfp); } break;
-                    case "xerox": { Counter_Xerox(mfp); } break;
-                    case "toshiba": { Counter_Toshiba(mfp); } break;
-                    case "kyocera": { Counter_Kyocera(mfp); } break;
+                    case "xerox":     { Counter_Xerox(mfp); } break;
+                    case "toshiba":
+                        switch (modelKey)
+                        {
+                            // 之後若要為特定型號客製 OID，請新增 Counter_Toshiba_<MODEL> 並在這裡分派
+                            default: { Counter_Toshiba(mfp); } break;
+                        }
+                        break;
+                    case "kyocera":   { Counter_Kyocera(mfp); } break;
                     default: break;
                 }
 
@@ -754,7 +799,7 @@ namespace printer_info
         #region Counter
 
         /// <summary>
-        /// Common（標準 prtMarkerLifeCount）：僅回傳總計數，無法區分 job_type / color。
+        /// Common（標準 prtMarkerLifeCount）：僅回傳總計數，無法區分 category / color。
         /// OID: 1.3.6.1.2.1.43.10.2.1.4.1.1
         /// </summary>
         private bool Counter_Common(Printer mfp)
@@ -772,7 +817,7 @@ namespace printer_info
 
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
             if (totalBlack > 0)
-                mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black", size = "normal", sheets = totalBlack });
+                mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "normal", sheets = totalBlack });
 
             return Supplies(mfp);
         }
@@ -810,13 +855,13 @@ namespace printer_info
                 }
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
 
-            if (copyBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "copy", color = "black", size = "normal", sheets = copyBlack });
-            if (copyDuotone > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "copy", color = "duotone", size = "normal", sheets = copyDuotone });
-            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "copy", color = "color_full", size = "normal", sheets = copyColor + copyDuotone });
-            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "fax", color = "black", size = "normal", sheets = faxBlack });
-            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black", size = "normal", sheets = printBlack });
-            if (printDuotone > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "duotone", size = "normal", sheets = printDuotone });
-            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "normal", sheets = printColor + printDuotone });
+            if (copyBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "black", size = "normal", sheets = copyBlack });
+            if (copyDuotone > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "duotone", size = "normal", sheets = copyDuotone });
+            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "color_full", size = "normal", sheets = copyColor + copyDuotone });
+            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "fax", color = "black", size = "normal", sheets = faxBlack });
+            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "normal", sheets = printBlack });
+            if (printDuotone > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone", size = "normal", sheets = printDuotone });
+            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor + printDuotone });
 
             return Supplies(mfp);
         }
@@ -859,11 +904,11 @@ namespace printer_info
                 }
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
 
-            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black", size = "normal", sheets = printBlack });
-            if (printBlackLarge > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black", size = "large", sheets = printBlackLarge });
-            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "normal", sheets = printColor });
-            if (printColorLarge > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "large", sheets = printColorLarge });
-            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "fax", color = "black", size = "normal", sheets = faxBlack });
+            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "normal", sheets = printBlack });
+            if (printBlackLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "large", sheets = printBlackLarge });
+            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor });
+            if (printColorLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "large", sheets = printColorLarge });
+            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "fax", color = "black", size = "normal", sheets = faxBlack });
 
             return Supplies(mfp);
         }
@@ -935,20 +980,20 @@ namespace printer_info
                 }
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
 
-            // 列印
-            if (printBlack        > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black",      size = "normal", sheets = printBlack });
-            if (printColor        > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "normal", sheets = printColor });
-            if (printDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "duotone",    size = "normal", sheets = printDuotone });
-            if (printBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black",      size = "large",  sheets = printBlackLarge });
-            if (printColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "large",  sheets = printColorLarge });
-            if (printDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "duotone",    size = "large",  sheets = printDuotoneLarge });
+            // 列印（Toshiba 此 OID 集為列印整體計數，無法細分 print/copy/fax，先歸 category=print）
+            if (printBlack        > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black",      size = "normal", sheets = printBlack });
+            if (printColor        > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor });
+            if (printDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone",    size = "normal", sheets = printDuotone });
+            if (printBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black",      size = "large",  sheets = printBlackLarge });
+            if (printColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "large",  sheets = printColorLarge });
+            if (printDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone",    size = "large",  sheets = printDuotoneLarge });
             // 掃描
-            if (scanBlack        > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "black",      size = "normal", sheets = scanBlack });
-            if (scanColor        > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "color_full", size = "normal", sheets = scanColor });
-            if (scanDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "duotone",    size = "normal", sheets = scanDuotone });
-            if (scanBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "black",      size = "large",  sheets = scanBlackLarge });
-            if (scanColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "color_full", size = "large",  sheets = scanColorLarge });
-            if (scanDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "scan", color = "duotone",    size = "large",  sheets = scanDuotoneLarge });
+            if (scanBlack        > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "black",      size = "normal", sheets = scanBlack });
+            if (scanColor        > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "color_full", size = "normal", sheets = scanColor });
+            if (scanDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "duotone",    size = "normal", sheets = scanDuotone });
+            if (scanBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "black",      size = "large",  sheets = scanBlackLarge });
+            if (scanColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "color_full", size = "large",  sheets = scanColorLarge });
+            if (scanDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "duotone",    size = "large",  sheets = scanDuotoneLarge });
 
             return Supplies_Toshiba(mfp);
         }
@@ -985,11 +1030,11 @@ namespace printer_info
                 }
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
 
-            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "black", size = "normal", sheets = printBlack });
-            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "print", color = "color_full", size = "normal", sheets = printColor });
-            if (copyBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "copy", color = "black", size = "normal", sheets = copyBlack });
-            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "copy", color = "color_full", size = "normal", sheets = copyColor });
-            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { job_type = "fax", color = "black", size = "normal", sheets = faxBlack });
+            if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "normal", sheets = printBlack });
+            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor });
+            if (copyBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "black", size = "normal", sheets = copyBlack });
+            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "color_full", size = "normal", sheets = copyColor });
+            if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "fax", color = "black", size = "normal", sheets = faxBlack });
 
             return Supplies_Kyocera(mfp);
         }

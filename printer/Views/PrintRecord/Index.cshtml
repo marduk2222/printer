@@ -83,8 +83,8 @@
                         }
                         else
                         {
-                            <th class="text-end">黑白</th>
                             <th class="text-end">彩色</th>
+                            <th class="text-end">黑白</th>
                             <th class="text-end">大張</th>
                         }
                         <th class="text-end">合計</th>
@@ -116,10 +116,10 @@
                             }
                             else
                             {
-                                <td class="text-end">@item.BlackSheets.ToString("N0")</td>
                                 <td class="text-end">@item.ColorSheets.ToString("N0")</td>
+                                <td class="text-end">@item.BlackSheets.ToString("N0")</td>
                                 <td class="text-end">@item.LargeSheets.ToString("N0")</td>
-                                total = item.BlackSheets + item.ColorSheets + item.LargeSheets;
+                                total = (long)item.BlackSheets + item.ColorSheets + item.LargeSheets;
                             }
                             <td class="text-end fw-bold">@total.ToString("N0")</td>
                             <td>

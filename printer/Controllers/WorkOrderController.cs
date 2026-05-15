@@ -126,7 +126,9 @@ public class WorkOrderController : Controller
         int id,
         WorkOrder workOrder,
         List<int>? printerIds,
-        List<int>? userIds)
+        List<int>? userIds,
+        List<IFormFile>? images,
+        string? imageCaption)
     {
         if (id != workOrder.Id) return BadRequest();
         if (string.IsNullOrWhiteSpace(workOrder.Title))
@@ -141,6 +143,16 @@ public class WorkOrderController : Controller
         try
         {
             await _workOrderService.UpdateAsync(workOrder, printerIds, userIds);
+
+            if (images != null)
+            {
+                foreach (var file in images.Where(f => f.Length > 0))
+                {
+                    try { await _workOrderService.AddImageAsync(id, file, imageCaption); }
+                    catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+                }
+            }
+
             TempData["Success"] = "派工單已更新";
         }
         catch (ArgumentException ex)
@@ -331,10 +343,23 @@ public class WorkOrderController : Controller
         var printers = await _context.Printers
             .Where(p => p.IsActive)
             .Include(p => p.Partner)
+            .Include(p => p.Model)
+                .ThenInclude(m => m!.Brand)
             .OrderBy(p => p.Partner!.Name).ThenBy(p => p.Name)
             .ToListAsync();
         ViewBag.AllPrinters = printers;
         ViewBag.SelectedPrinterIds = selectedPrinterIds ?? new List<int>();
+        ViewBag.AllPrintersJson = System.Text.Json.JsonSerializer.Serialize(
+            printers.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                partnerName = p.Partner?.Name ?? "",
+                brandName = p.Model?.Brand?.Name ?? "",
+                modelName = p.Model?.Name ?? ""
+            }));
+        ViewBag.SelectedPrinterIdsJson = System.Text.Json.JsonSerializer.Serialize(
+            selectedPrinterIds ?? new List<int>());
 
         var users = await _context.AppUsers
             .Where(u => u.IsActive).OrderBy(u => u.DisplayName).ToListAsync();

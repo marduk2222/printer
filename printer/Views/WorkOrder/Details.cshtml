@@ -120,10 +120,10 @@
             </div>
         }
 
-        <!-- 圖片 -->
+        <!-- 圖片 / PDF -->
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>附圖@(Model.Images.Any() ? $"（{Model.Images.Count} 張）" : "")</span>
+                <span>附件@(Model.Images.Any() ? $"（{Model.Images.Count} 個）" : "")</span>
             </div>
             <div class="card-body">
                 @if (Model.Images.Any())
@@ -131,19 +131,32 @@
                     <div class="row g-2 mb-3">
                         @foreach (var img in Model.Images)
                         {
+                            var isPdf = img.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
                             <div class="col-6 col-md-4">
                                 <div class="border rounded overflow-hidden position-relative">
-                                    <a href="@img.FilePath" target="_blank">
-                                        <img src="@img.FilePath" class="img-fluid w-100"
-                                             style="height:160px;object-fit:cover;"
-                                             alt="@(img.Caption ?? img.FileName)" />
-                                    </a>
+                                    @if (isPdf)
+                                    {
+                                        <a href="@img.FilePath" target="_blank"
+                                           class="d-flex flex-column align-items-center justify-content-center text-decoration-none p-3"
+                                           style="height:160px; background:#f8f9fa;">
+                                            <div style="font-size:3rem; line-height:1;">📄</div>
+                                            <div class="small text-truncate w-100 text-center mt-2" title="@img.FileName">@img.FileName</div>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@img.FilePath" target="_blank">
+                                            <img src="@img.FilePath" class="img-fluid w-100"
+                                                 style="height:160px;object-fit:cover;"
+                                                 alt="@(img.Caption ?? img.FileName)" />
+                                        </a>
+                                    }
                                     @if (!string.IsNullOrEmpty(img.Caption))
                                     {
                                         <div class="px-2 py-1 small bg-light">@img.Caption</div>
                                     }
                                     <form asp-action="DeleteImage" method="post"
-                                          onsubmit="return confirm('確認刪除此圖片？')">
+                                          onsubmit="return confirm('確認刪除此檔案？')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="imageId" value="@img.Id" />
                                         <input type="hidden" name="workOrderId" value="@Model.Id" />
@@ -156,20 +169,20 @@
                     </div>
                 }
 
-                <!-- 上傳新圖片（唯一上傳區） -->
+                <!-- 上傳新檔案（圖片 / PDF） -->
                 <form asp-action="UploadImage" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
                     <div class="d-flex gap-2 align-items-center flex-wrap">
                         <button type="button" class="btn btn-outline-primary btn-sm"
                                 onclick="document.getElementById('uploadInput').click()">
-                            📷 選擇或拍照上傳
+                            📷 選擇圖片或 PDF
                         </button>
                         <input type="text" name="caption" class="form-control form-control-sm"
-                               style="max-width:200px" placeholder="圖片說明（選填）" />
+                               style="max-width:200px" placeholder="說明（選填）" />
                         <button type="submit" id="uploadBtn" class="btn btn-success btn-sm" disabled>上傳</button>
                     </div>
-                    <input type="file" id="uploadInput" name="images" accept="image/*"
+                    <input type="file" id="uploadInput" name="images" accept="image/*,application/pdf"
                            multiple class="d-none"
                            onchange="document.getElementById('uploadBtn').disabled = this.files.length === 0;
                                      document.getElementById('uploadFileCount').textContent = this.files.length > 0 ? this.files.length + ' 個檔案' : '';" />

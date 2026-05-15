@@ -287,6 +287,35 @@ namespace Lib
             // Fallback to hostname
             return Environment.MachineName;
         }
+
+        /// <summary>
+        /// 取得本機名稱（用於識別上傳的 agent）
+        /// </summary>
+        public static string GetHostName()
+        {
+            try { return Environment.MachineName ?? ""; }
+            catch { return ""; }
+        }
+
+        /// <summary>
+        /// 取得本機 IPv4（第一張啟用、非 loopback 的網卡），用於識別上傳的 agent
+        /// </summary>
+        public static string GetHostIp()
+        {
+            try
+            {
+                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
+                    foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                        if (ua.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                            return ua.Address.ToString();
+                }
+            }
+            catch { }
+            return "";
+        }
     }
 
     #region Response Classes

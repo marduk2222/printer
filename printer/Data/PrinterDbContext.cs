@@ -87,6 +87,16 @@ public class PrinterDbContext : DbContext
     /// </summary>
     public DbSet<EinvoiceFieldMapping> EinvoiceFieldMappings { get; set; }
 
+    /// <summary>
+    /// 折讓單
+    /// </summary>
+    public DbSet<EinvoiceAllowance> EinvoiceAllowances { get; set; }
+
+    /// <summary>
+    /// 折讓單明細
+    /// </summary>
+    public DbSet<EinvoiceAllowanceItem> EinvoiceAllowanceItems { get; set; }
+
     #region 模組化計費系統
 
     /// <summary>
@@ -228,6 +238,7 @@ public class PrinterDbContext : DbContext
         // Brand
         modelBuilder.Entity<Brand>(entity =>
         {
+            entity.HasIndex(e => e.Code);
             entity.HasIndex(e => e.Name);
         });
 
@@ -378,6 +389,32 @@ public class PrinterDbContext : DbContext
             entity.HasOne(e => e.Einvoice)
                 .WithMany(i => i.Items)
                 .HasForeignKey(e => e.EinvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // EinvoiceAllowance
+        modelBuilder.Entity<EinvoiceAllowance>(entity =>
+        {
+            entity.HasIndex(e => e.AllowanceNumber);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.AllowanceDate);
+
+            entity.HasOne(e => e.Einvoice)
+                .WithMany()
+                .HasForeignKey(e => e.EinvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Platform)
+                .WithMany()
+                .HasForeignKey(e => e.PlatformId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<EinvoiceAllowanceItem>(entity =>
+        {
+            entity.HasOne(e => e.Allowance)
+                .WithMany(a => a.Items)
+                .HasForeignKey(e => e.AllowanceId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

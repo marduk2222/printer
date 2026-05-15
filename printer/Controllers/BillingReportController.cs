@@ -30,58 +30,6 @@ public class BillingReportController : Controller
         return View();
     }
 
-    /// <summary>
-    /// 計費預覽：即時計算（不依賴已生成帳單）
-    /// </summary>
-    [HttpPost]
-    public async Task<IActionResult> Preview(int? partnerId, DateOnly startDate, DateOnly endDate)
-    {
-        List<int> printerIds;
-        if (partnerId.HasValue)
-        {
-            printerIds = await _context.Printers
-                .Where(p => p.PartnerId == partnerId.Value && p.IsActive)
-                .Select(p => p.Id)
-                .ToListAsync();
-        }
-        else
-        {
-            printerIds = await _context.PrinterBillingConfigs
-                .Include(c => c.Printer)
-                .Where(c => c.IsEnabled && c.Printer != null && c.Printer.IsActive)
-                .Select(c => c.PrinterId)
-                .ToListAsync();
-        }
-
-        var calculations = new List<BillingCalculation>();
-        foreach (var pid in printerIds)
-        {
-            var calc = await _billingService.CalculateAsync(pid, startDate, endDate);
-            calculations.Add(calc);
-        }
-
-        string label;
-        if (partnerId.HasValue)
-        {
-            var partner = await _context.Partners.FindAsync(partnerId.Value);
-            label = partner?.Name ?? "";
-        }
-        else
-        {
-            label = "全部客戶";
-        }
-
-        ViewBag.ReportTitle = $"{label} - {startDate:yyyy/MM/dd} ~ {endDate:yyyy/MM/dd} 計費預覽";
-        ViewBag.StartDate = startDate.ToString("yyyy-MM-dd");
-        ViewBag.EndDate = endDate.ToString("yyyy-MM-dd");
-        ViewBag.PartnerId = partnerId;
-        ViewBag.Partners = new SelectList(
-            await _context.Partners.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync(),
-            "Id", "Name", partnerId);
-
-        return View("Preview", calculations);
-    }
-
     [HttpPost]
     public async Task<IActionResult> Generate(int? partnerId, DateOnly startDate, DateOnly endDate)
     {
@@ -92,6 +40,8 @@ public class BillingReportController : Controller
             .Include(i => i.Partner)
             .Include(i => i.Items)
                 .ThenInclude(item => item.Printer)
+            .Include(i => i.Items)
+                .ThenInclude(item => item.BillingGroup)
             .Where(i => i.Status != "cancelled")
             .Where(i => i.PeriodStart <= endDate && i.PeriodEnd >= startDate);
 
@@ -108,11 +58,11 @@ public class BillingReportController : Controller
         if (partnerId.HasValue)
         {
             var partner = await _context.Partners.FindAsync(partnerId.Value);
-            reportTitle = $"{partner?.Name} - {periodLabel} 計費報表";
+            reportTitle = $"{partner?.Name} - {periodLabel} 帳單報表";
         }
         else
         {
-            reportTitle = $"全部客戶 - {periodLabel} 計費報表";
+            reportTitle = $"全部客戶 - {periodLabel} 帳單報表";
         }
 
         ViewBag.ReportTitle = reportTitle;
