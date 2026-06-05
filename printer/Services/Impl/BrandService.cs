@@ -27,6 +27,7 @@ public class BrandService : IBrandService
         return brands.Select(b => new BrandDto
         {
             Id = b.Id,
+            Code = b.Code ?? "",
             Name = b.Name,
             Description = b.Description ?? "",
             ModelCount = b.Models.Count
@@ -77,6 +78,7 @@ public class BrandService : IBrandService
         return brands.Select(b => new BrandWithModelsDto
         {
             Id = b.Id,
+            Code = b.Code ?? "",
             Name = b.Name,
             Description = b.Description ?? "",
             Models = b.Models.Select(m => new ModelDto

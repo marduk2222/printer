@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using printer.Data;
+using printer.Data.Entities;
 using printer.Services;
 
 namespace printer.Controllers;
@@ -120,7 +121,15 @@ public class BillingReportController : Controller
         }
 
         var monthlyPrintRecords = await printQuery
+            .Include(r => r.Values).ThenInclude(v => v.SheetType)
             .ToListAsync();
+
+        // 用 SheetType 名稱對應「黑白/彩色/大張」分類；其餘 SheetType 計入 OtherPages
+        var blackNames = new HashSet<string> { "黑白" };
+        var colorNames = new HashSet<string> { "彩色" };
+        var largeNames = new HashSet<string> { "大張", "彩色大張" };
+        int SumByNames(PrintRecord r, HashSet<string> names) =>
+            r.Values.Where(v => v.SheetType != null && names.Contains(v.SheetType!.Name)).Sum(v => v.Value);
 
         var monthlyPrintSummary = monthlyPrintRecords
             .GroupBy(r => r.Date.ToString("yyyy/MM"))
@@ -128,10 +137,10 @@ public class BillingReportController : Controller
             .Select(g => new
             {
                 Period = g.Key,
-                BlackPages = g.Sum(r => r.BlackSheets),
-                ColorPages = g.Sum(r => r.ColorSheets),
-                LargePages = g.Sum(r => r.LargeSheets),
-                TotalPages = g.Sum(r => r.BlackSheets + r.ColorSheets + r.LargeSheets)
+                BlackPages = g.Sum(r => SumByNames(r, blackNames)),
+                ColorPages = g.Sum(r => SumByNames(r, colorNames)),
+                LargePages = g.Sum(r => SumByNames(r, largeNames)),
+                TotalPages = g.Sum(r => r.Values.Sum(v => v.Value))
             })
             .ToList();
 
@@ -175,9 +184,9 @@ public class BillingReportController : Controller
             .ToList();
 
         ViewBag.MonthlyPrintSummary = monthlyPrintSummary;
-        ViewBag.TotalBlackPages = monthlyPrintRecords.Sum(r => r.BlackSheets);
-        ViewBag.TotalColorPages = monthlyPrintRecords.Sum(r => r.ColorSheets);
-        ViewBag.TotalLargePages = monthlyPrintRecords.Sum(r => r.LargeSheets);
+        ViewBag.TotalBlackPages = monthlyPrintRecords.Sum(r => SumByNames(r, blackNames));
+        ViewBag.TotalColorPages = monthlyPrintRecords.Sum(r => SumByNames(r, colorNames));
+        ViewBag.TotalLargePages = monthlyPrintRecords.Sum(r => SumByNames(r, largeNames));
         ViewBag.MonthlySummary = monthlySummary;
         ViewBag.PartnerSummary = partnerSummary;
         ViewBag.TotalInvoices = invoices.Count;

@@ -1,8 +1,10 @@
 using DataClass;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 
@@ -133,7 +135,7 @@ namespace Lib
                         brand           = p.brand ?? "",
                         model           = p.model ?? "",
                         is_active       = p.isActive,
-                        printer_counter = false
+                        //printer_counter = false
                     });
                 }
                 return list;
@@ -215,18 +217,24 @@ namespace Lib
         {
             try
             {
+                // 先 log 一行 items 統計摘要（cat map 累加後每筆 sheets），方便對照 SNMP→PrinterScanner→上傳的張數
+                if (request.items != null && request.items.Count > 0)
+                {
+                    var summary = string.Join(" | ", request.items
+                        .Select(i => $"{i.output}/{i.category}/{i.color}/{i.size}={i.sheets}"));
+                    Log("WriteMeter", "items_summary", request.code,
+                        $"total={request.items.Count} | {summary}");
+                }
+
                 var json = JsonConvert.SerializeObject(new
                 {
-                    code       = request.code,
-                    date       = request.date,
-                    state      = request.state,
-                    hostName   = request.host_name,
-                    hostIp     = request.host_ip,
-                    data       = request.data,
-                    items      = request.items,
-                    blackPrint = request.black_print,
-                    colorPrint = request.color_print,
-                    largePrint = request.large_print
+                    code     = request.code,
+                    date     = request.date,
+                    state    = request.state,
+                    hostName = request.host_name,
+                    hostIp   = request.host_ip,
+                    data     = request.data,
+                    items    = request.items,
                 }, CamelSettings);
                 var body = Post("/api/record", json);
                 if (body == null) return false;
@@ -278,12 +286,33 @@ namespace Lib
         private string Post(string endpoint, string json)
         {
             var url = $"{_baseUrl}{endpoint}";
-            Log("Post", "request", endpoint, json);
+            Log("Post", "request", endpoint, RedactSnmpDataForLog(json));
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var response = _client.PostAsync(url, content).Result;
             var body = response.Content.ReadAsStringAsync().Result;
             Log("Post", response.IsSuccessStatusCode ? "response" : "error", endpoint, body);
             return response.IsSuccessStatusCode ? body : null;
+        }
+
+        /// <summary>
+        /// REST log 用：把 request 中的 snmp_data（data 欄位）抽掉，只留長度標記，避免 OID dump 灌爆 log。
+        /// items 等其他欄位保留，方便看到 cat map 累加後的數量。
+        /// </summary>
+        private static string RedactSnmpDataForLog(string json)
+        {
+            if (string.IsNullOrEmpty(json) || json.IndexOf("\"data\"", StringComparison.Ordinal) < 0) return json;
+            try
+            {
+                var token = JToken.Parse(json);
+                if (token is JObject obj && obj.TryGetValue("data", out var dataToken))
+                {
+                    var len = (dataToken?.ToString() ?? "").Length;
+                    obj["data"] = $"<snmp_data omitted, {len} chars>";
+                    return obj.ToString(Formatting.None);
+                }
+            }
+            catch { /* fall through 回 raw */ }
+            return json;
         }
 
         private string Get(string endpoint)

@@ -129,8 +129,7 @@ public class CounterItemDto
 }
 
 /// <summary>
-/// 抄表記錄請求。items 有值時優先以 items 落到 PrintRecordValue；
-/// 若 items 為空則仍接受舊格式 BlackPrint / ColorPrint / LargePrint。
+/// 抄表記錄請求。items 以四維 (output/category/color/size) 累加後落到 PrintRecordValue。
 /// </summary>
 public class RecordRequest
 {
@@ -145,11 +144,6 @@ public class RecordRequest
 
     /// <summary>四維計數明細</summary>
     public List<CounterItemDto>? Items { get; set; }
-
-    // 舊格式（向下相容）
-    public int? BlackPrint { get; set; }
-    public int? ColorPrint { get; set; }
-    public int? LargePrint { get; set; }
 }
 
 /// <summary>

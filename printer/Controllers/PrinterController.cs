@@ -439,15 +439,47 @@ public class PrinterController : Controller
                         continue;
                     }
 
-                    // 查詢客戶
+                    // 查詢客戶：依「客戶編號」欄比對 客戶代碼 → 客戶自訂編號 → 公司名稱
                     int? partnerId = null;
-                    var partnerCode = GetCellValue(worksheet, row, headers, "客戶編號");
-                    if (!string.IsNullOrWhiteSpace(partnerCode))
+                    string? partnerNumber = null;
+                    var partnerKey = GetCellValue(worksheet, row, headers, "客戶編號");
+                    if (!string.IsNullOrWhiteSpace(partnerKey))
                     {
-                        var partner = await _context.Partners
-                            .FirstOrDefaultAsync(p => p.Code == partnerCode || p.Name == partnerCode);
+                        var partner = await _context.Partners.FirstOrDefaultAsync(p =>
+                            p.Code == partnerKey || p.PartnerNumber == partnerKey || p.Name == partnerKey);
                         if (partner != null)
+                        {
                             partnerId = partner.Id;
+                            partnerNumber = partner.PartnerNumber;
+                        }
+                    }
+
+                    // 查詢廠牌 / 型號（依名稱或代碼）
+                    int? brandId = null;
+                    int? modelId = null;
+                    var brandName = GetCellValue(worksheet, row, headers, "廠牌");
+                    var modelName = GetCellValue(worksheet, row, headers, "型號");
+                    if (!string.IsNullOrWhiteSpace(brandName))
+                    {
+                        var brand = await _context.Brands
+                            .FirstOrDefaultAsync(b => b.Name == brandName || b.Code == brandName);
+                        if (brand != null) brandId = brand.Id;
+                    }
+                    if (!string.IsNullOrWhiteSpace(modelName))
+                    {
+                        PrinterModel? model = null;
+                        if (brandId.HasValue)
+                        {
+                            model = await _context.PrinterModels.FirstOrDefaultAsync(m =>
+                                m.BrandId == brandId && (m.Name == modelName || m.Code == modelName));
+                        }
+                        model ??= await _context.PrinterModels
+                            .FirstOrDefaultAsync(m => m.Name == modelName || m.Code == modelName);
+                        if (model != null)
+                        {
+                            modelId = model.Id;
+                            brandId ??= model.BrandId;
+                        }
                     }
 
                     // 代碼：若未提供則自動產生
@@ -479,6 +511,9 @@ public class PrinterController : Controller
                         Code = code,
                         Name = name,
                         PartnerId = partnerId,
+                        PartnerNumber = partnerNumber,
+                        BrandId = brandId,
+                        ModelId = modelId,
                         SerialNumber = GetCellValue(worksheet, row, headers, "序號"),
                         Ip = GetCellValue(worksheet, row, headers, "IP"),
                         Mac = GetCellValue(worksheet, row, headers, "MAC"),
@@ -524,7 +559,7 @@ public class PrinterController : Controller
         using var workbook = new ClosedXML.Excel.XLWorkbook();
         var ws = workbook.Worksheets.Add("事務機資料");
 
-        var headers = new[] { "代碼", "名稱", "客戶編號", "序號", "IP", "MAC", "印表機名稱", "合約開始日期", "合約結束日期", "押金", "說明" };
+        var headers = new[] { "代碼", "名稱", "客戶編號", "廠牌", "型號", "序號", "IP", "MAC", "印表機名稱", "合約開始日期", "合約結束日期", "押金", "說明" };
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
@@ -532,14 +567,16 @@ public class PrinterController : Controller
         ws.Cell(2, 1).Value = "";
         ws.Cell(2, 2).Value = "辦公室印表機";
         ws.Cell(2, 3).Value = "202601001";
-        ws.Cell(2, 4).Value = "SN12345678";
-        ws.Cell(2, 5).Value = "192.168.1.100";
-        ws.Cell(2, 6).Value = "AA:BB:CC:DD:EE:FF";
-        ws.Cell(2, 7).Value = "HP LaserJet";
-        ws.Cell(2, 8).Value = "2026-01-01";
-        ws.Cell(2, 9).Value = "2027-01-01";
-        ws.Cell(2, 10).Value = "5000";
-        ws.Cell(2, 11).Value = "一樓辦公室";
+        ws.Cell(2, 4).Value = "Canon";
+        ws.Cell(2, 5).Value = "imageRUNNER C3025";
+        ws.Cell(2, 6).Value = "SN12345678";
+        ws.Cell(2, 7).Value = "192.168.1.100";
+        ws.Cell(2, 8).Value = "AA:BB:CC:DD:EE:FF";
+        ws.Cell(2, 9).Value = "HP LaserJet";
+        ws.Cell(2, 10).Value = "2026-01-01";
+        ws.Cell(2, 11).Value = "2027-01-01";
+        ws.Cell(2, 12).Value = "5000";
+        ws.Cell(2, 13).Value = "一樓辦公室";
 
         var headerRange = ws.Range(1, 1, 1, headers.Length);
         headerRange.Style.Font.Bold = true;

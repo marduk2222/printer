@@ -255,29 +255,10 @@ public class BillingService : IBillingService
                 .Where(v => recordIds.Contains(v.RecordId))
                 .ToListAsync();
 
-            // 加總每種類型的張數
+            // 加總每種類型的張數（一律走 PrintRecordValue，由 SheetTypeKey wildcard 累加）
             var typeTotals = recordValues
                 .GroupBy(v => v.SheetTypeId)
                 .ToDictionary(g => g.Key, g => g.Sum(v => v.Value));
-
-            // 若無 PrintRecordValues（舊格式記錄），以 BlackSheets/ColorSheets/LargeSheets 名稱回退
-            if (!typeTotals.Any())
-            {
-                var legacyBlack = records.Sum(r => r.BlackSheets);
-                var legacyColor = records.Sum(r => r.ColorSheets);
-                var legacyLarge = records.Sum(r => r.LargeSheets);
-
-                foreach (var sp in sheetPrices)
-                {
-                    var n = sp.SheetType?.Name ?? "";
-                    if (legacyBlack > 0 && n == "黑白")
-                        typeTotals[sp.SheetTypeId] = legacyBlack;
-                    else if (legacyColor > 0 && n == "彩色")
-                        typeTotals[sp.SheetTypeId] = legacyColor;
-                    else if (legacyLarge > 0 && n == "大張")
-                        typeTotals[sp.SheetTypeId] = legacyLarge;
-                }
-            }
 
             // 計算每種類型的計費張數（套用誤印率後，扣除贈送張數，但先不折抵）
             // key = SheetTypeId, value = (rawPages, afterDiscount, freePagesLeft, billedPages)
@@ -384,21 +365,20 @@ public class BillingService : IBillingService
             return result;
         }
 
-        // 舊有計費邏輯（BlackSheets / ColorSheets / LargeSheets）
-        var totalBlack = records.Sum(r => r.BlackSheets);
-        var totalColor = records.Sum(r => r.ColorSheets);
-        var totalLarge = records.Sum(r => r.LargeSheets);
-
-        var legacyResult = BillingCalculator.Calculate(config, printerId, totalBlack, totalColor, totalLarge, periodMonths, printerName);
-
-        if (records.Any())
+        // 此事務機未設定 PrinterBillingSheetPrice 或無 record，回傳空計費結果
+        return new BillingCalculation
         {
-            legacyResult.FirstRecordDate = records.Min(r => r.Date);
-            legacyResult.LastRecordDate = records.Max(r => r.Date);
-            legacyResult.RecordCount = records.Count;
-        }
-
-        return legacyResult;
+            PrinterId = printerId,
+            PrinterName = printerName,
+            MonthlyFee = config.IsEnabled && config.MonthlyFee > 0 ? config.MonthlyFee : 0,
+            PageFee = 0,
+            TotalFee = config.IsEnabled && config.MonthlyFee > 0 ? config.MonthlyFee : 0,
+            BillingType = config.MonthlyFee > 0 ? Data.Enums.BillingType.Monthly : Data.Enums.BillingType.PerPage,
+            Breakdown = sheetPrices.Any() ? "本期間無抄表記錄" : "未設定張數類型計費",
+            FirstRecordDate = records.Any() ? records.Min(r => r.Date) : null,
+            LastRecordDate  = records.Any() ? records.Max(r => r.Date) : null,
+            RecordCount = records.Count
+        };
     }
 
     public async Task<List<BillingCalculation>> CalculatePartnerAsync(int partnerId, DateOnly startDate, DateOnly endDate)
@@ -496,34 +476,6 @@ public class BillingService : IBillingService
                 dict[pid] = dict.GetValueOrDefault(pid, 0) + rv.Value;
             }
         }
-        // legacy fallback：若沒有 PrintRecordValues，依 BlackSheets/ColorSheets/LargeSheets + 類型名稱回退
-        if (!typeTotals.Any())
-        {
-            var legacyByMember = records
-                .GroupBy(r => r.PrinterId)
-                .ToDictionary(g => g.Key, g => (
-                    Black: g.Sum(r => r.BlackSheets),
-                    Color: g.Sum(r => r.ColorSheets),
-                    Large: g.Sum(r => r.LargeSheets)));
-
-            foreach (var sp in group.SheetPrices)
-            {
-                var n = sp.SheetType?.Name ?? "";
-                int total = 0;
-                var contrib = new Dictionary<int, int>();
-                foreach (var (pid, t) in legacyByMember)
-                {
-                    int v = n switch { "黑白" => t.Black, "彩色" => t.Color, "大張" => t.Large, _ => 0 };
-                    if (v > 0) { total += v; contrib[pid] = v; }
-                }
-                if (total > 0)
-                {
-                    typeTotals[sp.SheetTypeId] = total;
-                    perMemberContrib[sp.SheetTypeId] = contrib;
-                }
-            }
-        }
-
         // 套群組層級誤印率 + 贈送
         var sheetCalc = new Dictionary<int, (int Raw, int AfterDiscount, int FreePagesLeft, int Billed)>();
         foreach (var sp in group.SheetPrices)

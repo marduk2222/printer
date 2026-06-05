@@ -63,6 +63,10 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Printer Cloud Meter API", Version = "v1" });
 });
 
+// /api/* request/response file logger（背景 task 寫 ./Log/Api{yyyyMMdd}.txt）
+builder.Services.AddSingleton<printer.Services.ApiFileLogger>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<printer.Services.ApiFileLogger>());
+
 var app = builder.Build();
 
 // Auto migrate database and initialize default modules
@@ -167,6 +171,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+// /api/* request/response log middleware — 須在 routing 之後、controller 之前
+app.UseMiddleware<printer.Middleware.ApiLoggingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

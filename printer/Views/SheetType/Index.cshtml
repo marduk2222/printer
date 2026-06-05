@@ -84,17 +84,17 @@ else
                                 <div class="d-flex flex-wrap gap-1 align-items-center">
                                     @foreach (var key in st.Keys)
                                     {
-                                        <span class="badge bg-secondary d-flex align-items-center gap-1"
-                                              title="@DriverKeyLabel(key.DriverKey)">
+                                        <span class="badge bg-secondary" title="@DriverKeyLabel(key.DriverKey)">
                                             @key.DriverKey
-                                            <form asp-action="DeleteKey" asp-route-id="@key.Id" method="post" class="d-inline">
-                                                <button type="submit" class="btn-close btn-close-white" style="font-size:0.6em"
-                                                        onclick="return confirm('刪除此驅動參數？')"></button>
-                                            </form>
                                         </span>
                                     }
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
-                                            onclick="openAddKeyModal(@st.Id, '@st.Name')">+ 參數</button>
+                                    @if (!st.Keys.Any())
+                                    {
+                                        <span class="text-muted small">尚未配置</span>
+                                    }
+                                    <a asp-action="Keys" asp-route-id="@st.Id" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1">
+                                        <i class="bi bi-sliders"></i> 管理參數
+                                    </a>
                                 </div>
                             </td>
                             <td class="align-middle">
@@ -189,67 +189,7 @@ else
     </div>
 </div>
 
-@* 新增驅動參數 Modal — 4 維可複選，自動產生所有合理組合 *@
-<div class="modal fade" id="addKeyModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form asp-action="AddKey" method="post" class="modal-content" id="addKeyForm">
-            <input type="hidden" name="sheetTypeId" id="keySheetTypeId" />
-            <div class="modal-header">
-                <h5 class="modal-title">新增驅動參數 — <span id="keySheetTypeName"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label small mb-1">列印 / 掃描 <span class="text-danger">*</span> <span class="text-muted small">(可多選)</span></label>
-                    <div id="dimOutputGroup" class="d-flex flex-wrap gap-1">
-                        <input type="checkbox" class="btn-check" id="opt-output-printed" data-dim="output" value="printed" autocomplete="off" checked />
-                        <label class="btn btn-sm btn-outline-primary" for="opt-output-printed">列印 (printed)</label>
-                        <input type="checkbox" class="btn-check" id="opt-output-scanned" data-dim="output" value="scanned" autocomplete="off" />
-                        <label class="btn btn-sm btn-outline-primary" for="opt-output-scanned">掃描 (scanned)</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small mb-1">類別 <span class="text-danger">*</span> <span class="text-muted small">(可多選；依 列印/掃描 自動切換)</span></label>
-                    <div id="dimCategoryGroup" class="d-flex flex-wrap gap-1"></div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small mb-1">色彩 <span class="text-danger">*</span> <span class="text-muted small">(可多選)</span></label>
-                    <div id="dimColorGroup" class="d-flex flex-wrap gap-1">
-                        <input type="checkbox" class="btn-check" id="opt-color-black"      data-dim="color" value="black"      autocomplete="off" checked />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-color-black">黑白 (black)</label>
-                        <input type="checkbox" class="btn-check" id="opt-color-mono"       data-dim="color" value="mono"       autocomplete="off" />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-color-mono">單彩 (mono)</label>
-                        <input type="checkbox" class="btn-check" id="opt-color-duotone"    data-dim="color" value="duotone"    autocomplete="off" />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-color-duotone">雙彩 (duotone)</label>
-                        <input type="checkbox" class="btn-check" id="opt-color-color_full" data-dim="color" value="color_full" autocomplete="off" />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-color-color_full">高彩 (color_full)</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small mb-1">紙張大小 <span class="text-danger">*</span> <span class="text-muted small">(可多選)</span></label>
-                    <div id="dimSizeGroup" class="d-flex flex-wrap gap-1">
-                        <input type="checkbox" class="btn-check" id="opt-size-normal" data-dim="size" value="normal" autocomplete="off" checked />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-size-normal">小張 (normal)</label>
-                        <input type="checkbox" class="btn-check" id="opt-size-large"  data-dim="size" value="large"  autocomplete="off" />
-                        <label class="btn btn-sm btn-outline-secondary" for="opt-size-large">大張 (large)</label>
-                    </div>
-                </div>
-                <div class="alert alert-light border mb-0 py-2 px-3">
-                    <div class="small text-muted mb-1">將新增以下 driver_key — <span id="keyCount">0</span> 筆（重複會自動跳過）</div>
-                    <div id="keyPreview" class="d-flex flex-wrap gap-1"></div>
-                    <div id="keyHidden"></div>
-                </div>
-                <div class="form-text mt-2">
-                    格式：<code>{output}.{category}.{color}.{size}</code>。例：「黑白」可同時掛 <code>printed.print.black.normal</code> 與 <code>scanned.scan.black.normal</code>，抄表回來的數值自動累加到此類型。
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="submit" class="btn btn-success" id="addKeySubmit">建立 (<span id="addKeyCount">0</span>)</button>
-            </div>
-        </form>
-    </div>
-</div>
+@* 驅動參數的「新增 / 刪除」整合管理畫面 → /SheetType/Keys/{id}（不在此頁編輯） *@
 
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
@@ -304,101 +244,5 @@ function openEditModal(id, name, sortOrder, isActive) {
     document.getElementById('editIsActive').checked = isActive;
     new bootstrap.Modal(document.getElementById('editModal')).show();
 }
-// 4 維對應表（與 printer_info / printer_setup 的 CounterItem schema 一致）
-const DIM_CATEGORIES = {
-    printed: [
-        { v: 'print',   label: '列印' },
-        { v: 'copy',    label: '影印' },
-        { v: 'fax',     label: '傳真' },
-        { v: 'network', label: '網路' },
-        { v: 'list',    label: '清單' },
-    ],
-    scanned: [
-        { v: 'scan',    label: '掃描' },
-    ],
-};
-
-function getSelected(dim) {
-    return Array.from(document.querySelectorAll(`input[data-dim="${dim}"]:checked`)).map(cb => cb.value);
-}
-
-function syncCategoryGroup() {
-    const outputs = getSelected('output');
-    const group   = document.getElementById('dimCategoryGroup');
-
-    // 保留既有勾選狀態
-    const checkedBefore = new Set(
-        Array.from(group.querySelectorAll('input[data-dim="category"]:checked')).map(cb => cb.value));
-
-    // 列出 outputs 對應的所有 categories（去重保序）
-    const categories = [];
-    outputs.forEach(o => (DIM_CATEGORIES[o] || []).forEach(c => {
-        if (!categories.some(x => x.v === c.v)) categories.push(c);
-    }));
-
-    if (categories.length === 0) {
-        group.innerHTML = '<span class="text-muted small">請先選擇 列印 / 掃描</span>';
-    } else {
-        group.innerHTML = categories.map(c => {
-            const id = `opt-cat-${c.v}`;
-            const isChecked = checkedBefore.has(c.v) || (checkedBefore.size === 0 && c.v === categories[0].v);
-            return `
-                <input type="checkbox" class="btn-check" id="${id}" data-dim="category" value="${c.v}" autocomplete="off" ${isChecked ? 'checked' : ''} />
-                <label class="btn btn-sm btn-outline-info" for="${id}">${c.label} (${c.v})</label>`;
-        }).join('');
-        group.querySelectorAll('input[data-dim="category"]').forEach(cb =>
-            cb.addEventListener('change', refreshKeyPreview));
-    }
-}
-
-function refreshKeyPreview() {
-    const outputs = getSelected('output');
-    const cats    = getSelected('category');
-    const colors  = getSelected('color');
-    const sizes   = getSelected('size');
-
-    // cartesian 但跳過跨 output 的非法組合（printed.scan / scanned.print 等）
-    const keys = [];
-    outputs.forEach(o => {
-        const validCats = new Set((DIM_CATEGORIES[o] || []).map(c => c.v));
-        cats.filter(c => validCats.has(c)).forEach(c => {
-            colors.forEach(col => {
-                sizes.forEach(s => {
-                    keys.push(`${o}.${c}.${col}.${s}`);
-                });
-            });
-        });
-    });
-    const unique = [...new Set(keys)];
-
-    const preview = document.getElementById('keyPreview');
-    preview.innerHTML = unique.length === 0
-        ? '<span class="text-muted small">尚未選滿四維，無可建立的 driver_key</span>'
-        : unique.map(k => `<code class="badge bg-light text-dark border">${k}</code>`).join('');
-
-    document.getElementById('keyHidden').innerHTML = unique
-        .map(k => `<input type="hidden" name="driverKeys" value="${k}" />`).join('');
-
-    document.getElementById('keyCount').textContent = unique.length;
-    document.getElementById('addKeyCount').textContent = unique.length;
-    document.getElementById('addKeySubmit').disabled = unique.length === 0;
-}
-
-function openAddKeyModal(sheetTypeId, name) {
-    document.getElementById('keySheetTypeId').value = sheetTypeId;
-    document.getElementById('keySheetTypeName').textContent = name;
-    syncCategoryGroup();
-    refreshKeyPreview();
-    new bootstrap.Modal(document.getElementById('addKeyModal')).show();
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('input[data-dim="output"]').forEach(cb =>
-        cb.addEventListener('change', () => { syncCategoryGroup(); refreshKeyPreview(); }));
-    document.querySelectorAll('input[data-dim="color"], input[data-dim="size"]').forEach(cb =>
-        cb.addEventListener('change', refreshKeyPreview));
-    syncCategoryGroup();
-    refreshKeyPreview();
-});
 </script>
 }

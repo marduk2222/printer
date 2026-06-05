@@ -1,0 +1,256 @@
+@model printer.Data.Entities.SheetType
+@{
+    ViewData["Title"] = $"驅動參數管理 — {Model.Name}";
+
+    var dimLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "printed", "列印" }, { "scanned", "掃描" },
+        { "print", "列印" }, { "copy", "影印" }, { "fax", "傳真" },
+        { "network", "網路" }, { "list", "清單" }, { "scan", "掃描" },
+        { "black", "黑白" }, { "mono", "單彩" }, { "duotone", "雙彩" }, { "color_full", "高彩" },
+        { "normal", "小張" }, { "large", "大張" },
+    };
+    string DriverKeyLabel(string key)
+    {
+        var parts = (key ?? "").Split('.');
+        if (parts.Length != 4) return key ?? "";
+        return string.Join(" / ", parts.Select(p => dimLabels.TryGetValue(p, out var l) ? l : p));
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-1">
+            <i class="bi bi-arrow-left"></i> 返回張數類型列表
+        </a>
+        <h4 class="mb-0">驅動參數管理 — <span class="text-primary">@Model.Name</span></h4>
+        <div class="text-muted small">
+            張數類型 ID = @Model.Id ／ 目前共 @Model.Keys.Count 筆驅動參數
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@* ───────── 上半：現有驅動參數（只能刪除，不可編輯）───────── *@
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>現有驅動參數</strong>
+        <span class="badge bg-secondary">@Model.Keys.Count 筆</span>
+    </div>
+    <div class="card-body">
+        @if (!Model.Keys.Any())
+        {
+            <div class="text-muted small">尚未配置任何驅動參數（此張數類型暫不會接收任何抄表資料）</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40%">driver_key</th>
+                            <th>中文對照</th>
+                            <th style="width:90px" class="text-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var k in Model.Keys.OrderBy(x => x.DriverKey))
+                        {
+                            <tr>
+                                <td><code>@k.DriverKey</code></td>
+                                <td class="text-muted small">@DriverKeyLabel(k.DriverKey)</td>
+                                <td class="text-end">
+                                    <form asp-action="DeleteKey" asp-route-id="@k.Id" method="post" class="d-inline">
+                                        <input type="hidden" name="returnTo" value="keys" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('刪除 @k.DriverKey ？')">刪除</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@* ───────── 下半：新增驅動參數（4 維可複選）───────── *@
+<form asp-action="AddKey" method="post" id="addKeyForm">
+    <input type="hidden" name="sheetTypeId" value="@Model.Id" />
+    <input type="hidden" name="returnTo" value="keys" />
+    <div class="card">
+        <div class="card-header">
+            <strong>新增驅動參數</strong>
+            <span class="text-muted small ms-2">— 各維皆可複選；未勾任何選項的維度視為 *（任意都符合），但不可全部都未勾</span>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label small mb-1">列印 / 掃描 <span class="text-muted small">(可多選；未勾＝任意)</span></label>
+                <div id="dimOutputGroup" class="d-flex flex-wrap gap-1">
+                    <input type="checkbox" class="btn-check" id="opt-output-printed" data-dim="output" value="printed" autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-primary" for="opt-output-printed">列印 (printed)</label>
+                    <input type="checkbox" class="btn-check" id="opt-output-scanned" data-dim="output" value="scanned" autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-primary" for="opt-output-scanned">掃描 (scanned)</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1">類別 <span class="text-muted small">(可多選；未勾＝任意；依 列印/掃描 自動切換選項)</span></label>
+                <div id="dimCategoryGroup" class="d-flex flex-wrap gap-1"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1">色彩 <span class="text-muted small">(可多選；未勾＝任意)</span></label>
+                <div id="dimColorGroup" class="d-flex flex-wrap gap-1">
+                    <input type="checkbox" class="btn-check" id="opt-color-black"      data-dim="color" value="black"      autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-color-black">黑白 (black)</label>
+                    <input type="checkbox" class="btn-check" id="opt-color-mono"       data-dim="color" value="mono"       autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-color-mono">單彩 (mono)</label>
+                    <input type="checkbox" class="btn-check" id="opt-color-duotone"    data-dim="color" value="duotone"    autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-color-duotone">雙彩 (duotone)</label>
+                    <input type="checkbox" class="btn-check" id="opt-color-color_full" data-dim="color" value="color_full" autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-color-color_full">高彩 (color_full)</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1">紙張大小 <span class="text-muted small">(可多選；未勾＝任意)</span></label>
+                <div id="dimSizeGroup" class="d-flex flex-wrap gap-1">
+                    <input type="checkbox" class="btn-check" id="opt-size-normal" data-dim="size" value="normal" autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-size-normal">小張 (normal)</label>
+                    <input type="checkbox" class="btn-check" id="opt-size-large"  data-dim="size" value="large"  autocomplete="off" />
+                    <label class="btn btn-sm btn-outline-secondary" for="opt-size-large">大張 (large)</label>
+                </div>
+            </div>
+            <div class="alert alert-light border mb-0 py-2 px-3">
+                <div class="small text-muted mb-1">將新增以下 driver_key — <span id="keyCount">0</span> 筆（重複會自動跳過）</div>
+                <div id="keyPreview" class="d-flex flex-wrap gap-1"></div>
+                <div id="keyHidden"></div>
+            </div>
+            <div class="form-text mt-2">
+                格式：<code>{output}.{category}.{color}.{size}</code>。例：「黑白」可同時掛 <code>printed.print.black.normal</code> 與 <code>scanned.scan.black.normal</code>，抄表回來的數值自動累加到此類型。
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-2">
+            <a asp-action="Index" class="btn btn-secondary">取消</a>
+            <button type="submit" class="btn btn-success" id="addKeySubmit" disabled>儲存 (<span id="addKeyCount">0</span>)</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+const DIM_CATEGORIES = {
+    printed: [
+        { v: 'print',   label: '列印' },
+        { v: 'copy',    label: '影印' },
+        { v: 'fax',     label: '傳真' },
+        { v: 'network', label: '網路' },
+        { v: 'list',    label: '清單' },
+    ],
+    scanned: [
+        { v: 'scan',    label: '掃描' },
+    ],
+};
+
+function getSelected(dim) {
+    return Array.from(document.querySelectorAll(`input[data-dim="${dim}"]:checked`)).map(cb => cb.value);
+}
+
+function syncCategoryGroup() {
+    const outputsSel = getSelected('output');
+    const group   = document.getElementById('dimCategoryGroup');
+
+    const checkedBefore = new Set(
+        Array.from(group.querySelectorAll('input[data-dim="category"]:checked')).map(cb => cb.value));
+
+    // 未選 output 時顯示所有 categories（union）；有選則只顯示對應 categories
+    const sourceOutputs = outputsSel.length > 0 ? outputsSel : Object.keys(DIM_CATEGORIES);
+    const categories = [];
+    sourceOutputs.forEach(o => (DIM_CATEGORIES[o] || []).forEach(c => {
+        if (!categories.some(x => x.v === c.v)) categories.push(c);
+    }));
+
+    group.innerHTML = categories.map(c => {
+        const id = `opt-cat-${c.v}`;
+        const isChecked = checkedBefore.has(c.v);
+        return `
+            <input type="checkbox" class="btn-check" id="${id}" data-dim="category" value="${c.v}" autocomplete="off" ${isChecked ? 'checked' : ''} />
+            <label class="btn btn-sm btn-outline-info" for="${id}">${c.label} (${c.v})</label>`;
+    }).join('');
+    group.querySelectorAll('input[data-dim="category"]').forEach(cb =>
+        cb.addEventListener('change', refreshKeyPreview));
+}
+
+function refreshKeyPreview() {
+    const outputsSel = getSelected('output');
+    const catsSel    = getSelected('category');
+    const colorsSel  = getSelected('color');
+    const sizesSel   = getSelected('size');
+
+    // 未勾任何維度 → 全 wildcard，不可送出
+    const anySelected = outputsSel.length || catsSel.length || colorsSel.length || sizesSel.length;
+
+    // 未勾的維度視為 ['*']
+    const outputs = outputsSel.length ? outputsSel : ['*'];
+    const cats    = catsSel.length    ? catsSel    : ['*'];
+    const colors  = colorsSel.length  ? colorsSel  : ['*'];
+    const sizes   = sizesSel.length   ? sizesSel   : ['*'];
+
+    const keys = [];
+    outputs.forEach(o => {
+        cats.forEach(c => {
+            // 若 output 與 category 同時為字面值（非 *），需符合 printed↔print/copy/fax/network/list、scanned↔scan
+            if (o !== '*' && c !== '*') {
+                const validCats = new Set((DIM_CATEGORIES[o] || []).map(x => x.v));
+                if (!validCats.has(c)) return;
+            }
+            colors.forEach(col => {
+                sizes.forEach(s => {
+                    keys.push(`${o}.${c}.${col}.${s}`);
+                });
+            });
+        });
+    });
+    // 移除全 wildcard（沒意義）
+    const unique = [...new Set(keys)].filter(k => k !== '*.*.*.*');
+
+    const preview = document.getElementById('keyPreview');
+    if (!anySelected) {
+        preview.innerHTML = '<span class="text-muted small">至少需勾選一個維度的至少一個值（不可全空）</span>';
+    } else if (unique.length === 0) {
+        preview.innerHTML = '<span class="text-muted small">所選組合非法（printed 與 scan 不相容），無可建立的 driver_key</span>';
+    } else {
+        preview.innerHTML = unique.map(k => `<code class="badge bg-light text-dark border">${k}</code>`).join('');
+    }
+
+    document.getElementById('keyHidden').innerHTML = unique
+        .map(k => `<input type="hidden" name="driverKeys" value="${k}" />`).join('');
+
+    document.getElementById('keyCount').textContent = unique.length;
+    document.getElementById('addKeyCount').textContent = unique.length;
+    document.getElementById('addKeySubmit').disabled = unique.length === 0 || !anySelected;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input[data-dim="output"]').forEach(cb =>
+        cb.addEventListener('change', () => { syncCategoryGroup(); refreshKeyPreview(); }));
+    document.querySelectorAll('input[data-dim="color"], input[data-dim="size"]').forEach(cb =>
+        cb.addEventListener('change', refreshKeyPreview));
+    syncCategoryGroup();
+    refreshKeyPreview();
+});
+</script>
+}

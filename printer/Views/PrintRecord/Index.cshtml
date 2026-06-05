@@ -64,7 +64,6 @@
         <div class="table-responsive">
             @{
                 var indexSheetTypes = ViewBag.IndexSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
-                var useDynamic = indexSheetTypes.Count > 0;
             }
             <table class="table table-striped table-hover">
                 <thead>
@@ -74,18 +73,9 @@
                         <th>日期</th>
                         <th>客戶</th>
                         <th>事務機</th>
-                        @if (useDynamic)
+                        @foreach (var st in indexSheetTypes)
                         {
-                            foreach (var st in indexSheetTypes)
-                            {
-                                <th class="text-end">@st.Name</th>
-                            }
-                        }
-                        else
-                        {
-                            <th class="text-end">彩色</th>
-                            <th class="text-end">黑白</th>
-                            <th class="text-end">大張</th>
+                            <th class="text-end">@st.Name</th>
                         }
                         <th class="text-end">合計</th>
                         <th>狀態</th>
@@ -103,8 +93,7 @@
                             <td>@item.Date.ToString("yyyy-MM-dd")</td>
                             <td>@item.Partner?.Name</td>
                             <td>@item.Printer?.Name</td>
-                            @if (useDynamic)
-                            {
+                            @{
                                 long sum = 0;
                                 foreach (var st in indexSheetTypes)
                                 {
@@ -113,13 +102,6 @@
                                     <td class="text-end">@(v == 0 ? "—" : v.ToString("N0"))</td>
                                 }
                                 total = sum;
-                            }
-                            else
-                            {
-                                <td class="text-end">@item.ColorSheets.ToString("N0")</td>
-                                <td class="text-end">@item.BlackSheets.ToString("N0")</td>
-                                <td class="text-end">@item.LargeSheets.ToString("N0")</td>
-                                total = (long)item.BlackSheets + item.ColorSheets + item.LargeSheets;
                             }
                             <td class="text-end fw-bold">@total.ToString("N0")</td>
                             <td>

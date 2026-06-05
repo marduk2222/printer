@@ -12,12 +12,35 @@ public class SheetTypeController : Controller
 
     /// <summary>
     /// driver_key 四維格式：{output}.{category}.{color}.{size}
-    /// output=printed 時 category 可為 print/copy/fax/network/list；output=scanned 時 category 必為 scan
-    /// 與 printer_info / printer_setup 送上來的 CounterItem 維度一致
+    /// 每個維度可填字面值或 *（wildcard，代表「任何」），但禁止 *.*.*.* 全 wildcard。
+    /// 維度字面值：
+    ///   output   = printed | scanned
+    ///   category = print | copy | fax | network | list | scan
+    ///   color    = black | mono | duotone | color_full
+    ///   size     = normal | large
+    /// 若 output 與 category 同時為字面值（非 *），仍需符合 printed↔print/copy/fax/network/list、scanned↔scan 對應。
+    /// 與 printer_info / printer_setup 送上來的 CounterItem 維度一致；wildcard 由 DriverKeyMatcher 解析。
     /// </summary>
     private static readonly Regex DriverKeyPattern = new Regex(
-        @"^(?:printed\.(?:print|copy|fax|network|list)|scanned\.scan)\.(?:black|mono|duotone|color_full)\.(?:normal|large)$",
+        @"^(?:printed|scanned|\*)\.(?:print|copy|fax|network|list|scan|\*)\.(?:black|mono|duotone|color_full|\*)\.(?:normal|large|\*)$",
         RegexOptions.Compiled);
+
+    /// <summary>
+    /// 在 regex 通過的前提下，額外檢查 output-category 對應合理性（避免 printed.scan / scanned.print 之類非法組合）。
+    /// 任一邊為 * 時不檢查（wildcard 由 matcher 處理）。
+    /// </summary>
+    private static bool IsValidDriverKey(string key)
+    {
+        if (!DriverKeyPattern.IsMatch(key)) return false;
+        if (key == "*.*.*.*") return false; // 全 wildcard 無意義
+
+        var parts = key.Split('.');
+        var output = parts[0]; var category = parts[1];
+        if (output == "*" || category == "*") return true;
+        if (output == "printed") return category is "print" or "copy" or "fax" or "network" or "list";
+        if (output == "scanned") return category == "scan";
+        return false;
+    }
 
     public SheetTypeController(PrinterDbContext context)
     {
@@ -111,9 +134,22 @@ public class SheetTypeController : Controller
         return Ok();
     }
 
+    /// <summary>
+    /// 驅動參數管理獨立頁面：列出該 SheetType 的所有 keys（可刪除）+ 新增區塊。
+    /// 對應 user 要求「驅動參數有額外的畫面進行修改調整」，從 Index 拆出。
+    /// </summary>
+    public async Task<IActionResult> Keys(int id)
+    {
+        var sheetType = await _context.SheetTypes
+            .Include(s => s.Keys)
+            .FirstOrDefaultAsync(s => s.Id == id);
+        if (sheetType == null) return NotFound();
+        return View(sheetType);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddKey([FromForm] int sheetTypeId, [FromForm] List<string>? driverKeys)
+    public async Task<IActionResult> AddKey([FromForm] int sheetTypeId, [FromForm] List<string>? driverKeys, [FromForm] string? returnTo = null)
     {
         var requested = (driverKeys ?? new List<string>())
             .Select(k => (k ?? string.Empty).Trim().ToLowerInvariant())
@@ -121,17 +157,22 @@ public class SheetTypeController : Controller
             .Distinct()
             .ToList();
 
+        IActionResult Back() =>
+            string.Equals(returnTo, "keys", StringComparison.OrdinalIgnoreCase)
+                ? RedirectToAction(nameof(Keys), new { id = sheetTypeId })
+                : RedirectToAction(nameof(Index));
+
         if (requested.Count == 0)
         {
             TempData["Error"] = "尚未選擇任何 driver_key";
-            return RedirectToAction(nameof(Index));
+            return Back();
         }
 
-        var invalid = requested.Where(k => !DriverKeyPattern.IsMatch(k)).ToList();
+        var invalid = requested.Where(k => !IsValidDriverKey(k)).ToList();
         if (invalid.Count > 0)
         {
-            TempData["Error"] = $"以下格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}）：{string.Join(", ", invalid)}";
-            return RedirectToAction(nameof(Index));
+            TempData["Error"] = $"以下格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}，未指定可用 * 代表任意；不可全 *）：{string.Join(", ", invalid)}";
+            return Back();
         }
 
         var existing = await _context.SheetTypeKeys
@@ -155,21 +196,24 @@ public class SheetTypeController : Controller
         TempData["Success"] = skipped > 0
             ? $"已新增 {toInsert.Count} 筆 driver_key（{skipped} 筆已存在跳過）"
             : $"已新增 {toInsert.Count} 筆 driver_key";
-        return RedirectToAction(nameof(Index));
+        return Back();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteKey(int id)
+    public async Task<IActionResult> DeleteKey(int id, [FromForm] string? returnTo = null)
     {
         var key = await _context.SheetTypeKeys.FindAsync(id);
+        int? sheetTypeId = key?.SheetTypeId;
         if (key != null)
         {
             _context.SheetTypeKeys.Remove(key);
             await _context.SaveChangesAsync();
             TempData["Success"] = "驅動參數已刪除";
         }
-        return RedirectToAction(nameof(Index));
+        return string.Equals(returnTo, "keys", StringComparison.OrdinalIgnoreCase) && sheetTypeId.HasValue
+            ? RedirectToAction(nameof(Keys), new { id = sheetTypeId.Value })
+            : RedirectToAction(nameof(Index));
     }
 
     #region Excel 匯出 / 匯入 / 下載範本
@@ -219,12 +263,13 @@ public class SheetTypeController : Controller
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
+        // 驅動參數須為四維格式 {output}.{category}.{color}.{size}，未指定維度可用 * 代表任意
         ws.Cell(2, 1).Value = "黑白";
-        ws.Cell(2, 2).Value = "print_black,copy_black";
+        ws.Cell(2, 2).Value = "printed.print.black.normal,printed.copy.black.normal";
         ws.Cell(2, 3).Value = 10;
 
         ws.Cell(3, 1).Value = "彩色";
-        ws.Cell(3, 2).Value = "print_color,copy_color";
+        ws.Cell(3, 2).Value = "printed.*.color_full.normal,printed.*.duotone.normal";
         ws.Cell(3, 3).Value = 20;
 
         var headerRange = ws.Range(1, 1, 1, headers.Length);
@@ -321,13 +366,13 @@ public class SheetTypeController : Controller
                             .Distinct()
                             .ToList();
 
-                        var invalid = keys.Where(k => !DriverKeyPattern.IsMatch(k)).ToList();
+                        var invalid = keys.Where(k => !IsValidDriverKey(k)).ToList();
                         if (invalid.Count > 0)
                         {
-                            errors.Add($"第 {row} 列: 以下 driver_key 格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}）: {string.Join(", ", invalid)}");
+                            errors.Add($"第 {row} 列: 以下 driver_key 格式不符（須為 {{output}}.{{category}}.{{color}}.{{size}}，未指定可用 * 代表任意；不可全 *）: {string.Join(", ", invalid)}");
                         }
 
-                        var validKeys = keys.Where(k => DriverKeyPattern.IsMatch(k)).ToList();
+                        var validKeys = keys.Where(IsValidDriverKey).ToList();
                         var existingKeys = await _context.SheetTypeKeys
                             .Where(k => k.SheetTypeId == target.Id)
                             .ToListAsync();

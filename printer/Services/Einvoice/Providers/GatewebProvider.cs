@@ -49,11 +49,16 @@ public class GatewebProvider : IEinvoiceProvider
             ["relateNumber"] = (string?)null
         }).ToArray();
 
-        // Gateweb 規則：B2C(無買方統編)+應稅時，稅額必為 0，銷售額帶含稅總額
+        // Gateweb 規則：
+        //  - B2C(無買方統編)+應稅時，稅額必為 0，銷售額帶含稅總額
+        //  - 零稅率/免稅：salesAmount=0，taxAmount=0；金額放 ZeroTaxSalesAmount / FreeTaxSalesAmount
         var noBuyer = string.IsNullOrEmpty(e.BuyerTaxId);
         var taxType = MapTaxType(e.TaxType);
-        var taxAmount = (taxType == "1" && noBuyer) ? 0 : (int)Math.Round(e.TaxAmount);
-        var salesAmount = (taxType == "1" && noBuyer) ? (int)Math.Round(e.TotalAmount) : (int)Math.Round(e.Amount);
+        var taxAmount = (taxType == "1" && noBuyer) ? 0
+                      : taxType != "1" ? 0
+                      : (int)Math.Round(e.TaxAmount);
+        var salesAmount = taxType != "1" ? 0
+                        : (noBuyer ? (int)Math.Round(e.TotalAmount) : (int)Math.Round(e.Amount));
 
         // 賣方資訊優先取 ExtraParams（平台設定）；缺則 fallback 至 einvoice 自身欄位
         var sellerDepartment = TryReadExtra(p.ExtraParams, "sellerDepartment");
@@ -89,7 +94,8 @@ public class GatewebProvider : IEinvoiceProvider
             ["taxType"] = taxType,
             ["taxRate"] = e.TaxType == "taxable" ? 0.05 : 0.0,
             ["taxAmount"] = taxAmount,
-            ["totalAmount"] = (int)Math.Round(e.TotalAmount)
+            ["totalAmount"] = (int)Math.Round(e.TotalAmount),
+            ["customsClearanceMark"] = e.TaxType == "zero" ? "1" : (string?)null
         };
 
         var url = $"{BaseUrl(p)}/api/v1/simplified/C0403?domestic=true&companyKey={Uri.EscapeDataString(p.MerchantId)}";

@@ -32,24 +32,6 @@ public class PrintRecord
     public DateOnly Date { get; set; }
 
     /// <summary>
-    /// 黑白列印張數
-    /// </summary>
-    [Column("black_sheets")]
-    public int BlackSheets { get; set; }
-
-    /// <summary>
-    /// 彩色列印張數
-    /// </summary>
-    [Column("color_sheets")]
-    public int ColorSheets { get; set; }
-
-    /// <summary>
-    /// 大張列印張數
-    /// </summary>
-    [Column("large_sheets")]
-    public int LargeSheets { get; set; }
-
-    /// <summary>
     /// 狀態: auto=自動回傳, manual=手動輸入
     /// </summary>
     [Column("state")]
@@ -82,7 +64,7 @@ public class PrintRecord
     public virtual Partner? Partner { get; set; }
 
     /// <summary>
-    /// 各張數類型的值（對應 SheetType；新系統用此，舊資料則保留 BlackSheets/ColorSheets/LargeSheets 欄位）
+    /// 各張數類型的值（對應 SheetType，從 client items 經 SheetTypeKey wildcard 累加而來）
     /// </summary>
     [InverseProperty(nameof(PrintRecordValue.Record))]
     public virtual ICollection<PrintRecordValue> Values { get; set; } = new List<PrintRecordValue>();

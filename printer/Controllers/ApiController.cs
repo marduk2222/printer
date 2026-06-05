@@ -109,10 +109,8 @@ public class ApiController : ControllerBase
         if (string.IsNullOrEmpty(request.Date))
             return Ok(ApiResponse.Error("missing date"));
 
-        var hasItems  = request.Items != null && request.Items.Count > 0;
-        var hasLegacy = request.BlackPrint.HasValue || request.ColorPrint.HasValue || request.LargePrint.HasValue;
-        if (!hasItems && !hasLegacy)
-            return Ok(ApiResponse.Error("no print count provided"));
+        if (request.Items == null || request.Items.Count == 0)
+            return Ok(ApiResponse.Error("no items provided"));
 
         var (result, error) = await _printerService.WriteRecordAsync(request);
         if (error != null)

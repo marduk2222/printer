@@ -3,18 +3,12 @@
     ViewData["Title"] = "抄表記錄詳情";
     var allSheetTypesJson = ViewBag.AllSheetTypesJson as string ?? "[]";
     var existingValuesJson = ViewBag.ExistingValuesJson as string ?? "[]";
-    // 顯示用：優先 PrintRecordValues；無則由 legacy 欄位轉成同樣 (Id, Name, Value) 結構
+    // 顯示用：從 PrintRecordValues 撈所有 SheetType 對應值
     var displayItems = Model.Values
         .Where(v => v.SheetType != null)
         .OrderBy(v => v.SortOrder).ThenBy(v => v.SheetType!.SortOrder).ThenBy(v => v.SheetTypeId)
         .Select(v => (Id: (int?)v.SheetTypeId, Name: v.SheetType!.Name, Value: v.Value))
         .ToList();
-    if (displayItems.Count == 0)
-    {
-        if (Model.BlackSheets > 0) displayItems.Add((null, "黑白", Model.BlackSheets));
-        if (Model.ColorSheets > 0) displayItems.Add((null, "彩色", Model.ColorSheets));
-        if (Model.LargeSheets > 0) displayItems.Add((null, "大張", Model.LargeSheets));
-    }
     long displayTotal = displayItems.Sum(i => (long)i.Value);
     bool sortable = displayItems.All(i => i.Id.HasValue);
 }

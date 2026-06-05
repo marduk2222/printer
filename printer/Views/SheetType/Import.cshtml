@@ -54,10 +54,11 @@
                         </thead>
                         <tbody>
                             <tr><td>名稱</td><td><span class="text-danger">*</span></td><td>類型名稱（唯一鍵）</td></tr>
-                            <tr><td>驅動參數</td><td></td><td>多個以逗號分隔</td></tr>
+                            <tr><td>驅動參數</td><td></td><td>四維格式，多個以逗號分隔</td></tr>
                             <tr><td>排序</td><td></td><td>數字，越小越前面</td></tr>
                         </tbody>
                     </table>
+                    <p class="text-muted mb-1">驅動參數格式為 <code>{output}.{category}.{color}.{size}</code>，例如 <code>printed.print.black.normal</code>；未指定維度可用 <code>*</code> 代表任意（不可全為 *）。</p>
                     <p class="text-muted">既有名稱會更新排序與新增尚未存在的驅動參數。</p>
                 </div>
             </div>

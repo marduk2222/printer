@@ -20,7 +20,7 @@ namespace printer_setup.Models
         public string name => Inner.name;
         public string brand => Inner.brand;
         public string model => Inner.model;
-        public bool printer_counter => Inner.printer_counter;
+        //public bool printer_counter => Inner.printer_counter;
 
         public string ip
         {

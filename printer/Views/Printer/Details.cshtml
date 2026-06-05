@@ -542,18 +542,9 @@
                         <thead>
                             <tr>
                                 <th>日期</th>
-                                @if (recordSheetTypes.Count > 0)
+                                @foreach (var st in recordSheetTypes)
                                 {
-                                    foreach (var st in recordSheetTypes)
-                                    {
-                                        <th class="text-end">@st.Name</th>
-                                    }
-                                }
-                                else
-                                {
-                                    <th class="text-end">黑白</th>
-                                    <th class="text-end">彩色</th>
-                                    <th class="text-end">大張</th>
+                                    <th class="text-end">@st.Name</th>
                                 }
                             </tr>
                         </thead>
@@ -562,19 +553,12 @@
                             {
                                 <tr>
                                     <td>@r.Date.ToString("yyyy-MM-dd")</td>
-                                    @if (recordSheetTypes.Count > 0)
-                                    {
+                                    @{
                                         var valueByType = r.Values.ToDictionary(v => v.SheetTypeId, v => v.Value);
-                                        foreach (var st in recordSheetTypes)
-                                        {
-                                            <td class="text-end">@(valueByType.TryGetValue(st.Id, out var v) ? v.ToString("N0") : "—")</td>
-                                        }
                                     }
-                                    else
+                                    @foreach (var st in recordSheetTypes)
                                     {
-                                        <td class="text-end">@r.BlackSheets.ToString("N0")</td>
-                                        <td class="text-end">@r.ColorSheets.ToString("N0")</td>
-                                        <td class="text-end">@r.LargeSheets.ToString("N0")</td>
+                                        <td class="text-end">@(valueByType.TryGetValue(st.Id, out var v) ? v.ToString("N0") : "—")</td>
                                     }
                                 </tr>
                             }

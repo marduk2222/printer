@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using printer.Data;
 
@@ -11,9 +12,11 @@ using printer.Data;
 namespace printer.Migrations
 {
     [DbContext(typeof(PrinterDbContext))]
-    partial class PrinterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520154201_DropLegacySheetColumns")]
+    partial class DropLegacySheetColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

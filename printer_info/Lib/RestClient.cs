@@ -1,6 +1,8 @@
 using DataClass;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -129,6 +131,27 @@ namespace Lib
         #endregion
 
         #region Private Methods
+        /// <summary>
+        /// REST log 用：把 request 中的 snmp_data（data 欄位）抽掉，只留長度標記，避免 OID dump 灌爆 log。
+        /// items 等其他欄位保留，方便看到 cat map 累加後的數量。
+        /// </summary>
+        private static string RedactSnmpDataForLog(string json)
+        {
+            if (string.IsNullOrEmpty(json) || json.IndexOf("\"data\"", StringComparison.Ordinal) < 0) return json;
+            try
+            {
+                var token = JToken.Parse(json);
+                if (token is JObject obj && obj.TryGetValue("data", out var dataToken))
+                {
+                    var len = (dataToken?.ToString() ?? "").Length;
+                    obj["data"] = $"<snmp_data omitted, {len} chars>";
+                    return obj.ToString(Newtonsoft.Json.Formatting.None);
+                }
+            }
+            catch { /* fall through 回 raw */ }
+            return json;
+        }
+
         private void Log(string category, string function, string option, string identity, string message)
         {
             _trace?.Invoke(new LogInfo
@@ -142,19 +165,19 @@ namespace Lib
             });
         }
 
-        private async Task<string> PostJsonAsync(string endpoint, string json, bool requireAuth = true)
+        private async Task<string> PostJsonAsync(string endpoint, string json, bool requireAuth = false)
         {
             try
             {
-                // Ensure authenticated if required
+                // ASP.NET Core 後端 /api/* 端點不需要 session 認證，預設 requireAuth=false。
+                // 保留 requireAuth 參數以便未來若改接需要 session 的後端時重啟此流程。
                 if (requireAuth && !EnsureAuthenticated())
                 {
                     Log("REST", "PostJsonAsync", "auth_failed", endpoint, "Authentication required but failed");
-                    // Continue anyway - some endpoints may not require auth
                 }
 
                 var url = $"{_baseUrl}{endpoint}";
-                Log("REST", "PostJsonAsync", "request", endpoint, json);
+                Log("REST", "PostJsonAsync", "request", endpoint, RedactSnmpDataForLog(json));
 
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await _client.PostAsync(url, content).ConfigureAwait(false);
@@ -234,9 +257,6 @@ namespace Lib
         {
             try
             {
-                // Ensure authenticated first (for session cookie)
-                EnsureAuthenticated();
-
                 var result = GetAsync("/api/ping", requireAuth: false).Result;
                 if (result == null) return false;
 
@@ -286,9 +306,9 @@ namespace Lib
                         ip = item.ip,
                         printer_name = item.printer_name,
                         serial_number = item.serial_number,
+                        brand = item.brand,
                         model = item.model,
                         state = item.state,
-                        printer_counter = item.counter,
                         priority = item.priority,
                         date_start = item.date_start,
                         date_end = item.date_end
@@ -354,6 +374,15 @@ namespace Lib
         {
             try
             {
+                // 先 log 一行 items 統計摘要（cat map 累加後每筆 sheets），方便對照 SNMP→PrinterScanner→上傳的張數
+                if (request?.items != null && request.items.Count > 0)
+                {
+                    var summary = string.Join(" | ", request.items
+                        .Select(i => $"{i.output}/{i.category}/{i.color}/{i.size}={i.sheets}"));
+                    Log("REST", "WriteMeter", "items_summary", request.code ?? "",
+                        $"total={request.items.Count} | {summary}");
+                }
+
                 var json = Newtonsoft.Json.JsonConvert.SerializeObject(request);
                 var result = PostJsonAsync("/api/record", json).Result;
                 if (result == null) return false;
@@ -416,9 +445,6 @@ namespace Lib
         {
             try
             {
-                // Ensure authenticated first
-                EnsureAuthenticated();
-
                 var url = $"/api/service/version?version={currentVersion}";
                 var result = GetAsync(url, requireAuth: false).Result;
                 if (result == null) return null;

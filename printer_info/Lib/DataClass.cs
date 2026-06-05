@@ -82,7 +82,6 @@ namespace DataClass
         public int    state         { get; set; }   // 狀態（0=正常,1=新裝機,2=退機,3=換機）
 
         // ── 排程設定（由 /api/period 填入）─────────────────────────────────
-        public bool   printer_counter { get; set; }   // 是否啟用計數器抄表
         public int    priority        { get; set; }
         public string date_start      { get; set; }
         public string date_end        { get; set; }
@@ -141,7 +140,6 @@ namespace DataClass
         public string ip            { get; set; }
         public string mac           { get; set; }
         public int    id            { get; set; }
-        public bool   counter       { get; set; }   // printer_counter
         public int    priority      { get; set; }
         public string date_start    { get; set; }
         public string date_end      { get; set; }
@@ -244,10 +242,9 @@ namespace DataClass
     }
 
     /// <summary>
-    /// 抄表紀錄請求（新格式）
+    /// 抄表紀錄請求。
     /// items 為 CounterItem list，包含完整的 output / category / color / size / sheets 維度。
-    /// data  為 SNMP 抓回的原始 JSON，供 Odoo 端除錯用。
-    /// 舊格式欄位（black_print 等）保留供向下相容，items 有值時不送。
+    /// data  為 SNMP 抓回的原始 JSON（除錯用）。
     ///
     /// state: 0=一般, 1=起表(新裝機), 2=尾表(退機), 3=換機
     /// </summary>
@@ -268,14 +265,6 @@ namespace DataClass
 
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public List<CounterItem> items { get; set; }
-
-        // 舊格式（向下相容）
-        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int? black_print { get; set; }
-        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int? color_print { get; set; }
-        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int? large_print { get; set; }
     }
     #endregion
 

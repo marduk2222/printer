@@ -564,12 +564,12 @@ namespace printer_info
 
                 // 整批共用一份 host 識別（避免每筆每種上傳重複呼叫 NetworkInterface 列舉，與 printer_setup 對齊）
                 var hostName = Lib.AutoUpdater.GetHostName();
-                var hostIp   = Lib.AutoUpdater.GetHostIp();
+                var hostIp = Lib.AutoUpdater.GetHostIp();
 
                 // ==================== 連線事務機 & 回傳Server ====================
                 foreach (var item in list)
                 {
-                    Trace(new LogInfo() { Category = "Run", Function = "Printer", Option = "connect", Identity = "printer", Message = $"code:{item?.code}/ip:{item?.ip}/brand:{item?.brand}/model:{item?.model}/printer_counter:{item?.printer_counter}" });
+                    Trace(new LogInfo() { Category = "Run", Function = "Printer", Option = "connect", Identity = "printer", Message = $"code:{item?.code}/ip:{item?.ip}/brand:{item?.brand}/model:{item?.model}" });
 
                     // ========== 連線事務機（SNMP 抓取）==========
                     if (Printer(item, hostName, hostIp)) continue;        // 若 SNMP 失敗則跳過此台
@@ -579,8 +579,8 @@ namespace printer_info
                     SendAlerts(item, hostName, hostIp);                   // 告警
 
                     // 抄表：只有 printer_counter=true 的機器才需送計數
-                    if (item.printer_counter)
-                        SendCounter(item, hostName, hostIp);
+                    //if (item.printer_counter)
+                    SendCounter(item, hostName, hostIp);
                 }
                 Trace(new LogInfo() { Category = "printer_upload", Message = $"done count:{list?.Count}" });
 
@@ -605,7 +605,7 @@ namespace printer_info
                 {
                     code = item.code,
                     host_name = hostName,
-                    host_ip   = hostIp,
+                    host_ip = hostIp,
                     items = item.supply_items?.Count > 0 ? item.supply_items : null,
                 };
                 var success = _restClient.UpdateSupplies(restRequest);
@@ -629,7 +629,7 @@ namespace printer_info
                 {
                     code = item.code,
                     host_name = hostName,
-                    host_ip   = hostIp,
+                    host_ip = hostIp,
                     alerts = item.alerts,
                 };
                 var success = _restClient.UpdateAlerts(restRequest);
@@ -661,7 +661,7 @@ namespace printer_info
                     date = DateTime.Now.ToString("yyyy-MM-dd"),
                     state = item.state,
                     host_name = hostName,
-                    host_ip   = hostIp,
+                    host_ip = hostIp,
                     data = item.snmp_data,
                     items = item.items,
                 };
@@ -677,17 +677,17 @@ namespace printer_info
         #endregion
 
         #region Printer
-        private bool Printer(Printer mfp, string hostName, string hostIp)
+        private bool Printer(Printer print, string hostName, string hostIp)
         {
             try
             {
-                var mac = mfp.mac;
-                var ip = mfp.ip;
+                var mac = print.mac;
+                var ip = print.ip;
                 if (string.IsNullOrEmpty(ip)) return true;
-                var brand = mfp.brand;
-                var model = mfp.model;
-                var printer_counter = mfp.printer_counter;
-                Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "ready", Message = $"ip:{ip}/brand:{brand}/model:{model}/printer_counter:{printer_counter}" });
+                var brand = print.brand;
+                var model = print.model;
+                //var printer_counter = mfp.printer_counter;
+                Trace(new LogInfo() { Category = "SNMP", Function = "Scan", Option = "ready", Message = $"ip:{ip}/brand:{brand}/model:{model}" });
 
                 var _mac = string.Empty;
                 var macs = Printer_MAC(ip);
@@ -700,47 +700,61 @@ namespace printer_info
                 foreach (var obj in serial_names) { if (_serial_number == string.Empty) _serial_number = obj.Value.ToString(); }
 
                 // 驗證 SNMP 抓到的 mac/serial 是否與 server 紀錄一致；任一識別欄位不符就跳過此台，避免抄表寫到錯誤的事務機
-                bool macMismatch    = !string.IsNullOrEmpty(mac) && !string.IsNullOrEmpty(_mac) &&
+                bool macMismatch = !string.IsNullOrEmpty(mac) && !string.IsNullOrEmpty(_mac) &&
                                       !string.Equals(mac.Trim(), _mac.Trim(), StringComparison.OrdinalIgnoreCase);
-                bool serialMismatch = !string.IsNullOrEmpty(mfp.serial_number) && !string.IsNullOrEmpty(_serial_number) &&
-                                      !string.Equals(mfp.serial_number.Trim(), _serial_number.Trim(), StringComparison.OrdinalIgnoreCase);
+                bool serialMismatch = !string.IsNullOrEmpty(print.serial_number) && !string.IsNullOrEmpty(_serial_number) &&
+                                      !string.Equals(print.serial_number.Trim(), _serial_number.Trim(), StringComparison.OrdinalIgnoreCase);
                 if (macMismatch || serialMismatch)
                 {
-                    Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Printer", Option = "mismatch", Identity = mfp.code,
-                        Message = $"server.mac={mac}/snmp.mac={_mac}/server.serial={mfp.serial_number}/snmp.serial={_serial_number}" });
+                    Trace(new LogInfo()
+                    {
+                        File = "Error",
+                        Category = "SNMP",
+                        Function = "Scan",
+                        Option = "mismatch",
+                        Identity = print.code,
+                        Message = $"server.mac={mac}/snmp.mac={_mac}/server.serial={print.serial_number}/snmp.serial={_serial_number}"
+                    });
                     return true;
                 }
 
                 // server 已有任一識別欄位，但 SNMP 連 mac 與 serial 都讀不到 → 無法驗證設備身分，視為異常並跳過
-                bool serverHasAnyId = !string.IsNullOrEmpty(mac) || !string.IsNullOrEmpty(mfp.serial_number);
-                bool snmpGotAnyId   = !string.IsNullOrEmpty(_mac) || !string.IsNullOrEmpty(_serial_number);
+                bool serverHasAnyId = !string.IsNullOrEmpty(mac) || !string.IsNullOrEmpty(print.serial_number);
+                bool snmpGotAnyId = !string.IsNullOrEmpty(_mac) || !string.IsNullOrEmpty(_serial_number);
                 if (serverHasAnyId && !snmpGotAnyId)
                 {
-                    Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Printer", Option = "no_identity", Identity = mfp.code,
-                        Message = $"server.mac={mac}/server.serial={mfp.serial_number}/snmp 未讀到任何識別欄位" });
+                    Trace(new LogInfo()
+                    {
+                        File = "Error",
+                        Category = "SNMP",
+                        Function = "Scan",
+                        Option = "no_identity",
+                        Identity = print.code,
+                        Message = $"server.mac={mac}/server.serial={print.serial_number}/snmp 未讀到任何識別欄位"
+                    });
                     return true;
                 }
 
-                if (mac == string.Empty || mfp.printer_name == string.Empty || mfp.serial_number == string.Empty)
+                if (mac == string.Empty || print.printer_name == string.Empty || print.serial_number == string.Empty)
                 {
-                    mfp.mac = _mac;
-                    mfp.printer_name = _printer_name;
-                    mfp.serial_number = _serial_number;
+                    print.mac = _mac;
+                    print.printer_name = _printer_name;
+                    print.serial_number = _serial_number;
 
                     // Use REST API to update device
-                    if (_restClient != null && !string.IsNullOrEmpty(mfp.code))
+                    if (_restClient != null && !string.IsNullOrEmpty(print.code))
                     {
                         var success = _restClient.UpdateDevice(
-                            code: mfp.code,
-                            mac: mfp.mac,
-                            ip: mfp.ip,
-                            serialNumber: mfp.serial_number,
-                            printerName: mfp.printer_name,
+                            code: print.code,
+                            mac: print.mac,
+                            ip: print.ip,
+                            serialNumber: print.serial_number,
+                            printerName: print.printer_name,
                             state: 1,
                             hostName: hostName,
                             hostIp: hostIp
                         );
-                        Trace(new LogInfo() { Category = "REST", Function = "Printer", Option = "UpdateDevice", Message = $"code={mfp.code}, success={success}" });
+                        Trace(new LogInfo() { Category = "REST", Function = "Scan", Option = "UpdateDevice", Message = $"code={print.code}, success={success}" });
                     }
                 }
 
@@ -748,22 +762,23 @@ namespace printer_info
                 // brand：廠牌（common/ricoh/ricoh_imc/xerox/toshiba/kyocera）
                 // model：具體型號（toshiba 內細分 2555c / 3515ac 等）
                 // 向後相容：brand 為空時，退回讀 mfp.model 當廠牌
-                var brandKey = (!string.IsNullOrEmpty(mfp.brand) ? mfp.brand : mfp.model)?.ToLowerInvariant();
-                var modelKey = (mfp.model ?? string.Empty).ToLowerInvariant();
+                var brandKey = (!string.IsNullOrEmpty(print.brand) ? print.brand : print.model)?.ToLowerInvariant();
+                var modelKey = (print.model ?? string.Empty).ToLowerInvariant();
                 switch (brandKey)
                 {
-                    case "common":    { Counter_Common(mfp); } break;
-                    case "ricoh":     { Counter_Ricoh(mfp); } break;
-                    case "ricoh_imc": { Counter_RicohIMC(mfp); } break;
-                    case "xerox":     { Counter_Xerox(mfp); } break;
+                    case "common": { Counter_Common(print); } break;
+                    case "ricoh": { Counter_Ricoh(print); } break;
+                    case "ricoh_imc": { Counter_RicohIMC(print); } break;
+                    case "xerox": { Counter_Xerox(print); } break;
                     case "toshiba":
                         switch (modelKey)
                         {
-                            // 之後若要為特定型號客製 OID，請新增 Counter_Toshiba_<MODEL> 並在這裡分派
-                            default: { Counter_Toshiba(mfp); } break;
+                            case "2555c": { Counter_Toshiba_2555C(print); } break;
+                            case "3515ac": { Counter_Toshiba_3515AC(print); } break;
+                            default: { Counter_Toshiba(print); } break;   // 通用版（未指定具體型號）
                         }
                         break;
-                    case "kyocera":   { Counter_Kyocera(mfp); } break;
+                    case "kyocera": { Counter_Kyocera(print); } break;
                     default: break;
                 }
 
@@ -789,10 +804,27 @@ namespace printer_info
                     else if (oid.StartsWith(pfx8)) alertMap[rowKey].description = val;
                     else if (oid.StartsWith(pfx9)) alertMap[rowKey].time = val;
                 }
-                foreach (var kvp in alertMap) mfp.alerts.Add(kvp.Value);
+                foreach (var kvp in alertMap) print.alerts.Add(kvp.Value);
+
+                // 把套 cat map 後 mfp.items 累加結果整理成「output/category/color/size=sheets」一行寫到 SNMP log
+                // 跟 REST WriteMeter items_summary 格式一致，方便日後 grep / 對照
+                if (print.items.Count > 0)
+                {
+                    var parts = new System.Collections.Generic.List<string>(print.items.Count);
+                    foreach (var it in print.items)
+                        parts.Add($"{it.output}/{it.category}/{it.color}/{it.size}={it.sheets}");
+                    Trace(new LogInfo()
+                    {
+                        Category = "SNMP",
+                        Function = "Scan",
+                        Option = "items",
+                        Identity = print.code,
+                        Message = $"total={print.items.Count} | {string.Join(" | ", parts)}"
+                    });
+                }
                 return false;
             }
-            catch (Exception ex) { Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Printer", Option = "exception", Message = ex.Message }); return true; }
+            catch (Exception ex) { Trace(new LogInfo() { File = "Error", Category = "SNMP", Function = "Scan", Option = "exception", Message = ex.Message }); return true; }
             finally { System.Threading.Thread.Sleep(1000); }
         }
 
@@ -857,11 +889,11 @@ namespace printer_info
 
             if (copyBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "black", size = "normal", sheets = copyBlack });
             if (copyDuotone > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "duotone", size = "normal", sheets = copyDuotone });
-            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "color_full", size = "normal", sheets = copyColor + copyDuotone });
+            if (copyColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "copy", color = "color_full", size = "normal", sheets = copyColor });
             if (faxBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "fax", color = "black", size = "normal", sheets = faxBlack });
             if (printBlack > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black", size = "normal", sheets = printBlack });
             if (printDuotone > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone", size = "normal", sheets = printDuotone });
-            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor + printDuotone });
+            if (printColor > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor });
 
             return Supplies(mfp);
         }
@@ -913,15 +945,96 @@ namespace printer_info
             return Supplies(mfp);
         }
 
+        // Toshiba OID 結構：1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.{cat}.1.{color}
+        //   color: .1=全彩 .2=雙色 .3=黑白
+        //   cat: 不同型號用不同 cat 集（見三個對應表）
+        private sealed class ToshibaCat
+        {
+            public string Output;
+            public string Category;
+            public string Size;
+            public ToshibaCat(string output, string category, string size) { Output = output; Category = category; Size = size; }
+        }
+
+        private static readonly Dictionary<int, ToshibaCat> _ToshibaCatGeneric = new Dictionary<int, ToshibaCat>
+        {
+            // 通用版（未指定具體型號）：cat 207=列印大張各色 / 208=列印小張各色（不分 print/copy/fax/list）
+            // 掃描分項：219/220=network, 221/222=copy, 223/224=fax
+            { 207, new ToshibaCat("printed", "print",   "large")  },
+            { 208, new ToshibaCat("printed", "print",   "normal") },
+            { 219, new ToshibaCat("scanned", "network", "large")  }, { 220, new ToshibaCat("scanned", "network", "normal") },
+            { 221, new ToshibaCat("scanned", "copy",    "large")  }, { 222, new ToshibaCat("scanned", "copy",    "normal") },
+            { 223, new ToshibaCat("scanned", "fax",     "large")  }, { 224, new ToshibaCat("scanned", "fax",     "normal") },
+        };
+
+        private static readonly Dictionary<int, ToshibaCat> _ToshibaCat3515AC = new Dictionary<int, ToshibaCat>
+        {
+            { 209, new ToshibaCat("printed", "print",   "large")  }, { 210, new ToshibaCat("printed", "print",   "normal") },
+            { 211, new ToshibaCat("printed", "copy",    "large")  }, { 212, new ToshibaCat("printed", "copy",    "normal") },
+            { 215, new ToshibaCat("printed", "fax",     "large")  }, { 216, new ToshibaCat("printed", "fax",     "normal") },  // 3515AC 用 .216
+            { 225, new ToshibaCat("printed", "list",    "large")  }, { 226, new ToshibaCat("printed", "list",    "normal") },  // 清單獨立 category=list
+            { 219, new ToshibaCat("scanned", "network", "large")  }, { 220, new ToshibaCat("scanned", "network", "normal") },
+            { 221, new ToshibaCat("scanned", "copy",    "large")  }, { 222, new ToshibaCat("scanned", "copy",    "normal") },
+            { 223, new ToshibaCat("scanned", "fax",     "large")  }, { 224, new ToshibaCat("scanned", "fax",     "normal") },
+        };
+
+        private static readonly Dictionary<int, ToshibaCat> _ToshibaCat2555C = new Dictionary<int, ToshibaCat>
+        {
+            { 209, new ToshibaCat("printed", "print", "large")  }, { 210, new ToshibaCat("printed", "print", "normal") },
+            { 211, new ToshibaCat("printed", "copy",  "large")  }, { 212, new ToshibaCat("printed", "copy",  "normal") },
+            { 215, new ToshibaCat("printed", "fax",   "large")  }, { 218, new ToshibaCat("printed", "fax",   "normal") },  // 2555C 用 .218
+            { 225, new ToshibaCat("printed", "list",  "large")  }, { 226, new ToshibaCat("printed", "list",  "normal") },  // 清單獨立 category=list
+            { 219, new ToshibaCat("scanned", "network", "large")  }, { 220, new ToshibaCat("scanned", "network", "normal") },
+            { 221, new ToshibaCat("scanned", "copy",  "large")  }, { 222, new ToshibaCat("scanned", "copy",  "normal") },
+            { 223, new ToshibaCat("scanned", "fax",   "large")  }, { 224, new ToshibaCat("scanned", "fax",   "normal") },
+        };
+
+        private static string ToshibaColorName(int c)
+        {
+            if (c == 1) return "color_full";
+            if (c == 2) return "duotone";
+            if (c == 3) return "black";
+            return null;
+        }
+
+        private void PopulateToshibaItems(Printer mfp, Dictionary<SnmpSharpNet.Oid, SnmpSharpNet.AsnType> counter, Dictionary<int, ToshibaCat> catMap)
+        {
+            // OID 尾段 .{cat}.1.{color} → 依 catMap 與 color 累計後寫入 mfp.items
+            // agg key 用 "output|category|size|color" 字串避免 .NET 4.6.2 缺 ValueTuple
+            var agg = new Dictionary<string, int>();
+            foreach (var kvp in counter)
+            {
+                var parts = kvp.Key.ToString().Split('.');
+                if (parts.Length < 3) continue;
+                int cat, colorIdx, v;
+                if (!int.TryParse(parts[parts.Length - 3], out cat)) continue;
+                if (!int.TryParse(parts[parts.Length - 1], out colorIdx)) continue;
+                ToshibaCat m;
+                if (!catMap.TryGetValue(cat, out m)) continue;
+                var colorName = ToshibaColorName(colorIdx);
+                if (colorName == null) continue;
+                if (!int.TryParse(kvp.Value == null ? "" : kvp.Value.ToString(), out v)) continue;
+                var key = m.Output + "|" + m.Category + "|" + m.Size + "|" + colorName;
+                int prev;
+                agg[key] = (agg.TryGetValue(key, out prev) ? prev : 0) + v;
+            }
+            foreach (var kvp in agg)
+            {
+                if (kvp.Value <= 0) continue;
+                var parts = kvp.Key.Split('|');
+                mfp.items.Add(new DataClass.CounterItem
+                {
+                    output = parts[0],
+                    category = parts[1],
+                    size = parts[2],
+                    color = parts[3],
+                    sheets = kvp.Value
+                });
+            }
+        }
+
         /// <summary>
-        /// Toshiba e-Studio 系列
-        /// OID root: 1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.{cat}.1.{color}
-        ///   color index: .1=全彩  .2=雙色  .3=黑白
-        ///   cat 2       = 列印-全部（小張＋大張合計）
-        ///   cat 207     = 列印-大張  cat 208 = 列印-小張
-        ///   cat 8/9/10  = 掃描-黑白（不同韌體 OID，同機型只回傳其中一個）
-        ///   cat 219/221/223 = 掃描-大張  cat 220/222/224 = 掃描-小張
-        ///   （同類別多 OID 為不同韌體版本，用 += 安全累加；同機型只有其中一個有值）
+        /// Toshiba 通用版（未指定具體型號）
         /// </summary>
         private bool Counter_Toshiba(Printer mfp)
         {
@@ -930,71 +1043,38 @@ namespace printer_info
             var counter = TOSHIBA_MIBs(ip);
             Trace(new LogInfo() { Category = "SNMP", Function = "Counter_Toshiba", Option = "response", Identity = ip, Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(counter)}" });
             if (counter == null) return true;
-
-            // 列印（print）
-            int printBlack = 0,      printColor = 0,      printDuotone = 0;
-            int printBlackLarge = 0, printColorLarge = 0, printDuotoneLarge = 0;
-            // 掃描（scan）
-            int scanBlack = 0,      scanColor = 0,      scanDuotone = 0;
-            int scanBlackLarge = 0, scanColorLarge = 0, scanDuotoneLarge = 0;
-
-            int v;
-            foreach (var obj in counter)
-                switch (obj.Key.ToString())
-                {
-                    // ── 列印 全部（小張＋大張合計）─────────────────────────────
-                    //case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.2.1.1": if (int.TryParse(obj.Value.ToString(), out v)) printColor   += v; break; // 列印-全彩-全部
-                    //case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.2.1.2": if (int.TryParse(obj.Value.ToString(), out v)) printDuotone += v; break; // 列印-雙色-全部
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.2.1.3": if (int.TryParse(obj.Value.ToString(), out v)) printBlack   += v; break; // 列印-黑白-全部
-
-                    // ── 列印 大張 ──────────────────────────────────────────────
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.207.1.1": if (int.TryParse(obj.Value.ToString(), out v)) printColorLarge   += v; break; // 列印-全彩-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.207.1.2": if (int.TryParse(obj.Value.ToString(), out v)) printDuotoneLarge += v; break; // 列印-雙色-大張
-
-                    // ── 列印 小張 ──────────────────────────────────────────────
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.208.1.1": if (int.TryParse(obj.Value.ToString(), out v)) printColor   += v; break; // 列印-全彩-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.208.1.2": if (int.TryParse(obj.Value.ToString(), out v)) printDuotone += v; break; // 列印-雙色-小張
-
-                    // ── 掃描 黑白（不同韌體 OID，只有其中一個有值）────────────
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.8.1.3":  if (int.TryParse(obj.Value.ToString(), out v)) scanBlack += v; break; // 掃描-黑白
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.9.1.3":  if (int.TryParse(obj.Value.ToString(), out v)) scanBlack += v; break; // 掃描-黑白
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.10.1.3": if (int.TryParse(obj.Value.ToString(), out v)) scanBlack += v; break; // 掃描-黑白
-
-                    // ── 掃描 小張（不同韌體 OID，只有其中一個有值）────────────
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.220.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColor   += v; break; // 掃描-全彩-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.220.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotone += v; break; // 掃描-雙色-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.222.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColor   += v; break; // 掃描-全彩-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.222.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotone += v; break; // 掃描-雙色-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.224.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColor   += v; break; // 掃描-全彩-小張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.224.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotone += v; break; // 掃描-雙色-小張
-
-                    // ── 掃描 大張（不同韌體 OID，只有其中一個有值）────────────
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.219.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColorLarge   += v; break; // 掃描-全彩-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.219.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotoneLarge += v; break; // 掃描-雙色-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.221.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColorLarge   += v; break; // 掃描-全彩-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.221.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotoneLarge += v; break; // 掃描-雙色-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.223.1.1": if (int.TryParse(obj.Value.ToString(), out v)) scanColorLarge   += v; break; // 掃描-全彩-大張
-                    case "1.3.6.1.4.1.1129.2.3.50.1.3.21.6.1.223.1.2": if (int.TryParse(obj.Value.ToString(), out v)) scanDuotoneLarge += v; break; // 掃描-雙色-大張
-
-                    default: break;
-                }
             mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
+            PopulateToshibaItems(mfp, counter, _ToshibaCatGeneric);
+            return Supplies_Toshiba(mfp);
+        }
 
-            // 列印（Toshiba 此 OID 集為列印整體計數，無法細分 print/copy/fax，先歸 category=print）
-            if (printBlack        > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black",      size = "normal", sheets = printBlack });
-            if (printColor        > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "normal", sheets = printColor });
-            if (printDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone",    size = "normal", sheets = printDuotone });
-            if (printBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "black",      size = "large",  sheets = printBlackLarge });
-            if (printColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "color_full", size = "large",  sheets = printColorLarge });
-            if (printDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "printed", category = "print", color = "duotone",    size = "large",  sheets = printDuotoneLarge });
-            // 掃描
-            if (scanBlack        > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "black",      size = "normal", sheets = scanBlack });
-            if (scanColor        > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "color_full", size = "normal", sheets = scanColor });
-            if (scanDuotone      > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "duotone",    size = "normal", sheets = scanDuotone });
-            if (scanBlackLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "black",      size = "large",  sheets = scanBlackLarge });
-            if (scanColorLarge   > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "color_full", size = "large",  sheets = scanColorLarge });
-            if (scanDuotoneLarge > 0) mfp.items.Add(new DataClass.CounterItem { output = "scanned", category = "scan", color = "duotone",    size = "large",  sheets = scanDuotoneLarge });
+        /// <summary>
+        /// Toshiba e-STUDIO 2555C 專用（fax 小張用 .218）
+        /// </summary>
+        private bool Counter_Toshiba_2555C(Printer mfp)
+        {
+            var ip = mfp.ip;
+            Trace(new LogInfo() { Category = "SNMP", Function = "Counter_Toshiba_2555C", Option = "request", Identity = ip });
+            var counter = TOSHIBA_MIBs(ip);
+            Trace(new LogInfo() { Category = "SNMP", Function = "Counter_Toshiba_2555C", Option = "response", Identity = ip, Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(counter)}" });
+            if (counter == null) return true;
+            mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
+            PopulateToshibaItems(mfp, counter, _ToshibaCat2555C);
+            return Supplies_Toshiba(mfp);
+        }
 
+        /// <summary>
+        /// Toshiba e-STUDIO 3515AC 專用（fax 小張用 .216）
+        /// </summary>
+        private bool Counter_Toshiba_3515AC(Printer mfp)
+        {
+            var ip = mfp.ip;
+            Trace(new LogInfo() { Category = "SNMP", Function = "Counter_Toshiba_3515AC", Option = "request", Identity = ip });
+            var counter = TOSHIBA_MIBs(ip);
+            Trace(new LogInfo() { Category = "SNMP", Function = "Counter_Toshiba_3515AC", Option = "response", Identity = ip, Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(counter)}" });
+            if (counter == null) return true;
+            mfp.snmp_data = Newtonsoft.Json.JsonConvert.SerializeObject(counter);
+            PopulateToshibaItems(mfp, counter, _ToshibaCat3515AC);
             return Supplies_Toshiba(mfp);
         }
 
@@ -1063,9 +1143,9 @@ namespace printer_info
         private bool Supplies(Printer mfp)
         {
             var ip = mfp.ip;
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "capacity", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "capacity", Message = $"None" });
             var capacity = Printer_MaxCapacity(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
             if (capacity == null) return true;
             int cap1 = 0, cap2 = 0, cap3 = 0, cap4 = 0, cap5 = 0;
             foreach (var obj in capacity)
@@ -1079,9 +1159,9 @@ namespace printer_info
                     default: break;
                 }
 
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "level", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "level", Message = $"None" });
             var level = Printer_SuppliesLevel(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
             if (level == null) return true;
             int lev1 = 0, lev2 = 0, lev3 = 0, lev4 = 0, lev5 = 0;
             foreach (var obj in level)
@@ -1108,9 +1188,9 @@ namespace printer_info
         private bool Supplies_Kyocera(Printer mfp)
         {
             var ip = mfp.ip;
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "capacity", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "capacity", Message = $"None" });
             var capacity = Printer_MaxCapacity(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
             if (capacity == null) return true;
             int capBlack = 0, capWaste = 0, capCyan = 0, capMagenta = 0, capYellow = 0;
             foreach (var obj in capacity)
@@ -1124,9 +1204,9 @@ namespace printer_info
                     default: break;
                 }
 
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "level", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "level", Message = $"None" });
             var level = Printer_SuppliesLevel(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
             if (level == null) return true;
             int levBlack = 0, levWaste = 0, levCyan = 0, levMagenta = 0, levYellow = 0;
             foreach (var obj in level)
@@ -1153,9 +1233,9 @@ namespace printer_info
         private bool Supplies_Toshiba(Printer mfp)
         {
             var ip = mfp.ip;
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "capacity", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "capacity", Message = $"None" });
             var capacity = Printer_MaxCapacity(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "capacity", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(capacity)}" });
             if (capacity == null) return true;
             int capBlack = 0, capCyan = 0, capMagenta = 0, capYellow = 0, capWaste = 0;
             foreach (var obj in capacity)
@@ -1169,9 +1249,9 @@ namespace printer_info
                     default: break;
                 }
 
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "request", Identity = "level", Message = $"None" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "request", Identity = "level", Message = $"None" });
             var level = Printer_SuppliesLevel(ip);
-            Trace(new LogInfo() { Category = "SNMP", Function = "Printer", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
+            Trace(new LogInfo() { Category = "SNMP", Function = "Supplies", Option = "response", Identity = "level", Message = $"{Newtonsoft.Json.JsonConvert.SerializeObject(level)}" });
             if (level == null) return true;
             int levBlack = 0, levCyan = 0, levMagenta = 0, levYellow = 0, levWaste = 0;
             foreach (var obj in level)

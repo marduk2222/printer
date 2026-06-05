@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using printer.Data;
 using printer.Data.Entities;
+using printer.Services;
 
 namespace printer.Controllers.Api;
 
@@ -95,8 +96,8 @@ public class PrintRecordsController : ControllerBase
         if (printerIdentityChanged)
             printer.UpdatedAt = DateTime.UtcNow;
 
-        // 取得此機型的張數類型與驅動參數對應
-        Dictionary<string, int> keyToSheetType = new();
+        // 取得此機型的張數類型與驅動參數對應（含 wildcard pattern）
+        var sheetTypeKeys = new List<SheetTypeKey>();
         if (printer.ModelId.HasValue)
         {
             var modelSheetTypeIds = await _context.PrinterModelSheetTypes
@@ -104,55 +105,33 @@ public class PrintRecordsController : ControllerBase
                 .Select(m => m.SheetTypeId)
                 .ToListAsync();
 
-            var keys = await _context.SheetTypeKeys
+            sheetTypeKeys = await _context.SheetTypeKeys
                 .Where(k => modelSheetTypeIds.Contains(k.SheetTypeId))
                 .ToListAsync();
-
-            foreach (var k in keys)
-                keyToSheetType[k.DriverKey] = k.SheetTypeId;
         }
 
-        // 加總同 sheet_type 的多個 driver_key
+        // 加總同 sheet_type 的多個 driver_key（支援 wildcard 比對）
+        // 同一 SheetType 內可能有多筆 keys（精確 + wildcard）同時 match —— 只算一次，避免重複累加
         var sheetTotals = new Dictionary<int, int>();
         foreach (var kv in request.Values)
         {
-            if (keyToSheetType.TryGetValue(kv.Key, out var sheetTypeId))
+            var matchedSheetTypes = sheetTypeKeys
+                .Where(k => DriverKeyMatcher.Matches(k.DriverKey, kv.Key))
+                .Select(k => k.SheetTypeId)
+                .Distinct();
+            foreach (var sheetTypeId in matchedSheetTypes)
             {
                 sheetTotals[sheetTypeId] = sheetTotals.GetValueOrDefault(sheetTypeId) + kv.Value;
             }
             // 找不到對應的 driver_key → 忽略
         }
 
-        // 由 sheetTotals 反推舊欄位（黑白/彩色/大張），讓 Index/Excel/統計仍可用；
-        // 對應不到名稱的類別只記在 PrintRecordValues
-        var standardNames = new[] { "黑白", "彩色", "大張", "彩色大張" };
-        var typeIds = sheetTotals.Keys.ToList();
-        var nameById = await _context.SheetTypes
-            .Where(st => typeIds.Contains(st.Id) && standardNames.Contains(st.Name))
-            .ToDictionaryAsync(st => st.Id, st => st.Name);
-
-        int legacyBlack = 0, legacyColor = 0, legacyLarge = 0;
-        foreach (var (sheetTypeId, value) in sheetTotals)
-        {
-            if (!nameById.TryGetValue(sheetTypeId, out var name)) continue;
-            switch (name)
-            {
-                case "黑白": legacyBlack += value; break;
-                case "彩色": legacyColor += value; break;
-                case "大張":
-                case "彩色大張": legacyLarge += value; break;
-            }
-        }
-
-        // 建立 PrintRecord
+        // 建立 PrintRecord（張數細節走 PrintRecordValue，不再寫入 legacy 三欄）
         var record = new PrintRecord
         {
             PrinterId = request.PrinterId,
             PartnerId = printer.PartnerId,
             Date = request.Date ?? DateOnly.FromDateTime(DateTime.UtcNow),
-            BlackSheets = legacyBlack,
-            ColorSheets = legacyColor,
-            LargeSheets = legacyLarge,
             State = "auto",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -278,9 +257,6 @@ public class PrintRecordsController : ControllerBase
             return NotFound();
 
         existing.Date = record.Date;
-        existing.BlackSheets = record.BlackSheets;
-        existing.ColorSheets = record.ColorSheets;
-        existing.LargeSheets = record.LargeSheets;
         existing.State = record.State;
         existing.UpdatedAt = DateTime.UtcNow;
 
@@ -328,22 +304,20 @@ public class PrintRecordsController : ControllerBase
         if (endDate.HasValue)
             query = query.Where(r => r.Date <= endDate.Value);
 
-        var stats = await query.GroupBy(r => 1).Select(g => new
-        {
-            TotalRecords = g.Count(),
-            TotalBlackSheets = g.Sum(r => r.BlackSheets),
-            TotalColorSheets = g.Sum(r => r.ColorSheets),
-            TotalLargeSheets = g.Sum(r => r.LargeSheets),
-            TotalSheets = g.Sum(r => r.BlackSheets + r.ColorSheets + r.LargeSheets)
-        }).FirstOrDefaultAsync();
+        // 從 PrintRecordValues 加總（依 SheetType 名稱分組）
+        var recordIds = await query.Select(r => r.Id).ToListAsync();
+        var valueSums = await _context.PrintRecordValues
+            .Where(v => recordIds.Contains(v.RecordId))
+            .Include(v => v.SheetType)
+            .GroupBy(v => new { v.SheetTypeId, Name = v.SheetType!.Name })
+            .Select(g => new { g.Key.SheetTypeId, g.Key.Name, Total = g.Sum(v => v.Value) })
+            .ToListAsync();
 
-        return Ok(stats ?? new
+        return Ok(new
         {
-            TotalRecords = 0,
-            TotalBlackSheets = 0,
-            TotalColorSheets = 0,
-            TotalLargeSheets = 0,
-            TotalSheets = 0
+            TotalRecords = recordIds.Count,
+            TotalSheets  = valueSums.Sum(v => (long)v.Total),
+            PerSheetType = valueSums.OrderBy(v => v.Name).ToList()
         });
     }
 }

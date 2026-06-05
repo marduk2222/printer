@@ -203,17 +203,10 @@ public class PrinterService : IPrinterService
             record.UpdatedAt = DateTime.UtcNow;
         }
 
-        // 優先以四維 items 落地到 PrintRecordValue
+        // 以四維 items 落地到 PrintRecordValue（透過 SheetTypeKey wildcard 累加）
         if (request.Items != null && request.Items.Count > 0)
         {
             await ApplyItemsToRecordAsync(record, request.Items);
-        }
-        else
-        {
-            // 舊格式相容：以扁平欄位寫入 PrintRecord
-            record.BlackSheets = request.BlackPrint ?? record.BlackSheets;
-            record.ColorSheets = request.ColorPrint ?? record.ColorSheets;
-            record.LargeSheets = request.LargePrint ?? record.LargeSheets;
         }
 
         await _context.SaveChangesAsync();
@@ -229,26 +222,30 @@ public class PrinterService : IPrinterService
     /// <summary>
     /// 把四維 CounterItem 合計到 PrintRecordValue。
     /// 規則：
-    ///   1. 以 driver_key（output.category.color.size）查 SheetTypeKey 對應 SheetType
-    ///   2. 同一 SheetType 的多筆 driver_key 累加
+    ///   1. 以 driver_key（output.category.color.size）逐筆與 SheetTypeKey 比對（支援 wildcard *）
+    ///   2. 一個 item 可能 match 多個 SheetType（wildcard 重疊時），每個 match 都累加
     ///   3. 找不到對應 SheetType 的 item 略過（不報錯，由前端 SheetType 設定補齊）
     /// 既有 record 的 PrintRecordValue 會以本次 items 重新覆寫（同一 SheetType 取最新值）。
     /// </summary>
     private async Task ApplyItemsToRecordAsync(PrintRecord record, List<CounterItemDto> items)
     {
-        var keys = items.Select(i => i.ToDriverKey()).Distinct().ToList();
-        var sheetTypeKeys = await _context.SheetTypeKeys
-            .Where(k => keys.Contains(k.DriverKey))
-            .ToListAsync();
-
-        var keyToSheetTypeId = sheetTypeKeys.ToDictionary(k => k.DriverKey, k => k.SheetTypeId);
+        // wildcard pattern 無法在 SQL 端 prefilter，全表載入（每客戶通常只有數十筆 SheetTypeKey，影響可忽略）
+        var sheetTypeKeys = await _context.SheetTypeKeys.ToListAsync();
 
         var perSheetTypeTotals = new Dictionary<int, int>();
         foreach (var item in items)
         {
-            if (!keyToSheetTypeId.TryGetValue(item.ToDriverKey(), out var sheetTypeId)) continue;
-            if (!perSheetTypeTotals.ContainsKey(sheetTypeId)) perSheetTypeTotals[sheetTypeId] = 0;
-            perSheetTypeTotals[sheetTypeId] += item.Sheets;
+            var actualKey = item.ToDriverKey();
+            // 同一 SheetType 內可能有多筆 keys（精確 + wildcard）同時 match —— 只算一次，避免重複累加
+            var matchedSheetTypes = sheetTypeKeys
+                .Where(k => DriverKeyMatcher.Matches(k.DriverKey, actualKey))
+                .Select(k => k.SheetTypeId)
+                .Distinct();
+            foreach (var sheetTypeId in matchedSheetTypes)
+            {
+                if (!perSheetTypeTotals.ContainsKey(sheetTypeId)) perSheetTypeTotals[sheetTypeId] = 0;
+                perSheetTypeTotals[sheetTypeId] += item.Sheets;
+            }
         }
 
         var existingValues = record.Values.ToDictionary(v => v.SheetTypeId);
@@ -317,9 +314,6 @@ public class PrinterService : IPrinterService
             PrinterId = printer.Id,
             PartnerId = printer.PartnerId,
             Date = date,
-            BlackSheets = 0,
-            ColorSheets = 0,
-            LargeSheets = 0,
             State = $"install_{request.State}",
             Count = 1,
             CreatedAt = DateTime.UtcNow,

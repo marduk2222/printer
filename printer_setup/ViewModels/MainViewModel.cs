@@ -232,11 +232,17 @@ namespace printer_setup.ViewModels
                 var hostName = AutoUpdater.GetHostName();
                 var hostIp   = AutoUpdater.GetHostIp();
 
+                _logger?.Write(new LogInfo { Category = "Run", Function = "CurrentSheets", Option = "click",
+                    Message = $"stage={Stage}, partner_id={_partnerId}, targets={targets.Count}, host={hostName}/{hostIp}" });
+
+                int okCount = 0, failCount = 0;
+
                 await Task.Run(() =>
                 {
                     foreach (var item in targets)
                     {
-                        _logger?.Write(new LogInfo { Category = "Test", Option = item.ip, Message = $"[Test] ip:{item.ip} / serial:{item.serial_number} / name:{item.name} / brand:{item.brand} / model:{item.model}" });
+                        _logger?.Write(new LogInfo { Category = "Run", Function = "CurrentSheets", Option = "request", Identity = item.code,
+                            Message = $"ip={item.ip}/serial={item.serial_number}/name={item.name}/brand={item.brand}/model={item.model}" });
                         try
                         {
                             item.Inner.items.Clear();
@@ -248,14 +254,23 @@ namespace printer_setup.ViewModels
                             item.PopulateSheetsFromItems();
                             if (item.connect == 1) item.upload = 1;
 
-                            _logger?.Write(new LogInfo { Category = "Test", Option = item.ip, Message = $"Black:{item.black_sheets}/Color:{item.color_sheets}/Large:{item.large_sheets} / Supplies:{item.Inner.supply_items.Count}" });
+                            if (ok) okCount++; else failCount++;
+
+                            _logger?.Write(new LogInfo { Category = "Run", Function = "CurrentSheets",
+                                Option = ok ? "success" : "failed", Identity = item.code,
+                                Message = $"black={item.black_sheets}/color={item.color_sheets}/large={item.large_sheets}/supplies={item.Inner.supply_items.Count}/alerts={item.Inner.alerts.Count}" });
                         }
                         catch (Exception ex)
                         {
-                            _logger?.Write(new LogInfo { Category = "Test", Option = "Exception", Message = ex.Message });
+                            failCount++;
+                            item.connect = 1;
+                            _logger?.Write(new LogInfo { File = "Error", Category = "Run", Function = "CurrentSheets", Option = "exception", Identity = item.code, Message = ex.Message });
                         }
                     }
                 });
+
+                _logger?.Write(new LogInfo { Category = "Run", Function = "CurrentSheets", Option = "done",
+                    Message = $"success={okCount}, failed={failCount}, total={targets.Count}" });
 
                 List2.Clear();
                 foreach (var item in List) if (item.check) List2.Add(item);
@@ -306,9 +321,7 @@ namespace printer_setup.ViewModels
                                 host_name = hostName,
                                 host_ip   = hostIp,
                                 data = item.Inner.snmp_data,
-                                black_print = item.black_sheets,
-                                color_print = item.color_sheets,
-                                large_print = item.large_sheets,
+                                items = item.Inner.items,
                             }) ?? false;
                             item.upload = ok ? 2 : 1;
 
@@ -383,9 +396,7 @@ namespace printer_setup.ViewModels
                                 host_name = hostName,
                                 host_ip   = hostIp,
                                 data = item.Inner.snmp_data,
-                                black_print = item.black_sheets,
-                                color_print = item.color_sheets,
-                                large_print = item.large_sheets,
+                                items = item.Inner.items,
                             }) ?? false;
                             item.upload = ok ? 2 : 1;
 

@@ -86,13 +86,13 @@ public class PrintRecordController : Controller
         }
         ViewBag.IndexSheetTypes = indexSheetTypes;
 
-        // 統計資料
-        var stats = await query.GroupBy(r => 1).Select(g => new
-        {
-            TotalBlack = g.Sum(r => r.BlackSheets),
-            TotalColor = g.Sum(r => r.ColorSheets),
-            TotalLarge = g.Sum(r => r.LargeSheets)
-        }).FirstOrDefaultAsync();
+        // 統計資料：從 PrintRecordValues 按 SheetType 加總
+        var queryRecordIds = await query.Select(r => r.Id).ToListAsync();
+        var totalsByType = await _context.PrintRecordValues
+            .Where(v => queryRecordIds.Contains(v.RecordId))
+            .GroupBy(v => v.SheetTypeId)
+            .Select(g => new { SheetTypeId = g.Key, Total = g.Sum(v => v.Value) })
+            .ToDictionaryAsync(x => x.SheetTypeId, x => x.Total);
 
         ViewBag.PrinterId = printerId;
         ViewBag.PartnerId = partnerId;
@@ -101,9 +101,7 @@ public class PrintRecordController : Controller
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
         ViewBag.Total = total;
-        ViewBag.TotalBlack = stats?.TotalBlack ?? 0;
-        ViewBag.TotalColor = stats?.TotalColor ?? 0;
-        ViewBag.TotalLarge = stats?.TotalLarge ?? 0;
+        ViewBag.TotalsByType = totalsByType;
         ViewBag.Partners = new SelectList(
             await _context.Partners.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync(),
             "Id", "Name");
@@ -130,27 +128,12 @@ public class PrintRecordController : Controller
 
         await LoadViewBagData();
 
-        // 既有 PrintRecordValues（若無則由 legacy Black/Color/Large 推回）給 edit-mode 動態列用
+        // 從 PrintRecordValues 撈當前各 SheetType 對應值給 edit-mode 動態列用
         var existingValues = record.Values
             .Where(v => v.SheetType != null)
             .OrderBy(v => v.SortOrder).ThenBy(v => v.SheetType!.SortOrder).ThenBy(v => v.SheetTypeId)
             .Select(v => new { id = v.SheetTypeId, name = v.SheetType!.Name, value = v.Value })
             .ToList<object>();
-
-        if (existingValues.Count == 0 && (record.BlackSheets > 0 || record.ColorSheets > 0 || record.LargeSheets > 0))
-        {
-            var standard = await _context.SheetTypes
-                .Where(st => st.IsActive && (st.Name == "黑白" || st.Name == "彩色" || st.Name == "大張"))
-                .ToDictionaryAsync(st => st.Name, st => st);
-            void Add(string name, int v)
-            {
-                if (v <= 0 || !standard.TryGetValue(name, out var st)) return;
-                existingValues.Add(new { id = st.Id, name = st.Name, value = v });
-            }
-            Add("黑白", record.BlackSheets);
-            Add("彩色", record.ColorSheets);
-            Add("大張", record.LargeSheets);
-        }
 
         ViewBag.ExistingValuesJson = System.Text.Json.JsonSerializer.Serialize(existingValues);
         return View(record);
@@ -171,9 +154,6 @@ public class PrintRecordController : Controller
             var printer = await _context.Printers.FindAsync(record.PrinterId);
             if (printer != null)
                 record.PartnerId = printer.PartnerId;
-
-            // 由動態類別值 backfill 舊欄位（黑白/彩色/大張）讓既有 Index/Export/統計仍可用
-            await ApplySheetTypeValuesToLegacyFieldsAsync(record, sheetValues);
 
             record.CreatedAt = DateTime.UtcNow;
             record.UpdatedAt = DateTime.UtcNow;
@@ -230,27 +210,12 @@ public class PrintRecordController : Controller
 
         await LoadViewBagData();
 
-        // 既有 PrintRecordValues 給前端做為初始列；若沒有，用 legacy Black/Color/Large 名稱推回
+        // 從 PrintRecordValues 撈當前各 SheetType 對應值給前端做為初始列
         var existingValues = record.Values
             .Where(v => v.SheetType != null)
             .OrderBy(v => v.SheetType!.SortOrder).ThenBy(v => v.SheetTypeId)
             .Select(v => new { id = v.SheetTypeId, name = v.SheetType!.Name, value = v.Value })
             .ToList<object>();
-
-        if (existingValues.Count == 0 && (record.BlackSheets > 0 || record.ColorSheets > 0 || record.LargeSheets > 0))
-        {
-            var standard = await _context.SheetTypes
-                .Where(st => st.IsActive && (st.Name == "黑白" || st.Name == "彩色" || st.Name == "大張"))
-                .ToDictionaryAsync(st => st.Name, st => st);
-            void Add(string name, int v)
-            {
-                if (v <= 0 || !standard.TryGetValue(name, out var st)) return;
-                existingValues.Add(new { id = st.Id, name = st.Name, value = v });
-            }
-            Add("黑白", record.BlackSheets);
-            Add("彩色", record.ColorSheets);
-            Add("大張", record.LargeSheets);
-        }
 
         ViewBag.ExistingValuesJson = System.Text.Json.JsonSerializer.Serialize(existingValues);
         return View(record);
@@ -273,9 +238,6 @@ public class PrintRecordController : Controller
             existing.Date = record.Date;
             existing.State = record.State;
             existing.UpdatedAt = DateTime.UtcNow;
-
-            // 由動態類別值 backfill 舊欄位
-            await ApplySheetTypeValuesToLegacyFieldsAsync(existing, sheetValues);
 
             var printer = await _context.Printers.FindAsync(record.PrinterId);
             if (printer != null)
@@ -340,16 +302,30 @@ public class PrintRecordController : Controller
         }
 
         var items = await query
+            .Include(r => r.Values).ThenInclude(v => v.SheetType)
             .OrderByDescending(r => r.Date)
             .ThenByDescending(r => r.Id)
             .ToListAsync();
 
+        // 收集所有出現過的 SheetType (依 SortOrder) 作為動態 column
+        var allSheetTypes = items.SelectMany(r => r.Values)
+            .Where(v => v.SheetType != null)
+            .Select(v => v.SheetType!)
+            .DistinctBy(st => st.Id)
+            .OrderBy(st => st.SortOrder).ThenBy(st => st.Id)
+            .ToList();
+
         using var workbook = new ClosedXML.Excel.XLWorkbook();
         var ws = workbook.Worksheets.Add("抄表記錄");
 
-        var headers = new[] { "日期", "客戶", "事務機代碼", "事務機名稱", "黑白張數", "彩色張數", "大張張數", "合計", "狀態" };
-        for (int i = 0; i < headers.Length; i++)
-            ws.Cell(1, i + 1).Value = headers[i];
+        var fixedHeaders = new[] { "日期", "客戶", "事務機代碼", "事務機名稱" };
+        for (int i = 0; i < fixedHeaders.Length; i++)
+            ws.Cell(1, i + 1).Value = fixedHeaders[i];
+        for (int i = 0; i < allSheetTypes.Count; i++)
+            ws.Cell(1, fixedHeaders.Length + 1 + i).Value = allSheetTypes[i].Name;
+        ws.Cell(1, fixedHeaders.Length + allSheetTypes.Count + 1).Value = "合計";
+        ws.Cell(1, fixedHeaders.Length + allSheetTypes.Count + 2).Value = "狀態";
+        var headerColumnCount = fixedHeaders.Length + allSheetTypes.Count + 2;
 
         int row = 2;
         foreach (var item in items)
@@ -358,15 +334,20 @@ public class PrintRecordController : Controller
             ws.Cell(row, 2).Value = item.Partner?.Name;
             ws.Cell(row, 3).Value = item.Printer?.Code;
             ws.Cell(row, 4).Value = item.Printer?.Name;
-            ws.Cell(row, 5).Value = item.BlackSheets;
-            ws.Cell(row, 6).Value = item.ColorSheets;
-            ws.Cell(row, 7).Value = item.LargeSheets;
-            ws.Cell(row, 8).Value = item.BlackSheets + item.ColorSheets + item.LargeSheets;
-            ws.Cell(row, 9).Value = item.State == "auto" ? "自動" : "手動";
+            var valueByType = item.Values.ToDictionary(v => v.SheetTypeId, v => v.Value);
+            long total = 0;
+            for (int i = 0; i < allSheetTypes.Count; i++)
+            {
+                var v = valueByType.GetValueOrDefault(allSheetTypes[i].Id, 0);
+                ws.Cell(row, fixedHeaders.Length + 1 + i).Value = v;
+                total += v;
+            }
+            ws.Cell(row, fixedHeaders.Length + allSheetTypes.Count + 1).Value = total;
+            ws.Cell(row, fixedHeaders.Length + allSheetTypes.Count + 2).Value = item.State == "auto" ? "自動" : "手動";
             row++;
         }
 
-        var headerRange = ws.Range(1, 1, 1, headers.Length);
+        var headerRange = ws.Range(1, 1, 1, headerColumnCount);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
         ws.Columns().AdjustToContents();
@@ -451,26 +432,37 @@ public class PrintRecordController : Controller
                         date = DateOnly.FromDateTime(DateTime.Today);
                     }
 
-                    // 解析張數
-                    int.TryParse(GetCellValue(worksheet, row, headers, "黑白張數") ?? "0", out var blackSheets);
-                    int.TryParse(GetCellValue(worksheet, row, headers, "彩色張數") ?? "0", out var colorSheets);
-                    int.TryParse(GetCellValue(worksheet, row, headers, "大張張數") ?? "0", out var largeSheets);
-
                     var record = new PrintRecord
                     {
                         PrinterId = printer.Id,
                         PartnerId = printer.PartnerId,
                         Date = date,
-                        BlackSheets = blackSheets,
-                        ColorSheets = colorSheets,
-                        LargeSheets = largeSheets,
                         State = "manual",
                         Count = 1,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
-
                     _context.PrintRecords.Add(record);
+                    await _context.SaveChangesAsync();
+
+                    // 解析欄位：除「日期/客戶/事務機代碼/事務機名稱/合計/狀態」之外的欄位視為 SheetType 名稱
+                    var skipHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "日期", "客戶", "事務機代碼", "事務機名稱", "合計", "狀態"
+                    };
+                    foreach (var (headerName, col) in headers)
+                    {
+                        if (skipHeaders.Contains(headerName)) continue;
+                        if (!int.TryParse(GetCellValue(worksheet, row, headers, headerName) ?? "0", out var v) || v <= 0) continue;
+                        var st = await _context.SheetTypes.FirstOrDefaultAsync(s => s.Name == headerName);
+                        if (st == null) continue;
+                        _context.PrintRecordValues.Add(new PrintRecordValue
+                        {
+                            RecordId = record.Id,
+                            SheetTypeId = st.Id,
+                            Value = v
+                        });
+                    }
                     success++;
                 }
                 catch (Exception ex)
@@ -502,7 +494,8 @@ public class PrintRecordController : Controller
         using var workbook = new ClosedXML.Excel.XLWorkbook();
         var ws = workbook.Worksheets.Add("抄表記錄");
 
-        var headers = new[] { "日期", "事務機代碼", "黑白張數", "彩色張數", "大張張數" };
+        // 張數欄位標題必須與「張數類型」名稱完全一致，否則匯入時對不到類型、該欄會被忽略
+        var headers = new[] { "日期", "事務機代碼", "黑白", "彩色", "黑白大張", "彩色大張" };
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
@@ -512,6 +505,7 @@ public class PrintRecordController : Controller
         ws.Cell(2, 3).Value = "1500";
         ws.Cell(2, 4).Value = "300";
         ws.Cell(2, 5).Value = "50";
+        ws.Cell(2, 6).Value = "20";
 
         var headerRange = ws.Range(1, 1, 1, headers.Length);
         headerRange.Style.Font.Bold = true;
@@ -543,21 +537,33 @@ public class PrintRecordController : Controller
         var start = startDate ?? DateOnly.FromDateTime(DateTime.Today.AddMonths(-1));
         var end = endDate ?? DateOnly.FromDateTime(DateTime.Today);
 
-        var stats = await _context.PrintRecords
+        // 載入 records + Values 後在 memory 內統計（依 SheetType 名稱分類成黑白/彩色/大張）
+        var rawRecords = await _context.PrintRecords
+            .Include(r => r.Partner)
+            .Include(r => r.Values).ThenInclude(v => v.SheetType)
             .Where(r => r.Date >= start && r.Date <= end && r.PartnerId != null)
-            .GroupBy(r => new { r.PartnerId, r.Partner!.Name, r.Partner.Code })
+            .ToListAsync();
+
+        var blackNames = new HashSet<string> { "黑白" };
+        var colorNames = new HashSet<string> { "彩色" };
+        var largeNames = new HashSet<string> { "大張", "彩色大張" };
+        int SumByNames(PrintRecord r, HashSet<string> names) =>
+            r.Values.Where(v => v.SheetType != null && names.Contains(v.SheetType!.Name)).Sum(v => v.Value);
+
+        var stats = rawRecords
+            .GroupBy(r => new { r.PartnerId, Name = r.Partner!.Name, r.Partner.Code })
             .Select(g => new PartnerStatDto
             {
                 PartnerId = g.Key.PartnerId!.Value,
                 PartnerName = g.Key.Name,
                 PartnerCode = g.Key.Code,
                 RecordCount = g.Count(),
-                TotalBlack = g.Sum(r => r.BlackSheets),
-                TotalColor = g.Sum(r => r.ColorSheets),
-                TotalLarge = g.Sum(r => r.LargeSheets)
+                TotalBlack = g.Sum(r => SumByNames(r, blackNames)),
+                TotalColor = g.Sum(r => SumByNames(r, colorNames)),
+                TotalLarge = g.Sum(r => SumByNames(r, largeNames))
             })
             .OrderByDescending(s => s.TotalBlack + s.TotalColor + s.TotalLarge)
-            .ToListAsync();
+            .ToList();
 
         ViewBag.StartDate = start;
         ViewBag.EndDate = end;
@@ -583,8 +589,18 @@ public class PrintRecordController : Controller
             query = query.Where(r => r.PartnerId == partnerId.Value);
         }
 
-        var stats = await query
-            .GroupBy(r => new { r.PrinterId, r.Printer!.Code, r.Printer.Name, PartnerName = r.Printer.Partner!.Name })
+        var rawRecords2 = await query
+            .Include(r => r.Values).ThenInclude(v => v.SheetType)
+            .ToListAsync();
+
+        var blackNames2 = new HashSet<string> { "黑白" };
+        var colorNames2 = new HashSet<string> { "彩色" };
+        var largeNames2 = new HashSet<string> { "大張", "彩色大張" };
+        int SumByNames2(PrintRecord r, HashSet<string> names) =>
+            r.Values.Where(v => v.SheetType != null && names.Contains(v.SheetType!.Name)).Sum(v => v.Value);
+
+        var stats = rawRecords2
+            .GroupBy(r => new { r.PrinterId, Code = r.Printer!.Code, Name = r.Printer.Name, PartnerName = r.Printer.Partner!.Name })
             .Select(g => new PrinterStatDto
             {
                 PrinterId = g.Key.PrinterId,
@@ -592,12 +608,12 @@ public class PrintRecordController : Controller
                 PrinterName = g.Key.Name,
                 PartnerName = g.Key.PartnerName,
                 RecordCount = g.Count(),
-                TotalBlack = g.Sum(r => r.BlackSheets),
-                TotalColor = g.Sum(r => r.ColorSheets),
-                TotalLarge = g.Sum(r => r.LargeSheets)
+                TotalBlack = g.Sum(r => SumByNames2(r, blackNames2)),
+                TotalColor = g.Sum(r => SumByNames2(r, colorNames2)),
+                TotalLarge = g.Sum(r => SumByNames2(r, largeNames2))
             })
             .OrderByDescending(s => s.TotalBlack + s.TotalColor + s.TotalLarge)
-            .ToListAsync();
+            .ToList();
 
         ViewBag.PartnerId = partnerId;
         ViewBag.StartDate = start;
@@ -655,36 +671,6 @@ public class PrintRecordController : Controller
         }
         await _context.SaveChangesAsync();
         return Json(new { success = true });
-    }
-
-    /// <summary>
-    /// 由動態類別值反推舊 BlackSheets/ColorSheets/LargeSheets 欄位（依 SheetType.Name 對應），
-    /// 讓既有 Index/Excel/統計頁不需改寫；對應不到名稱的類別只記在 PrintRecordValues。
-    /// </summary>
-    private async Task ApplySheetTypeValuesToLegacyFieldsAsync(PrintRecord record, Dictionary<int, int>? values)
-    {
-        record.BlackSheets = 0;
-        record.ColorSheets = 0;
-        record.LargeSheets = 0;
-        if (values == null || values.Count == 0) return;
-
-        var ids = values.Keys.ToList();
-        var nameById = await _context.SheetTypes
-            .Where(st => ids.Contains(st.Id))
-            .ToDictionaryAsync(st => st.Id, st => st.Name);
-
-        foreach (var (sheetTypeId, value) in values)
-        {
-            if (value <= 0) continue;
-            if (!nameById.TryGetValue(sheetTypeId, out var name)) continue;
-            switch (name)
-            {
-                case "黑白": record.BlackSheets += value; break;
-                case "彩色": record.ColorSheets += value; break;
-                case "大張":
-                case "彩色大張": record.LargeSheets += value; break;
-            }
-        }
     }
 
     private async Task LoadViewBagData(int? partnerId = null)
