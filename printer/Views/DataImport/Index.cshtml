@@ -1,0 +1,77 @@
+@{
+    ViewData["Title"] = "合併匯入（客戶 + 事務機 + 計費）";
+}
+
+<form asp-action="Import" method="post" enctype="multipart/form-data">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>合併匯入（客戶 + 事務機 + 計費）</h4>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">匯入</button>
+            <a asp-action="DownloadSample" class="btn btn-outline-primary btn-sm">下載合併範本</a>
+            <a asp-controller="Partner" asp-action="Index" class="btn btn-outline-secondary btn-sm">返回客戶</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="white-space: pre-line">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="white-space: pre-line">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card mb-3">
+                <div class="card-header">上傳 Excel 檔案</div>
+                <div class="card-body">
+                    <div class="mb-0">
+                        <label class="form-label">選擇 Excel 檔案 (.xlsx)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">格式說明</div>
+                <div class="card-body small">
+                    <p class="mb-2"><strong>單一工作表，每列代表一台事務機</strong>，並把所屬客戶欄位填在同一列。</p>
+                    <p class="mb-2">匯入時依「<em>客戶編號 → 公司名稱</em>」判斷客戶是否已存在：
+                        已存在（含本次匯入中已建立者）則沿用、不存在則自動建立。
+                        因此<strong>同一客戶可重複出現在多列，只會建立一次</strong>，再把多台事務機掛在其下。</p>
+                    <table class="table table-sm mb-2">
+                        <thead>
+                            <tr><th>欄位</th><th>必填</th><th>說明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>客戶編號</td><td></td><td>客戶自訂編號（客戶判重主鍵）</td></tr>
+                            <tr><td>公司名稱</td><td></td><td>新建客戶時的名稱</td></tr>
+                            <tr><td>統一編號／公司電話／傳真／手機／Email／地址／備註</td><td></td><td>新建客戶時帶入</td></tr>
+                            <tr><td>名稱</td><td><span class="text-danger">*</span></td><td>事務機名稱</td></tr>
+                            <tr><td>代碼</td><td></td><td>未填則自動產生</td></tr>
+                            <tr><td>廠牌／型號</td><td></td><td>須為系統已存在者</td></tr>
+                            <tr><td>序號／IP／MAC／印表機名稱</td><td></td><td>事務機資訊</td></tr>
+                            <tr><td>合約開始日期／合約結束日期</td><td></td><td>格式 yyyy-MM-dd</td></tr>
+                            <tr><td>押金／說明</td><td></td><td>事務機資訊</td></tr>
+                            <tr><td>月租費用</td><td></td><td>有填則建立計費設定</td></tr>
+                            <tr><td>月租週期／張數週期</td><td></td><td>月數：1=每月、3=每季、6=半年、12=每年，未填預設 1</td></tr>
+                            <tr><td>月租起算日期／張數起算日期</td><td></td><td>未填則以合約開始日期代入</td></tr>
+                            <tr><td>{類型}單價／{類型}贈送／{類型}誤印率／{類型}互換比例</td><td></td><td>各張數類型的計費欄位，如「黑白單價」「彩色贈送」；任一有填即建立該類型單價</td></tr>
+                            <tr><td>計費備註</td><td></td><td>計費設定備註</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted mb-2">客戶編號與公司名稱皆留空時，該台事務機不掛客戶。發票相關欄位（發票抬頭、載具類型…）亦可加入，建立客戶時一併帶入。</p>
+                    <p class="text-muted mb-0">計費欄位（月租費用或任一張數類型欄位）有填才會建立計費設定；階梯式計費與折抵順序請於「計費設定」頁面維護。範本會依目前啟用的張數類型自動產生對應欄位。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
