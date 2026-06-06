@@ -134,6 +134,53 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 彩色動作按鈕：裝機(綠) / 退機(橘) / 換機(紫)；連線沿用 BtnPrimary(藍) -->
+        <Style x:Key="BtnSuccess" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#10B981" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#059669"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="bd" Property="Background" Value="#6EE7B7"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BtnWarning" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#F59E0B" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#D97706"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="bd" Property="Background" Value="#FCD34D"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BtnPurple" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#8B5CF6" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#7C3AED"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="bd" Property="Background" Value="#C4B5FD"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="BtnGhost" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#374151"/>
@@ -270,7 +317,28 @@
                 <!-- Step 3 / 4 / 5 群組標題 -->
                 <TextBlock Text="設備操作" Foreground="#6B7280" FontSize="11" FontWeight="SemiBold" Margin="4,20,0,12"/>
 
-                <!-- Step 3 -->
+                <!-- Step 7 : 新增設備（從庫存） -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="7"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}" Background="#10B981"><TextBlock Style="{StaticResource StepBadgeText}" Foreground="White" Text="+"/></Border>
+                        <TextBlock Text="裝機（庫存取機）"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="7"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 3 : 連線設備 -->
                 <Border><Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
                             <Style.Triggers>
@@ -279,8 +347,8 @@
                         </Style>
                     </Border.Style>
                     <StackPanel Orientation="Horizontal">
-                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="+"/></Border>
-                        <TextBlock Text="新增設備"><TextBlock.Style>
+                        <Border Style="{StaticResource StepBadge}" Background="#2563EB"><TextBlock Style="{StaticResource StepBadgeText}" Foreground="White" Text="🖧"/></Border>
+                        <TextBlock Text="連線（起表）"><TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Stage}" Value="3"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
@@ -291,20 +359,41 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Step 4 -->
+                <!-- Step 5 : 退機 -->
                 <Border><Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                                <DataTrigger Binding="{Binding Stage}" Value="5"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
                     <StackPanel Orientation="Horizontal">
-                        <Border Style="{StaticResource StepBadge}"><TextBlock Style="{StaticResource StepBadgeText}" Text="−"/></Border>
-                        <TextBlock Text="移除設備"><TextBlock.Style>
+                        <Border Style="{StaticResource StepBadge}" Background="#F59E0B"><TextBlock Style="{StaticResource StepBadgeText}" Foreground="White" Text="↩"/></Border>
+                        <TextBlock Text="退機（回庫存）"><TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding Stage}" Value="5"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Step 6 : 換機 -->
+                <Border><Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StepItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="6"><Setter Property="Background" Value="#2563EB"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StepBadge}" Background="#8B5CF6"><TextBlock Style="{StaticResource StepBadgeText}" Foreground="White" Text="⇄"/></Border>
+                        <TextBlock Text="換機"><TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource StepTitle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Stage}" Value="6"><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
@@ -332,9 +421,9 @@
                         <TextBlock Style="{StaticResource SectionTitle}" HorizontalAlignment="Center" Text="歡迎回來"/>
                         <TextBlock Style="{StaticResource SectionSub}" HorizontalAlignment="Center" Text="請以工程師帳密登入以繼續"/>
                         <TextBlock Style="{StaticResource FieldLabel}" Text="帳號"/>
-                        <TextBox Style="{StaticResource Input}" Name="staff_ac"/>
+                        <TextBox Style="{StaticResource Input}" Name="staff_ac" KeyDown="StaffAc_KeyDown"/>
                         <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,6" Text="密碼"/>
-                        <PasswordBox Style="{StaticResource InputPwd}" Name="staff_pw"/>
+                        <PasswordBox Style="{StaticResource InputPwd}" Name="staff_pw" KeyDown="StaffPw_KeyDown"/>
                         <TextBlock HorizontalAlignment="Center" Margin="0,18,0,0" FontWeight="SemiBold">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}">
@@ -405,7 +494,9 @@
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0">
                         <TextBlock Style="{StaticResource SectionTitle}" Text="選定事務機"/>
-                        <TextBlock Style="{StaticResource SectionSub}" Text="勾選要操作的機器，可同時選取多台。接著在右下角選擇要執行的動作：新增 / 移除"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Margin="0,0,0,6"
+                                   Text="{Binding CurrentPartnerName, StringFormat=目前客戶：{0}}"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="勾選要操作的機器，可同時選取多台。接著在右下角選擇要執行的動作：裝機 / 連線 / 退機 / 換機"/>
                     </StackPanel>
                     <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List}">
                         <ListView.View>
@@ -449,8 +540,10 @@
                         <RowDefinition/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0">
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="新增設備 (起表)"/>
-                        <TextBlock Style="{StaticResource SectionSub}" Text="先點「目前張數」讀取各機 SNMP 抄表作為起表值（可手動調整），確認無誤後點「新增並回報」送出"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="連線（起表 + 安裝服務）"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Margin="0,0,0,6"
+                                   Text="{Binding CurrentPartnerName, StringFormat=目前客戶：{0}}"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="先點「目前張數」讀取各機 SNMP 抄表作為起表值（可手動調整），確認無誤後點「連線並回報」上傳並安裝 printer_info 服務"/>
                     </StackPanel>
                     <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List2}">
                         <ListView.View>
@@ -531,23 +624,26 @@
                     </ListView>
                 </Grid>
 
-                <!-- Stage 4 : 移除設備 -->
+                <!-- Stage 5 : 退機（回庫存） -->
                 <Grid>
                     <Grid.Style>
                         <Style TargetType="Grid">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Stage}" Value="4"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                <DataTrigger Binding="{Binding Stage}" Value="5"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Grid.Style>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0">
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="移除設備 (尾表)"/>
-                        <TextBlock Style="{StaticResource SectionSub}" Text="先點「目前張數」讀取各機的尾表數，確認後點「移除並回報」將設備標示為退機"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="退機（回庫存）"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Margin="0,0,0,6"
+                                   Text="{Binding CurrentPartnerName, StringFormat=目前客戶：{0}}"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="建議先點「目前張數」讀取尾表上傳最後抄表；機器故障讀不到時仍可退機。退機後機器自客戶移除、回到庫存可再派，退機前張數會結算給該客戶"/>
                     </StackPanel>
                     <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List2}">
                         <ListView.View>
@@ -593,9 +689,149 @@
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
+                                <GridViewColumn Width="96" Header="回傳">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse><Ellipse.Style>
+                                                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                                            <Setter Property="Fill" Value="#9CA3AF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding upload}" Value="1"><Setter Property="Fill" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding upload}" Value="2"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="等待"/>
+                                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding upload}" Value="1"><Setter Property="Text" Value="失敗"/><Setter Property="Foreground" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding upload}" Value="2"><Setter Property="Text" Value="成功"/><Setter Property="Foreground" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                             </GridView>
                         </ListView.View>
                     </ListView>
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="備註（選填）"/>
+                        <TextBox Style="{StaticResource Input}" Text="{Binding LifecycleNote, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Stage 6 : 換機 -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="6"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="換機"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Margin="0,0,0,6"
+                                   Text="{Binding CurrentPartnerName, StringFormat=目前客戶：{0}}"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="建議先點「目前張數」讀取舊機尾表；從庫存挑選接手的新機後點「換機並回報」。新機將接手客戶、合約與計費設定，舊機回庫存。完成後請對新機執行「新增設備（起表）」"/>
+                    </StackPanel>
+
+                    <!-- 舊機（單選） -->
+                    <ListView Grid.Row="1" Style="{StaticResource ModernList}" ItemsSource="{Binding List2}" MaxHeight="110" Margin="0,0,0,16">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn DisplayMemberBinding="{Binding name}"          Width="160" Header="舊機"/>
+                                <GridViewColumn DisplayMemberBinding="{Binding serial_number}" Width="140" Header="機器碼"/>
+                                <GridViewColumn Width="96" Header="彩色尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding color_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="黑白尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding black_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="大張尾表">
+                                    <GridViewColumn.CellTemplate><DataTemplate><TextBox Text="{Binding large_sheets}" BorderThickness="0" Background="Transparent"/></DataTemplate></GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Width="96" Header="連線">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse><Ellipse.Style>
+                                                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                                            <Setter Property="Fill" Value="#9CA3AF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Fill" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="等待"/>
+                                                            <Setter Property="Foreground" Value="#6B7280"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding connect}" Value="1"><Setter Property="Text" Value="失敗"/><Setter Property="Foreground" Value="#EF4444"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding connect}" Value="2"><Setter Property="Text" Value="成功"/><Setter Property="Foreground" Value="#10B981"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <!-- 新機：從庫存挑選 -->
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="接手的新機（從庫存挑選，未指派客戶的事務機）"/>
+                        <ComboBox Style="{StaticResource InputCombo}"
+                                  ItemsSource="{Binding StockPrinterItems}"
+                                  SelectedValue="{Binding SelectedStockPrinterValue}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,6" Text="備註（選填）"/>
+                        <TextBox Style="{StaticResource Input}" Text="{Binding LifecycleNote, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Stage 7 : 新增設備（從庫存） -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Stage}" Value="7"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <StackPanel VerticalAlignment="Top">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="裝機（從庫存）"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Margin="0,0,0,6"
+                                   Text="{Binding CurrentPartnerName, StringFormat=目前客戶：{0}}"/>
+                        <TextBlock Style="{StaticResource SectionSub}" Text="從庫存挑選機器裝機給目前客戶。裝機後會自動勾選並前往「連線」，再進行起表與 printer_info 服務安裝"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="要加入的機器（庫存：未指派客戶的事務機）"/>
+                        <ComboBox Style="{StaticResource InputCombo}"
+                                  ItemsSource="{Binding StockPrinterItems}"
+                                  SelectedValue="{Binding SelectedStockPrinterValue}"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,6" Text="備註（選填）"/>
+                        <TextBox Style="{StaticResource Input}" Text="{Binding LifecycleNote, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
                 </Grid>
 
             </Grid>
@@ -653,8 +889,8 @@
                         </Button.Visibility>
                     </Button>
 
-                    <!-- Stage 2 -->
-                    <Button Style="{StaticResource BtnPrimary}" Content="新增設備" Command="{Binding StageNewCommand}" Name="btn_stage_new">
+                    <!-- Stage 2：四個生命週期動作（裝機綠/連線藍/退機橘/換機紫） -->
+                    <Button Style="{StaticResource BtnSuccess}" Content="＋ 裝機" Command="{Binding StageAddCommand}" Name="btn_stage_add">
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
@@ -662,7 +898,23 @@
                             </MultiBinding>
                         </Button.Visibility>
                     </Button>
-                    <Button Style="{StaticResource BtnGhost}" Content="移除設備" Command="{Binding StageRemoveCommand}" Name="btn_stage_remove">
+                    <Button Style="{StaticResource BtnPrimary}" Content="🖧 連線" Command="{Binding StageNewCommand}" Name="btn_stage_new">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="2"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnWarning}" Content="↩ 退機" Command="{Binding StageReturnCommand}" Name="btn_stage_return">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="2"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnPurple}" Content="⇄ 換機" Command="{Binding StageReplaceCommand}" Name="btn_stage_replace">
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
@@ -671,12 +923,12 @@
                         </Button.Visibility>
                     </Button>
 
-                    <!-- Stage 3 / 4 -->
+                    <!-- Stage 3 / 5 / 6 / 7 -->
                     <Button Style="{StaticResource BtnGhost}" Content="返回" Command="{Binding ReturnCommand}" Name="btn_return">
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
-                                <Binding Source="3,4"/>
+                                <Binding Source="3,5,6,7"/>
                             </MultiBinding>
                         </Button.Visibility>
                     </Button>
@@ -684,11 +936,11 @@
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
-                                <Binding Source="3,4"/>
+                                <Binding Source="3,5,6"/>
                             </MultiBinding>
                         </Button.Visibility>
                     </Button>
-                    <Button Style="{StaticResource BtnPrimary}" Content="新增並回報" Command="{Binding TestCommand}" Name="btn_test">
+                    <Button Style="{StaticResource BtnPrimary}" Content="🖧 連線並回報（起表+服務）" Command="{Binding TestCommand}" Name="btn_test">
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
@@ -696,11 +948,27 @@
                             </MultiBinding>
                         </Button.Visibility>
                     </Button>
-                    <Button Style="{StaticResource BtnPrimary}" Content="移除並回報" Command="{Binding RemoveCommand}" Name="btn_remove">
+                    <Button Style="{StaticResource BtnSuccess}" Content="＋ 裝機並前往連線" Command="{Binding AddDeviceCommand}" Name="btn_add_device">
                         <Button.Visibility>
                             <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
                                 <Binding Path="Stage"/>
-                                <Binding Source="4"/>
+                                <Binding Source="7"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnWarning}" Content="↩ 退機並回報" Command="{Binding ReturnDeviceCommand}" Name="btn_return_device">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="5"/>
+                            </MultiBinding>
+                        </Button.Visibility>
+                    </Button>
+                    <Button Style="{StaticResource BtnPurple}" Content="⇄ 換機並回報" Command="{Binding ReplaceDeviceCommand}" Name="btn_replace_device">
+                        <Button.Visibility>
+                            <MultiBinding Converter="{x:Static local:StageVisibilityConverter.Instance}">
+                                <Binding Path="Stage"/>
+                                <Binding Source="6"/>
                             </MultiBinding>
                         </Button.Visibility>
                     </Button>

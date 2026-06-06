@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -33,6 +33,12 @@ namespace printer_setup.ViewModels
         private RestClient _rest;
         private int _partnerId;
 
+        /// <summary>客戶 DB id（v1 lifecycle API 用；_partnerId 為客戶代碼，供舊版 /api/printer 介接）</summary>
+        private int _partnerDbId;
+
+        /// <summary>客戶代碼 → 客戶資料（DB id / 名稱）對照，由查詢結果建立</summary>
+        private readonly Dictionary<string, CompanyItem> _companyLookup = new Dictionary<string, CompanyItem>();
+
         public MainViewModel(string baseDirectory, AsyncLogger logger)
         {
             _logger = logger;
@@ -49,15 +55,19 @@ namespace printer_setup.ViewModels
             NextCommand        = new RelayCommand(_ => Stage++,                                        _ => !IsBusy);
             PrevCommand        = new RelayCommand(_ => Stage--,                                        _ => !IsBusy);
             ReturnCommand      = new RelayCommand(_ => GoToSelectDevice(),                             _ => !IsBusy);
-            StageNewCommand    = new RelayCommand(_ => EnterActionStage(StageKind.Install),            _ => !IsBusy);
-            StageRemoveCommand = new RelayCommand(_ => EnterActionStage(StageKind.Remove),             _ => !IsBusy);
+            StageNewCommand     = new RelayCommand(_ => EnterActionStage(StageKind.Install),           _ => !IsBusy);
+            StageReturnCommand  = new RelayCommand(_ => EnterActionStage(StageKind.Return),            _ => !IsBusy);
+            StageReplaceCommand = new AsyncRelayCommand(EnterReplaceStageAsync);
+            StageAddCommand     = new AsyncRelayCommand(EnterAddStageAsync);
 
             // 慢速（I/O：網路 / SNMP）
-            VerifyCommand  = new AsyncRelayCommand(RunVerify);
-            SearchCommand  = new AsyncRelayCommand(RunSearch);
-            PrinterCommand = new AsyncRelayCommand(RunPrinterScan);
-            TestCommand    = new AsyncRelayCommand(RunAddAndReport);
-            RemoveCommand  = new AsyncRelayCommand(RunRemoveAndReport);
+            VerifyCommand        = new AsyncRelayCommand(RunVerify);
+            SearchCommand        = new AsyncRelayCommand(RunSearch);
+            PrinterCommand       = new AsyncRelayCommand(RunPrinterScan);
+            TestCommand          = new AsyncRelayCommand(RunAddAndReport);
+            ReturnDeviceCommand  = new AsyncRelayCommand(RunReturnAndReport);
+            ReplaceDeviceCommand = new AsyncRelayCommand(RunReplaceAndReport);
+            AddDeviceCommand     = new AsyncRelayCommand(RunAddFromStock);
         }
 
         // ─── Bindable state ───────────────────────────────────────────────
@@ -96,6 +106,10 @@ namespace printer_setup.ViewModels
         private List<Pair> _companyItems;
         public List<Pair> CompanyItems { get => _companyItems; set => Set(ref _companyItems, value); }
 
+        /// <summary>目前選定客戶名稱 — 各操作頁顯示「正在此客戶端進行 安裝/連線/退機/換機」。</summary>
+        private string _currentPartnerName;
+        public string CurrentPartnerName { get => _currentPartnerName; set => Set(ref _currentPartnerName, value); }
+
         private object _selectedCompanyValue;
         public object SelectedCompanyValue
         {
@@ -105,16 +119,34 @@ namespace printer_setup.ViewModels
 
         // ─── Commands ─────────────────────────────────────────────────────
 
-        public ICommand VerifyCommand      { get; }
-        public ICommand SearchCommand      { get; }
-        public ICommand NextCommand        { get; }
-        public ICommand PrevCommand        { get; }
-        public ICommand ReturnCommand      { get; }
-        public ICommand StageNewCommand    { get; }
-        public ICommand StageRemoveCommand { get; }
-        public ICommand PrinterCommand     { get; }
-        public ICommand TestCommand        { get; }
-        public ICommand RemoveCommand      { get; }
+        public ICommand VerifyCommand       { get; }
+        public ICommand SearchCommand       { get; }
+        public ICommand NextCommand         { get; }
+        public ICommand PrevCommand         { get; }
+        public ICommand ReturnCommand       { get; }
+        public ICommand StageNewCommand     { get; }
+        public ICommand StageReturnCommand  { get; }
+        public ICommand StageReplaceCommand { get; }
+        public ICommand StageAddCommand     { get; }
+        public ICommand PrinterCommand      { get; }
+        public ICommand TestCommand         { get; }
+        public ICommand ReturnDeviceCommand  { get; }
+        public ICommand ReplaceDeviceCommand { get; }
+        public ICommand AddDeviceCommand     { get; }
+
+        // ─── 換機表單欄位（Stage 6）：新機從庫存挑選 ─────────────────────
+
+        private List<Pair> _stockPrinterItems;
+        public List<Pair> StockPrinterItems { get => _stockPrinterItems; set => Set(ref _stockPrinterItems, value); }
+
+        private object _selectedStockPrinterValue;
+        public object SelectedStockPrinterValue { get => _selectedStockPrinterValue; set => Set(ref _selectedStockPrinterValue, value); }
+
+        private bool _replaceCopyBilling = true;
+        public bool ReplaceCopyBilling { get => _replaceCopyBilling; set => Set(ref _replaceCopyBilling, value); }
+
+        private string _lifecycleNote;
+        public string LifecycleNote { get => _lifecycleNote; set => Set(ref _lifecycleNote, value); }
 
         /// <summary>View 透過 PasswordBox 讀值後觸發。</summary>
         public event Action AuthenticateRequested;
@@ -191,7 +223,12 @@ namespace printer_setup.ViewModels
                     _logger?.Write(new LogInfo { Category = "Search", Function = "Company", Option = "item", Message = $"id={item.id} / code={item.code} / name={item.name}" });
 
                 var list = new List<Pair>();
-                foreach (var item in response.data) list.Add(new Pair { Name = item.name, Value = item.code });
+                _companyLookup.Clear();
+                foreach (var item in response.data)
+                {
+                    list.Add(new Pair { Name = item.name, Value = item.code });
+                    _companyLookup[item.code] = item;
+                }
                 CompanyItems = list;
                 SelectedCompanyValue = list.Count > 0 ? list[0].Value : null;
             }
@@ -207,6 +244,15 @@ namespace printer_setup.ViewModels
             }
 
             _partnerId = pid;
+
+            // 解析客戶 DB id 與名稱（lifecycle API 與操作頁「目前客戶」顯示用）
+            var key = SelectedCompanyValue.ToString();
+            if (_companyLookup.TryGetValue(key, out var info))
+            {
+                _partnerDbId = info.id;
+                CurrentPartnerName = info.name;
+            }
+
             _logger?.Write(new LogInfo { Category = "ComboBox", Function = "GetPrinter", Option = "request", Message = $"partner_id={_partnerId}" });
             var printers = await Task.Run(() => _rest?.GetPrinter(_partnerId));
             if (printers == null)
@@ -355,72 +401,154 @@ namespace printer_setup.ViewModels
                 }
                 else
                 {
-                    MessageBox.Show("您所選擇的設備已 新增成功，printer_info 服務已啟動。", "新增設備");
+                    MessageBox.Show("您所選擇的設備已 連線並回報成功，printer_info 服務已啟動。", "連線");
                 }
                 GoToSelectDevice();
             }
         }
 
-        private async Task RunRemoveAndReport()
+
+        /// <summary>
+        /// 退機並回報：有讀到尾表（connect==2）者先上傳最後抄表，再呼叫退機 API。
+        /// 機器故障讀不到尾表時仍可退機（尾表略過），與「移除設備」必須通過識別驗證不同。
+        /// </summary>
+        private async Task RunReturnAndReport()
         {
             using (BusyScope())
             {
-                var skipped = new List<string>();
+                var failed = new List<string>();
                 var hostName = AutoUpdater.GetHostName();
                 var hostIp   = AutoUpdater.GetHostIp();
                 await Task.Run(() =>
                 {
                     foreach (var item in List2)
                     {
-                        // 必須先在「測試」頁面通過 SNMP 識別驗證（connect == 2）才允許 UpdateDevice/WriteMeter
-                        if (item.connect != 2)
-                        {
-                            item.upload = 1;
-                            skipped.Add(item.code);
-                            _logger?.Write(new LogInfo { File = "Error", Category = "Run", Function = "Remove", Option = "skip", Identity = item.code, Message = "scan 未成功，跳過 UpdateDevice/WriteMeter" });
-                            continue;
-                        }
                         try
                         {
-                            _logger?.Write(new LogInfo { Category = "Run", Function = "Remove", Option = "request", Identity = item.code });
+                            _logger?.Write(new LogInfo { Category = "Run", Function = "Return", Option = "request", Identity = item.code });
 
-                            _rest?.UpdateDevice(code: item.code, mac: item.mac, ip: item.ip,
-                                                serialNumber: item.serial_number, printerName: item.printer_name, isActive: false,
-                                                hostName: hostName, hostIp: hostIp);
-
-                            var ok = _rest?.WriteMeter(new RecordRequest
+                            // 尾表（best-effort）：SNMP 驗證成功才上傳最後抄表
+                            if (item.connect == 2)
                             {
-                                code = item.code,
-                                date = DateTime.Now.ToString("yyyy-MM-dd"),
-                                state = 2,
-                                host_name = hostName,
-                                host_ip   = hostIp,
-                                data = item.Inner.snmp_data,
-                                items = item.Inner.items,
-                            }) ?? false;
-                            item.upload = ok ? 2 : 1;
+                                _rest?.WriteMeter(new RecordRequest
+                                {
+                                    code = item.code,
+                                    date = DateTime.Now.ToString("yyyy-MM-dd"),
+                                    state = 2,
+                                    host_name = hostName,
+                                    host_ip   = hostIp,
+                                    data = item.Inner.snmp_data,
+                                    items = item.Inner.items,
+                                });
+                            }
 
-                            _logger?.Write(new LogInfo { Category = "Run", Function = "Remove", Option = ok ? "success" : "failed", Identity = item.code });
+                            var result = _rest?.ReturnPrinter(item.id, note: LifecycleNote);
+                            var ok = result?.success == true;
+                            item.upload = ok ? 2 : 1;
+                            if (!ok) failed.Add($"{item.code}：{result?.message ?? "無回應"}");
+
+                            _logger?.Write(new LogInfo { Category = "Run", Function = "Return", Option = ok ? "success" : "failed", Identity = item.code, Message = result?.message });
                         }
                         catch (Exception ex)
                         {
                             item.upload = 1;
-                            _logger?.Write(new LogInfo { File = "Error", Category = "Remove", Identity = item.code, Message = ex.Message });
+                            failed.Add($"{item.code}：{ex.Message}");
+                            _logger?.Write(new LogInfo { File = "Error", Category = "Return", Identity = item.code, Message = ex.Message });
                         }
                     }
                 });
 
-                if (skipped.Count > 0)
+                if (failed.Count > 0)
                 {
-                    MessageBox.Show(
-                        "以下事務機尚未通過 SNMP 識別驗證，已跳過退機：\n\n  • " + string.Join("\n  • ", skipped) +
-                        "\n\n請回到「測試」頁面重新檢查（mac/序號需與設備實際讀取一致）。",
-                        "識別驗證未通過", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("以下事務機退機失敗：\n\n  • " + string.Join("\n  • ", failed),
+                        "退機失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else
                 {
-                    MessageBox.Show("您所選擇的設備已 移除成功!!!", "移除設備");
+                    MessageBox.Show("您所選擇的設備已 退機成功，機器已回庫存。", "退機設備");
                 }
+                await ReloadPrintersAsync();
+                GoToSelectDevice();
+            }
+        }
+
+        /// <summary>
+        /// 換機並回報：舊機（單選）有讀到尾表者先上傳最後抄表，
+        /// 再呼叫換機 API：庫存新機接手客戶/合約/計費群組並複製計費設定，舊機回庫存。
+        /// 完成後請對新機執行「連線（起表）」上傳起表與耗材。
+        /// </summary>
+        private async Task RunReplaceAndReport()
+        {
+            if (List2.Count != 1)
+            {
+                MessageBox.Show("換機一次只能處理一台，請回到「選定事務機」勾選一台要換的舊機。", "提示");
+                return;
+            }
+            if (SelectedStockPrinterValue == null || !int.TryParse(SelectedStockPrinterValue.ToString(), out var newPrinterId) || newPrinterId <= 0)
+            {
+                MessageBox.Show("請從庫存挑選接手的新機。", "提示");
+                return;
+            }
+
+            using (BusyScope())
+            {
+                var oldItem = List2[0];
+                var hostName = AutoUpdater.GetHostName();
+                var hostIp   = AutoUpdater.GetHostIp();
+
+                LifecycleResponse result = null;
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        _logger?.Write(new LogInfo { Category = "Run", Function = "Replace", Option = "request", Identity = oldItem.code,
+                            Message = $"new_printer_id={newPrinterId}/copyBilling={ReplaceCopyBilling}" });
+
+                        // 舊機尾表（best-effort）
+                        if (oldItem.connect == 2)
+                        {
+                            _rest?.WriteMeter(new RecordRequest
+                            {
+                                code = oldItem.code,
+                                date = DateTime.Now.ToString("yyyy-MM-dd"),
+                                state = 2,
+                                host_name = hostName,
+                                host_ip   = hostIp,
+                                data = oldItem.Inner.snmp_data,
+                                items = oldItem.Inner.items,
+                            });
+                        }
+
+                        result = _rest?.ReplacePrinter(oldItem.id, newPrinterId,
+                            copyBilling: ReplaceCopyBilling,
+                            note: LifecycleNote);
+
+                        oldItem.upload = result?.success == true ? 2 : 1;
+                        _logger?.Write(new LogInfo { Category = "Run", Function = "Replace",
+                            Option = result?.success == true ? "success" : "failed", Identity = oldItem.code, Message = result?.message });
+                    }
+                    catch (Exception ex)
+                    {
+                        oldItem.upload = 1;
+                        result = new LifecycleResponse { success = false, message = ex.Message };
+                        _logger?.Write(new LogInfo { File = "Error", Category = "Replace", Identity = oldItem.code, Message = ex.Message });
+                    }
+                });
+
+                if (result?.success == true)
+                {
+                    MessageBox.Show(
+                        $"換機成功：新機（代碼 {result.newPrinterCode}）已接手客戶與計費設定，舊機回庫存。\n\n" +
+                        "清單已重新載入，請勾選新機執行「連線（起表）」上傳起表與耗材。",
+                        "換機設備");
+                    SelectedStockPrinterValue = null;
+                    LifecycleNote = null;
+                }
+                else
+                {
+                    MessageBox.Show($"換機失敗：{result?.message ?? "無回應"}", "換機失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                await ReloadPrintersAsync();
                 GoToSelectDevice();
             }
         }
@@ -428,6 +556,126 @@ namespace printer_setup.ViewModels
         // ─── Stage transitions / Helpers ─────────────────────────────────
 
         private void GoToSelectDevice() => Stage = (int)StageKind.SelectDevice;
+
+        /// <summary>進入裝機階段：載入庫存機清單供挑選要指派給目前客戶的機器。</summary>
+        private async Task EnterAddStageAsync()
+        {
+            if (_partnerDbId <= 0)
+            {
+                MessageBox.Show("請先在「選定客戶」查詢並選定客戶。", "提示");
+                return;
+            }
+
+            using (BusyScope())
+            {
+                var stock = await Task.Run(() => _rest?.GetStockPrinters());
+                if (stock == null || stock.Count == 0)
+                {
+                    MessageBox.Show("目前沒有庫存機（未指派客戶的事務機），請先於網頁端建立機器。", "提示");
+                    return;
+                }
+
+                var items = new List<Pair>();
+                foreach (var p in stock)
+                    items.Add(new Pair { Name = $"{p.name}（{p.code}）", Value = p.id });
+                StockPrinterItems = items;
+                SelectedStockPrinterValue = null;
+
+                Stage = (int)StageKind.AddFromStock;
+            }
+        }
+
+        /// <summary>
+        /// 裝機：把選定的庫存機指派給目前客戶，重新載入清單並自動勾選，
+        /// 前往「連線」階段進行起表與服務安裝。
+        /// </summary>
+        private async Task RunAddFromStock()
+        {
+            if (SelectedStockPrinterValue == null || !int.TryParse(SelectedStockPrinterValue.ToString(), out var printerId) || printerId <= 0)
+            {
+                MessageBox.Show("請從庫存挑選要加入的事務機。", "提示");
+                return;
+            }
+
+            using (BusyScope())
+            {
+                LifecycleResponse result = null;
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        _logger?.Write(new LogInfo { Category = "Run", Function = "AddFromStock", Option = "request",
+                            Identity = printerId.ToString(), Message = $"partner_db_id={_partnerDbId}" });
+                        result = _rest?.AssignPrinter(printerId, _partnerDbId, note: LifecycleNote);
+                        _logger?.Write(new LogInfo { Category = "Run", Function = "AddFromStock",
+                            Option = result?.success == true ? "success" : "failed", Identity = printerId.ToString(), Message = result?.message });
+                    }
+                    catch (Exception ex)
+                    {
+                        result = new LifecycleResponse { success = false, message = ex.Message };
+                        _logger?.Write(new LogInfo { File = "Error", Category = "AddFromStock", Identity = printerId.ToString(), Message = ex.Message });
+                    }
+                });
+
+                if (result?.success != true)
+                {
+                    MessageBox.Show($"裝機失敗：{result?.message ?? "無回應"}", "裝機", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                SelectedStockPrinterValue = null;
+                LifecycleNote = null;
+
+                // 重新載入清單、自動勾選剛加入的機器，直接前往「連線」做起表與服務安裝
+                await ReloadPrintersAsync();
+                foreach (var item in List) item.check = item.id == printerId;
+                EnterActionStage(StageKind.Install);
+
+                MessageBox.Show(
+                    "設備已裝機給目前客戶並自動勾選。\n請點「目前張數」讀取起表，確認後點「連線並回報」上傳並安裝服務。",
+                    "裝機");
+            }
+        }
+
+        /// <summary>進入換機階段：限制單選一台舊機，並載入庫存機清單供挑選新機。</summary>
+        private async Task EnterReplaceStageAsync()
+        {
+            var checkedCount = 0;
+            foreach (var item in List) if (item.check) checkedCount++;
+            if (checkedCount != 1)
+            {
+                MessageBox.Show("換機一次只能處理一台，請勾選一台要換的舊機。", "提示");
+                return;
+            }
+
+            using (BusyScope())
+            {
+                var stock = await Task.Run(() => _rest?.GetStockPrinters());
+                if (stock == null || stock.Count == 0)
+                {
+                    MessageBox.Show("目前沒有庫存機（未指派客戶的事務機）可供換機，請先於網頁端建立新機。", "提示");
+                    return;
+                }
+
+                var items = new List<Pair>();
+                foreach (var p in stock)
+                    items.Add(new Pair { Name = $"{p.name}（{p.code}）", Value = p.id });
+                StockPrinterItems = items;
+                SelectedStockPrinterValue = null;
+
+                EnterActionStage(StageKind.Replace);
+            }
+        }
+
+        /// <summary>重新載入目前客戶的事務機清單（換機/退機後同步最新狀態）。</summary>
+        private async Task ReloadPrintersAsync()
+        {
+            if (_partnerId <= 0) return;
+            var printers = await Task.Run(() => _rest?.GetPrinter(_partnerId));
+            if (printers == null) return;
+            List.Clear();
+            foreach (var p in printers) List.Add(new MfpItem(p));
+        }
 
         private void EnterActionStage(StageKind target)
         {

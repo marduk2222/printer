@@ -244,6 +244,112 @@ namespace Lib
             catch (Exception ex) { Log("WriteMeter", "exception", "meter", ex.Message); return false; }
         }
 
+        /// <summary>
+        /// POST /api/v1/printers/{id}/return — 退機：關閉使用紀錄、機器回庫存（清除客戶、合約結束日填退機日）。
+        /// 失敗時 message 帶回伺服器錯誤原因。
+        /// </summary>
+        public LifecycleResponse ReturnPrinter(int printerId, string date = null, string note = null)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(new
+                {
+                    date = date ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                    note
+                }, CamelSettings);
+                var body = PostAllowError($"/api/v1/printers/{printerId}/return", json);
+                var response = Deserialize<LifecycleResponse>(body);
+                return response ?? new LifecycleResponse { success = false, message = "伺服器無回應" };
+            }
+            catch (Exception ex)
+            {
+                Log("ReturnPrinter", "exception", printerId.ToString(), ex.Message);
+                return new LifecycleResponse { success = false, message = ex.Message };
+            }
+        }
+
+        /// <summary>
+        /// POST /api/v1/printers/{id}/replace — 換機：新機從庫存挑選（newPrinterId），
+        /// 接手客戶/合約/計費群組並複製計費設定，舊機回庫存。成功時回傳 newPrinterId / newPrinterCode。
+        /// </summary>
+        public LifecycleResponse ReplacePrinter(int oldPrinterId, int newPrinterId,
+            bool copyBilling = true, string date = null, string note = null)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(new
+                {
+                    date = date ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                    newPrinterId,
+                    copyBilling,
+                    note
+                }, CamelSettings);
+                var body = PostAllowError($"/api/v1/printers/{oldPrinterId}/replace", json);
+                var response = Deserialize<LifecycleResponse>(body);
+                return response ?? new LifecycleResponse { success = false, message = "伺服器無回應" };
+            }
+            catch (Exception ex)
+            {
+                Log("ReplacePrinter", "exception", oldPrinterId.ToString(), ex.Message);
+                return new LifecycleResponse { success = false, message = ex.Message };
+            }
+        }
+
+        /// <summary>
+        /// POST /api/v1/printers/{id}/assign — 把庫存機指派給客戶並開使用紀錄（新增設備用）。
+        /// </summary>
+        public LifecycleResponse AssignPrinter(int printerId, int partnerId, string date = null, string note = null)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(new
+                {
+                    partnerId,
+                    date = date ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                    note
+                }, CamelSettings);
+                var body = PostAllowError($"/api/v1/printers/{printerId}/assign", json);
+                var response = Deserialize<LifecycleResponse>(body);
+                return response ?? new LifecycleResponse { success = false, message = "伺服器無回應" };
+            }
+            catch (Exception ex)
+            {
+                Log("AssignPrinter", "exception", printerId.ToString(), ex.Message);
+                return new LifecycleResponse { success = false, message = ex.Message };
+            }
+        }
+
+        /// <summary>
+        /// GET /api/v1/printers?unassigned=true — 庫存機清單（未指派客戶），換機挑選新機用。
+        /// 注意：v1 API 的 model/brand 是物件（非字串代碼），須用 PrinterV1Dto 反序列化。
+        /// </summary>
+        public List<Printer> GetStockPrinters()
+        {
+            try
+            {
+                var body = Get("/api/v1/printers?unassigned=true&isActive=true&pageSize=500");
+                var data = Deserialize<List<PrinterV1Dto>>(body);
+                if (data == null) return null;
+
+                var list = new List<Printer>();
+                foreach (var p in data)
+                {
+                    list.Add(new Printer
+                    {
+                        id            = p.id,
+                        code          = p.code,
+                        name          = p.name ?? "",
+                        mac           = p.mac ?? "",
+                        ip            = p.ip ?? "",
+                        serial_number = p.serialNumber ?? "",
+                        is_active     = p.isActive,
+                    });
+                }
+                return list;
+            }
+            catch (Exception ex) { Log("GetStockPrinters", "exception", "stock", ex.Message); return null; }
+        }
+
         /// <summary>POST /api/install — 安裝/退機/換機事件紀錄（state "0"|"1"|"2"|"3"）</summary>
         public bool CreateInstall(string code, int state, string date = null)
         {
@@ -292,6 +398,21 @@ namespace Lib
             var body = response.Content.ReadAsStringAsync().Result;
             Log("Post", response.IsSuccessStatusCode ? "response" : "error", endpoint, body);
             return response.IsSuccessStatusCode ? body : null;
+        }
+
+        /// <summary>
+        /// 同 Post，但非 2xx 也回傳 body —
+        /// /api/v1/printers/{id}/replace、/return 失敗時以 400 + { success, message } 回應，需讀取錯誤原因。
+        /// </summary>
+        private string PostAllowError(string endpoint, string json)
+        {
+            var url = $"{_baseUrl}{endpoint}";
+            Log("Post", "request", endpoint, RedactSnmpDataForLog(json));
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = _client.PostAsync(url, content).Result;
+            var body = response.Content.ReadAsStringAsync().Result;
+            Log("Post", response.IsSuccessStatusCode ? "response" : "error", endpoint, body);
+            return body;
         }
 
         /// <summary>
@@ -408,5 +529,30 @@ namespace Lib
         public int id { get; set; }
         public string name { get; set; }
         public string mobile { get; set; }
+    }
+
+    /// <summary>
+    /// /api/v1/printers 清單項目（entity 直出，camelCase；model/brand 為物件故不宣告，僅取需要的純量欄位）
+    /// </summary>
+    internal class PrinterV1Dto
+    {
+        public int id { get; set; }
+        public string code { get; set; }
+        public string name { get; set; }
+        public string serialNumber { get; set; }
+        public string ip { get; set; }
+        public string mac { get; set; }
+        public bool isActive { get; set; }
+    }
+
+    /// <summary>/api/v1/printers/{id}/replace、/return 的回應</summary>
+    internal class LifecycleResponse
+    {
+        public bool success { get; set; }
+        public string message { get; set; }
+        public int? oldPrinterId { get; set; }
+        public int? newPrinterId { get; set; }
+        public string newPrinterCode { get; set; }
+        public int? printerId { get; set; }
     }
 }

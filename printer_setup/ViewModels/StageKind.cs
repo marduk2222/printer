@@ -9,8 +9,11 @@ namespace printer_setup.ViewModels
         Login        = 0,
         SelectClient = 1,
         SelectDevice = 2,
-        Install      = 3,
-        Remove       = 4,
+        Install      = 3,   // 連線設備（起表 + 安裝服務）
+        Remove       = 4,   // （已停用，保留編號避免 XAML trigger 位移）
+        Return       = 5,
+        Replace      = 6,
+        AddFromStock = 7,   // 新增設備（從庫存指派給客戶）
     }
 
     /// <summary>

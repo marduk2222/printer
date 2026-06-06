@@ -33,6 +33,27 @@ namespace printer_setup
             Closing += (_, __) => _logger.Dispose();
         }
 
+        /// <summary>登入畫面：帳號欄按 Enter → 跳至密碼欄。</summary>
+        private void StaffAc_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                staff_pw.Focus();
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>登入畫面：密碼欄按 Enter → 執行驗證/登入。</summary>
+        private void StaffPw_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                if (_vm.VerifyCommand.CanExecute(null))
+                    _vm.VerifyCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
+
         private void LoadLogo()
         {
             try
