@@ -47,7 +47,47 @@
         </div>
     </div>
     <div id="viewActions" class="gap-2" style="display:flex;">
+        @{
+            var prevPrinter = ViewBag.PrevPrinter as dynamic;
+            var nextPrinter = ViewBag.NextPrinter as dynamic;
+        }
+        <div class="btn-group" role="group">
+            @if (prevPrinter != null)
+            {
+                <a id="prevPrinterLink" asp-action="Details" asp-route-id="@prevPrinter.Id"
+                   class="btn btn-outline-secondary btn-sm" title="上一筆：@prevPrinter.Name（@prevPrinter.Code）　快捷鍵 ←">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="已是第一筆">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+            }
+            <span class="btn btn-outline-secondary btn-sm pe-none" title="目前位置／總筆數">
+                第 @ViewBag.PrinterPosition / @ViewBag.PrinterTotal 筆
+            </span>
+            @if (nextPrinter != null)
+            {
+                <a id="nextPrinterLink" asp-action="Details" asp-route-id="@nextPrinter.Id"
+                   class="btn btn-outline-secondary btn-sm" title="下一筆：@nextPrinter.Name（@nextPrinter.Code）　快捷鍵 →">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="已是最後一筆">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            }
+        </div>
         <button type="button" class="btn btn-warning btn-sm" onclick="toggleEdit(true)">編輯</button>
+        @if (Model.PartnerId.HasValue)
+        {
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#replaceModal">換機</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#returnModal">退機</button>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
     </div>
     <div id="editActions" class="gap-2" style="display:none;">
@@ -55,6 +95,21 @@
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleEdit(false)">取消</button>
     </div>
 </div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <form asp-action="Edit" method="post" id="editForm">
     <input type="hidden" asp-for="Id" />
@@ -150,7 +205,36 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header">合約資訊</div>
+        <div class="card-header">說明</div>
+        <div class="card-body">
+            <span class="view-mode">@(string.IsNullOrEmpty(Model.Description) ? "無" : Model.Description)</span>
+            <textarea asp-for="Description" class="form-control edit-mode" rows="3" style="display:none"></textarea>
+        </div>
+    </div>
+
+    @{
+        // 合約狀態：未填寫(灰) / 未開始(藍) / 進行中(綠) / 即將到期(黃) / 已到期(紅)
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var (contractLabel, contractBadge) =
+            !Model.ContractEndDate.HasValue ? ("未填寫", "bg-secondary")
+            : Model.ContractStatus == "expired" ? ("已到期", "bg-danger")
+            : Model.ContractStatus == "expiring" ? ("即將到期", "bg-warning text-dark")
+            : (Model.ContractStartDate.HasValue && Model.ContractStartDate.Value > today) ? ("未開始", "bg-info text-dark")
+            : ("進行中", "bg-success");
+    }
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <span>合約資訊</span>
+            <span class="d-flex align-items-center gap-2">
+                <span class="badge @contractBadge">@contractLabel</span>
+                <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#contractCollapse"
+                        aria-expanded="false" aria-controls="contractCollapse" title="展開/收合">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </span>
+        </div>
+        <div class="collapse" id="contractCollapse">
         <div class="card-body">
             <dl class="row mb-0">
                 <dt class="col-sm-3">合約開始日期</dt>
@@ -188,13 +272,6 @@
                 </dd>
             </dl>
         </div>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header">說明</div>
-        <div class="card-body">
-            <span class="view-mode">@(string.IsNullOrEmpty(Model.Description) ? "無" : Model.Description)</span>
-            <textarea asp-for="Description" class="form-control edit-mode" rows="3" style="display:none"></textarea>
         </div>
     </div>
 
@@ -210,13 +287,25 @@
     var dYellowLow = Model.DrumYellow.HasValue && Model.DrumYellow < Model.DrumYellowAlertThreshold;
 }
 <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
         <span>耗材狀態</span>
-        @if (Model.HasLowSupply)
-        {
-            <span class="badge bg-danger">耗材不足</span>
-        }
+        <span class="d-flex align-items-center gap-2">
+            @if (Model.HasLowSupply)
+            {
+                <span class="badge bg-danger">耗材不足</span>
+            }
+            else
+            {
+                <span class="badge bg-success">正常</span>
+            }
+            <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#supplyCollapse"
+                    aria-expanded="true" aria-controls="supplyCollapse" title="展開/收合">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </span>
     </div>
+    <div class="collapse show" id="supplyCollapse">
     <div class="card-body">
         <div class="row">
             <!-- 碳粉狀態 -->
@@ -281,8 +370,145 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 </form>
+
+@{
+    var usageRecords = ViewBag.UsageRecords as List<printer.Data.Entities.PrinterUsageRecord> ?? new List<printer.Data.Entities.PrinterUsageRecord>();
+    var totalWorkedDays = (int)(ViewBag.TotalWorkedDays ?? 0);
+    var workedYears = totalWorkedDays / 365;
+    var workedMonths = (totalWorkedDays % 365) / 30;
+    var workedDisplay = totalWorkedDays >= 365 ? $"{totalWorkedDays:N0} 天（約 {workedYears} 年 {workedMonths} 個月）"
+                      : totalWorkedDays >= 60 ? $"{totalWorkedDays:N0} 天（約 {totalWorkedDays / 30} 個月）"
+                      : $"{totalWorkedDays:N0} 天";
+    var replacedFrom = ViewBag.ReplacedFromPrinter as printer.Data.Entities.Printer;
+}
+<style>
+    /* 卡片收合圖示：展開時箭頭旋轉 180 度 */
+    .collapse-toggle .bi { display: inline-block; transition: transform .2s; }
+    .collapse-toggle[aria-expanded="true"] .bi { transform: rotate(180deg); }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <span>裝機歷程 <span class="text-muted small ms-1">（@usageRecords.Count 筆）</span></span>
+        <span class="d-flex align-items-center gap-2">
+            @if (replacedFrom != null)
+            {
+                <span class="badge bg-info text-dark" title="本機為換機接手">
+                    接替自：<a asp-action="Details" asp-route-id="@replacedFrom.Id" class="text-dark">@replacedFrom.Name (@replacedFrom.Code)</a>
+                </span>
+            }
+            <span class="badge bg-secondary">已工作時長：@workedDisplay</span>
+            <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#usageCollapse"
+                    aria-expanded="false" aria-controls="usageCollapse" title="展開/收合">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </span>
+    </div>
+    <div class="collapse" id="usageCollapse">
+    <div class="card-body p-0">
+        @if (usageRecords.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>開始日期</th>
+                            <th>結束日期</th>
+                            <th>客戶</th>
+                            <th class="text-end">時長（天）</th>
+                            <th>狀態</th>
+                            <th>備註</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in usageRecords)
+                        {
+                            <tr>
+                                <td>@u.StartDate.ToString("yyyy-MM-dd")</td>
+                                <td>@(u.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                <td>
+                                    @if (u.Partner != null)
+                                    {
+                                        <a asp-controller="Partner" asp-action="Details" asp-route-id="@u.PartnerId">@u.Partner.Name</a>
+                                    }
+                                </td>
+                                <td class="text-end">@u.DurationDays.ToString("N0")</td>
+                                <td>
+                                    @if (u.EndDate == null)
+                                    {
+                                        <span class="badge bg-success">使用中</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@u.EndReasonDisplay</span>
+                                        @if (u.ReplacementPrinter != null)
+                                        {
+                                            <a asp-action="Details" asp-route-id="@u.ReplacementPrinterId" class="ms-1 small">→ @u.ReplacementPrinter.Name</a>
+                                        }
+                                    }
+                                </td>
+                                <td class="small text-muted">@u.Note</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-3 text-muted">尚無裝機歷程</div>
+        }
+    </div>
+    </div>
+</div>
+
+@{
+    var billingGroup = ViewBag.BillingGroup as printer.Data.Entities.PrinterBillingGroup;
+}
+@if (billingGroup != null)
+{
+    @* 計費群組：預設收合，只顯示一行摘要 *@
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <span>
+                計費群組：<strong>@billingGroup.Name</strong>
+                <span class="text-muted small ms-1">（成員 @billingGroup.Members.Count 台，張數合併計費）</span>
+            </span>
+            <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#groupDetailCollapse"
+                    aria-expanded="false" aria-controls="groupDetailCollapse" title="展開/收合">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse" id="groupDetailCollapse">
+            <div class="card-body py-2">
+                <dl class="row mb-2">
+                    <dt class="col-sm-2">結帳客戶</dt>
+                    <dd class="col-sm-10 mb-1">@billingGroup.BillingPartner?.Name</dd>
+                    <dt class="col-sm-2">成員</dt>
+                    <dd class="col-sm-10 mb-1">
+                        @foreach (var m in billingGroup.Members.OrderBy(m => m.BillingGroupSortOrder).ThenBy(m => m.Name))
+                        {
+                            if (m.Id == Model.Id)
+                            {
+                                <span class="badge bg-primary me-1 mb-1">@m.Name（本機）</span>
+                            }
+                            else
+                            {
+                                <a asp-action="Details" asp-route-id="@m.Id" class="badge bg-light text-dark border me-1 mb-1 text-decoration-none">@m.Name</a>
+                            }
+                        }
+                    </dd>
+                </dl>
+                <a asp-controller="BillingGroup" asp-action="Edit" asp-route-id="@billingGroup.Id" class="btn btn-sm btn-outline-primary">管理群組</a>
+            </div>
+        </div>
+    </div>
+}
 
 @if (ViewBag.BillingEnabled == true)
 {
@@ -296,9 +522,27 @@
     {
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span>計費方式</span>
-            <a asp-controller="BillingConfig" asp-action="Edit" asp-route-printerId="@Model.Id" class="btn btn-sm btn-warning">編輯計費</a>
+            <span>
+                計費方式
+                @if (config.MonthlyFee > 0)
+                {
+                    <span class="text-muted small ms-1">（月租 $@config.MonthlyFee.ToString("N0")@(sheetPrices.Any() ? $"，{sheetPrices.Count} 種張數類型" : "")）</span>
+                }
+                else if (sheetPrices.Any())
+                {
+                    <span class="text-muted small ms-1">（@sheetPrices.Count 種張數類型）</span>
+                }
+            </span>
+            <span class="d-flex align-items-center gap-2">
+                <a asp-controller="BillingConfig" asp-action="Edit" asp-route-printerId="@Model.Id" class="btn btn-sm btn-warning">編輯計費</a>
+                <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#billingCollapse"
+                        aria-expanded="false" aria-controls="billingCollapse" title="展開/收合">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </span>
         </div>
+        <div class="collapse" id="billingCollapse">
         <div class="card-body">
                 <!-- 基本設定列 -->
                 <div class="row mb-3">
@@ -390,6 +634,7 @@
                     </div>
                 </div>
         </div>
+        </div>
     </div>
     } // end if (config != null && config.IsEnabled)
 }
@@ -405,7 +650,15 @@
         ["cancelled"] = ("已取消","bg-danger"),
     };
     <div class="card mb-3">
-        <div class="card-header">帳單記錄</div>
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <span>帳單記錄 <span class="text-muted small ms-1">（@printerInvoices.Count 筆）</span></span>
+            <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#invoiceCollapse"
+                    aria-expanded="false" aria-controls="invoiceCollapse" title="展開/收合">
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse" id="invoiceCollapse">
         <div class="card-body p-0">
             @if (printerInvoices.Any())
             {
@@ -446,11 +699,20 @@
                 <div class="text-center py-3 text-muted">尚無帳單記錄</div>
             }
         </div>
+        </div>
     </div>
 }
 
 <div class="card mb-3">
-    <div class="card-header">維護人員</div>
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <span>維護人員 <span class="text-muted small ms-1">（@Model.Maintainers.Count 人）</span></span>
+        <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                data-bs-toggle="collapse" data-bs-target="#maintainerCollapse"
+                aria-expanded="false" aria-controls="maintainerCollapse" title="展開/收合">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+    </div>
+    <div class="collapse" id="maintainerCollapse">
     <div class="card-body">
         @if (Model.Maintainers.Any())
         {
@@ -526,12 +788,21 @@
             </form>
         }
     </div>
+    </div>
 </div>
 
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header">最近抄表記錄</div>
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span>最近抄表記錄 <span class="text-muted small ms-1">（@Model.PrintRecords.Count 筆）</span></span>
+                <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#recordsCollapse"
+                        aria-expanded="false" aria-controls="recordsCollapse" title="展開/收合">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" id="recordsCollapse">
             <div class="card-body">
                 @{
                     var recordSheetTypes = ViewBag.RecordSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
@@ -570,11 +841,20 @@
                     <p class="text-muted mb-0">無記錄</p>
                 }
             </div>
+            </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header">告警記錄</div>
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span>告警記錄 <span class="text-muted small ms-1">（@Model.AlertRecords.Count 筆）</span></span>
+                <button class="btn btn-sm btn-light border collapse-toggle" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#alertsCollapse"
+                        aria-expanded="true" aria-controls="alertsCollapse" title="展開/收合">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="alertsCollapse">
             <div class="card-body">
                 @if (Model.AlertRecords.Any())
                 {
@@ -609,9 +889,171 @@
                     <p class="text-muted mb-0">無告警</p>
                 }
             </div>
+            </div>
         </div>
     </div>
 </div>
+
+@* ───── 換機 Modal ───── *@
+@if (Model.PartnerId.HasValue)
+{
+    var stockPrinters = ViewBag.StockPrinters as IEnumerable<dynamic>;
+    <div class="modal fade" id="replaceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <form asp-action="Replace" method="post" class="modal-content">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">換機 — @Model.Name (@Model.Code)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small mb-3">
+                        換機後：新機接手客戶「<strong>@Model.Partner?.Name</strong>」、合約與計費群組；舊機回庫存並結束合約。
+                        換機前的張數會結算至換機日，列入同一張帳單。
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">換機日期</label>
+                            <input type="date" name="date" class="form-control form-control-sm"
+                                   value="@DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-8 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" name="copyBilling" value="true" checked class="form-check-input" id="copyBillingCheck" />
+                                <label class="form-check-label" for="copyBillingCheck">複製計費設定到新機（月租、各張數類型單價/贈送/誤印率/階梯）</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="newSource" id="srcStock" value="stock" checked onchange="toggleNewSource()" />
+                            <label class="form-check-label" for="srcStock">從庫存挑選</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="newSource" id="srcSame" value="same" onchange="toggleNewSource()" />
+                            <label class="form-check-label" for="srcSame">同客戶既有設備</label>
+                        </div>
+                    </div>
+
+                    <div id="stockSection" class="mb-3">
+                        <label class="form-label">庫存機（未指派客戶）</label>
+                        <select name="newPrinterId" id="stockSelect" class="form-select form-select-sm">
+                            <option value="">請選擇...</option>
+                            @if (stockPrinters != null)
+                            {
+                                foreach (var sp in stockPrinters)
+                                {
+                                    <option value="@sp.Id">@sp.Name（@sp.Code）</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div id="sameSection" class="mb-3" style="display:none">
+                        <label class="form-label">同客戶既有設備 <span class="text-muted small">（沿用其裝機歷程，接手舊機的合約/群組/計費）</span></label>
+                        <select name="newPrinterId" id="sameSelect" class="form-select form-select-sm" disabled>
+                            <option value="">請選擇...</option>
+                            @{
+                                var assignedPrinters = ViewBag.AssignedPrinters as IEnumerable<dynamic>;
+                            }
+                            @if (assignedPrinters != null)
+                            {
+                                foreach (var ap in assignedPrinters)
+                                {
+                                    <option value="@ap.Id">@ap.Name（@ap.Code）</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    @{
+                        var meterSheetTypes = ViewBag.RecordSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
+                    }
+                    @if (meterSheetTypes.Any())
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">補登舊機尾表 <span class="text-muted small">（選填；已事先補登抄表或可正常抄表者留空）</span></label>
+                            <div class="row g-2">
+                                @foreach (var st in meterSheetTypes)
+                                {
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">@st.Name</span>
+                                            <input type="number" name="finalMeter[@st.Id]" class="form-control" min="0" placeholder="張數" />
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <small class="text-muted">有填寫時會以換機日建立一筆尾表抄表記錄，計入該客戶當期帳單。</small>
+                        </div>
+                    }
+                    <div class="mb-0">
+                        <label class="form-label">備註</label>
+                        <input type="text" name="note" class="form-control form-control-sm" placeholder="例：機器故障無法維修，原廠換新" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary btn-sm">確認換機</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ───── 退機 Modal ───── *@
+    <div class="modal fade" id="returnModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form asp-action="Return" method="post" class="modal-content">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">退機 — @Model.Name (@Model.Code)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning small mb-3">
+                        退機後機器將自客戶「<strong>@Model.Partner?.Name</strong>」移除、回到庫存可再派；
+                        合約結束日填入退機日。退機前的張數會結算至退機日，列入該客戶帳單。
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">退機日期</label>
+                        <input type="date" name="date" class="form-control form-control-sm"
+                               value="@DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")" />
+                    </div>
+                    @{
+                        var returnMeterTypes = ViewBag.RecordSheetTypes as List<printer.Data.Entities.SheetType> ?? new List<printer.Data.Entities.SheetType>();
+                    }
+                    @if (returnMeterTypes.Any())
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">補登尾表 <span class="text-muted small">（選填；已事先補登抄表或可正常抄表者留空）</span></label>
+                            <div class="row g-2">
+                                @foreach (var st in returnMeterTypes)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">@st.Name</span>
+                                            <input type="number" name="finalMeter[@st.Id]" class="form-control" min="0" placeholder="張數" />
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <small class="text-muted">有填寫時會以退機日建立一筆尾表抄表記錄，計入該客戶當期帳單。</small>
+                        </div>
+                    }
+                    <div class="mb-0">
+                        <label class="form-label">備註</label>
+                        <input type="text" name="note" class="form-control form-control-sm" placeholder="例：合約到期不續租" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger btn-sm">確認退機</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
@@ -668,7 +1110,47 @@
         document.getElementById('detailBrandSelect').addEventListener('change', function() {
             filterDetailModels(this.value ? parseInt(this.value) : null);
         });
+
+        // 換機 modal：廠牌 → 型號連動
+        var newBrandSelect = document.getElementById('newBrandSelect');
+        if (newBrandSelect) {
+            newBrandSelect.addEventListener('change', function() {
+                var brandId = this.value ? parseInt(this.value) : null;
+                var sel = document.getElementById('newModelSelect');
+                sel.innerHTML = '<option value="">請選擇</option>';
+                var filtered = brandId ? allModels.filter(m => m.brandId === brandId) : allModels;
+                filtered.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.text = m.name;
+                    sel.appendChild(opt);
+                });
+            });
+        }
     });
+
+    // 上一筆 / 下一筆 鍵盤快捷鍵（← / →）；輸入框聚焦或編輯模式中不觸發
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        var tag = (document.activeElement?.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        if (document.getElementById('editActions').style.display !== 'none') return; // 編輯模式中
+        if (document.querySelector('.modal.show')) return;                           // modal 開啟中
+        var link = document.getElementById(e.key === 'ArrowLeft' ? 'prevPrinterLink' : 'nextPrinterLink');
+        if (link) link.click();
+    });
+
+    // 換機 modal：新機來源切換（庫存 / 同客戶既有設備）；停用未選用的下拉避免重複送出 newPrinterId
+    function toggleNewSource() {
+        var isStock = document.getElementById('srcStock').checked;
+        var stockSelect = document.getElementById('stockSelect');
+        var sameSelect = document.getElementById('sameSelect');
+        document.getElementById('stockSection').style.display = isStock ? '' : 'none';
+        document.getElementById('sameSection').style.display = isStock ? 'none' : '';
+        stockSelect.disabled = !isStock;
+        sameSelect.disabled = isStock;
+        if (isStock) { sameSelect.value = ''; } else { stockSelect.value = ''; }
+    }
 
     function toggleEdit(editing) {
         document.querySelectorAll('.view-mode').forEach(function (el) { el.style.display = editing ? 'none' : ''; });

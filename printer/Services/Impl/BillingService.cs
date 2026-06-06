@@ -396,6 +396,42 @@ public class BillingService : IBillingService
             results.Add(calculation);
         }
 
+        // 期間內曾屬於該客戶、但已換機/退機/異動離開的機器：
+        // 依使用紀錄裁切計費區間納入，避免換機當期漏帳
+        var exUsages = await _context.PrinterUsageRecords
+            .Include(u => u.Printer)
+            .Where(u => u.PartnerId == partnerId
+                && u.EndDate != null
+                && u.StartDate <= endDate && u.EndDate >= startDate
+                && u.Printer!.PartnerId != partnerId
+                && u.Printer.BillingGroupId == null)
+            .ToListAsync();
+
+        foreach (var usage in exUsages)
+        {
+            var clipStart = usage.StartDate > startDate ? usage.StartDate : startDate;
+            var clipEnd = usage.EndDate!.Value < endDate ? usage.EndDate.Value : endDate;
+            if (clipStart > clipEnd) continue;
+
+            var calculation = await CalculateAsync(usage.PrinterId, clipStart, clipEnd);
+            if (calculation.TotalFee <= 0) continue;
+
+            calculation.PrinterName = $"{calculation.PrinterName}（{usage.EndReasonDisplay} {usage.EndDate:yyyy-MM-dd}，結算至離機日）";
+            results.Add(calculation);
+
+            // 換機月月租由舊機計收：同期接手的新機（複製了相同月租設定）本期月租歸零，避免重複收費
+            if (usage.EndReason == "replace" && usage.ReplacementPrinterId.HasValue && calculation.MonthlyFee > 0)
+            {
+                var newCalc = results.FirstOrDefault(r => r.PrinterId == usage.ReplacementPrinterId.Value);
+                if (newCalc != null && newCalc.MonthlyFee > 0)
+                {
+                    newCalc.TotalFee -= newCalc.MonthlyFee;
+                    newCalc.MonthlyFee = 0;
+                    newCalc.Breakdown = "換機月月租由舊機計收，本期月租 $0\n" + newCalc.Breakdown;
+                }
+            }
+        }
+
         return results;
     }
 

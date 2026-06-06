@@ -12,10 +12,12 @@ namespace printer.Controllers;
 public class PrinterController : Controller
 {
     private readonly PrinterDbContext _context;
+    private readonly Services.IPrinterLifecycleService _lifecycleService;
 
-    public PrinterController(PrinterDbContext context)
+    public PrinterController(PrinterDbContext context, Services.IPrinterLifecycleService lifecycleService)
     {
         _context = context;
+        _lifecycleService = lifecycleService;
     }
 
     public async Task<IActionResult> Index(string? keyword, int? partnerId, bool? isActive, int page = 1)
@@ -84,7 +86,10 @@ public class PrinterController : Controller
 
     public async Task<IActionResult> Details(int id)
     {
+        // AsSplitQuery：多個集合 Include 拆成個別 SQL，
+        // 避免單一巨型 join 要求過大記憶體配額（SQL Express 會 RESOURCE_SEMAPHORE 排隊而逾時）
         var printer = await _context.Printers
+            .AsSplitQuery()
             .Include(p => p.Partner)
             .Include(p => p.Model)
             .ThenInclude(m => m!.Brand)
@@ -166,9 +171,140 @@ public class PrinterController : Controller
             ViewBag.PrinterInvoices = printerInvoices;
         }
 
+        // 上一筆 / 下一筆（依事務機列表排序：Id 由大到小），含目前位置與總筆數
+        ViewBag.PrevPrinter = await _context.Printers
+            .Where(p => p.Id > id)
+            .OrderBy(p => p.Id)
+            .Select(p => new { p.Id, p.Name, p.Code })
+            .FirstOrDefaultAsync();
+        ViewBag.NextPrinter = await _context.Printers
+            .Where(p => p.Id < id)
+            .OrderByDescending(p => p.Id)
+            .Select(p => new { p.Id, p.Name, p.Code })
+            .FirstOrDefaultAsync();
+        ViewBag.PrinterPosition = await _context.Printers.CountAsync(p => p.Id > id) + 1;
+        ViewBag.PrinterTotal = await _context.Printers.CountAsync();
+
+        // 計費群組（詳情頁縮排一行顯示，點開才展開成員）
+        if (printer.BillingGroupId.HasValue)
+        {
+            ViewBag.BillingGroup = await _context.PrinterBillingGroups
+                .Include(g => g.BillingPartner)
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(g => g.Id == printer.BillingGroupId.Value);
+        }
+
+        // 客戶使用紀錄與已工作時長
+        var (usageRecords, totalDays) = await _lifecycleService.GetUsageAsync(id);
+        ViewBag.UsageRecords = usageRecords;
+        ViewBag.TotalWorkedDays = totalDays;
+
+        // 換機 modal 用：庫存機（未指派客戶）+ 本客戶的既有設備
+        ViewBag.StockPrinters = await _context.Printers
+            .Where(p => p.PartnerId == null && p.IsActive && p.Id != id)
+            .OrderBy(p => p.Name)
+            .Select(p => new { p.Id, p.Code, p.Name })
+            .ToListAsync();
+        ViewBag.AssignedPrinters = printer.PartnerId.HasValue
+            ? await _context.Printers
+                .Where(p => p.PartnerId == printer.PartnerId && p.IsActive && p.Id != id)
+                .OrderBy(p => p.Name)
+                .Select(p => new { p.Id, p.Code, p.Name })
+                .ToListAsync()
+            : null;
+
+        // 本機接替的舊機（換機鏈）
+        if (printer.ReplacedFromPrinterId.HasValue)
+        {
+            ViewBag.ReplacedFromPrinter = await _context.Printers
+                .FirstOrDefaultAsync(p => p.Id == printer.ReplacedFromPrinterId.Value);
+        }
+
         await LoadViewBagData();
         return View(printer);
     }
+
+    #region 換機 / 退機
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Replace(int id, DateOnly? date, int? newPrinterId,
+        string? newCode, string? newName, int? newBrandId, int? newModelId,
+        string? newSerialNumber, string? newIp, string? newMac,
+        bool copyBilling = true, string? note = null,
+        [FromForm] Dictionary<int, string>? finalMeter = null)
+    {
+        try
+        {
+            var request = new Models.ReplacePrinterRequest
+            {
+                Date = date,
+                NewPrinterId = newPrinterId,
+                CopyBilling = copyBilling,
+                Note = note,
+                FinalMeter = ParseFinalMeter(finalMeter)
+            };
+            if (!newPrinterId.HasValue && !string.IsNullOrWhiteSpace(newName))
+            {
+                request.NewPrinter = new Models.NewPrinterData
+                {
+                    Code = newCode,
+                    Name = newName,
+                    BrandId = newBrandId,
+                    ModelId = newModelId,
+                    SerialNumber = newSerialNumber,
+                    Ip = newIp,
+                    Mac = newMac
+                };
+            }
+
+            var newPrinter = await _lifecycleService.ReplaceAsync(id, request);
+            TempData["Success"] = $"換機完成：由「{newPrinter.Name}」({newPrinter.Code}) 接手";
+            return RedirectToAction(nameof(Details), new { id = newPrinter.Id });
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"換機失敗：{ex.Message}";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Return(int id, DateOnly? date, string? note,
+        [FromForm] Dictionary<int, string>? finalMeter = null)
+    {
+        try
+        {
+            var printer = await _lifecycleService.ReturnAsync(id, new Models.ReturnPrinterRequest
+            {
+                Date = date,
+                Note = note,
+                FinalMeter = ParseFinalMeter(finalMeter)
+            });
+            TempData["Success"] = $"退機完成：「{printer.Name}」已回庫存";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"退機失敗：{ex.Message}";
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>表單尾表欄位（SheetTypeId → 文字）轉成數值字典；空白與非數字略過。</summary>
+    private static Dictionary<int, int>? ParseFinalMeter(Dictionary<int, string>? finalMeter)
+    {
+        if (finalMeter == null) return null;
+        var result = new Dictionary<int, int>();
+        foreach (var kv in finalMeter)
+        {
+            if (int.TryParse(kv.Value, out var v) && v > 0)
+                result[kv.Key] = v;
+        }
+        return result.Count > 0 ? result : null;
+    }
+
+    #endregion
 
     public async Task<IActionResult> Create()
     {
@@ -200,6 +336,11 @@ public class PrinterController : Controller
             printer.CreatedAt = DateTime.UtcNow;
             printer.UpdatedAt = DateTime.UtcNow;
             _context.Printers.Add(printer);
+
+            // 建立時已指派客戶 → 開使用紀錄
+            if (printer.PartnerId.HasValue)
+                _lifecycleService.RecordPartnerChange(printer, null, printer.PartnerId);
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
@@ -229,6 +370,10 @@ public class PrinterController : Controller
             var existing = await _context.Printers.FindAsync(id);
             if (existing == null)
                 return NotFound();
+
+            // 客戶異動 → 維護使用紀錄（關舊開新）
+            if (existing.PartnerId != printer.PartnerId)
+                _lifecycleService.RecordPartnerChange(existing, existing.PartnerId, printer.PartnerId);
 
             existing.Code = printer.Code;
             existing.Name = printer.Name;

@@ -326,6 +326,12 @@ public class Printer
     public int? BillingGroupId { get; set; }
 
     /// <summary>
+    /// 換機鏈 — 本機是接替哪一台機器（換機時由系統寫入）
+    /// </summary>
+    [Column("replaced_from_printer_id")]
+    public int? ReplacedFromPrinterId { get; set; }
+
+    /// <summary>
     /// 建立時間
     /// </summary>
     [Column("created_at")]
@@ -350,7 +356,11 @@ public class Printer
     [ForeignKey("BillingGroupId")]
     public virtual PrinterBillingGroup? BillingGroup { get; set; }
 
+    [ForeignKey("ReplacedFromPrinterId")]
+    public virtual Printer? ReplacedFromPrinter { get; set; }
+
     public virtual ICollection<PrintRecord> PrintRecords { get; set; } = new List<PrintRecord>();
+    public virtual ICollection<PrinterUsageRecord> UsageRecords { get; set; } = new List<PrinterUsageRecord>();
     public virtual ICollection<AlertRecord> AlertRecords { get; set; } = new List<AlertRecord>();
     public virtual ICollection<PrinterMaintainer> Maintainers { get; set; } = new List<PrinterMaintainer>();
 }

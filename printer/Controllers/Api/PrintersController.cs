@@ -13,10 +13,12 @@ namespace printer.Controllers.Api;
 public class PrintersController : ControllerBase
 {
     private readonly PrinterDbContext _context;
+    private readonly Services.IPrinterLifecycleService _lifecycleService;
 
-    public PrintersController(PrinterDbContext context)
+    public PrintersController(PrinterDbContext context, Services.IPrinterLifecycleService lifecycleService)
     {
         _context = context;
+        _lifecycleService = lifecycleService;
     }
 
     /// <summary>
@@ -27,6 +29,7 @@ public class PrintersController : ControllerBase
         [FromQuery] string? keyword,
         [FromQuery] int? partnerId,
         [FromQuery] bool? isActive,
+        [FromQuery] bool? unassigned,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
@@ -47,6 +50,12 @@ public class PrintersController : ControllerBase
         if (partnerId.HasValue)
         {
             query = query.Where(p => p.PartnerId == partnerId.Value);
+        }
+
+        // 庫存機（未指派客戶）— printer_setup 換機挑選新機用
+        if (unassigned == true)
+        {
+            query = query.Where(p => p.PartnerId == null);
         }
 
         if (isActive.HasValue)
@@ -265,4 +274,98 @@ public class PrintersController : ControllerBase
             sheetTypes = sheetTypes
         });
     }
+
+    #region 換機 / 退機 / 使用紀錄
+
+    /// <summary>
+    /// 換機：舊機回庫存，新機（NewPrinterId 從庫存挑選，或 NewPrinter 現場新建）接手客戶、合約與計費設定
+    /// </summary>
+    [HttpPost("{id}/replace")]
+    public async Task<ActionResult> Replace(int id, [FromBody] Models.ReplacePrinterRequest request)
+    {
+        try
+        {
+            var newPrinter = await _lifecycleService.ReplaceAsync(id, request);
+            return Ok(new
+            {
+                success = true,
+                message = $"換機完成：由「{newPrinter.Name}」({newPrinter.Code}) 接手",
+                oldPrinterId = id,
+                newPrinterId = newPrinter.Id,
+                newPrinterCode = newPrinter.Code
+            });
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// 指派：把庫存機指派給客戶並開使用紀錄（printer_setup 新增設備用）
+    /// </summary>
+    [HttpPost("{id}/assign")]
+    public async Task<ActionResult> Assign(int id, [FromBody] Models.AssignPrinterRequest request)
+    {
+        try
+        {
+            var p = await _lifecycleService.AssignAsync(id, request);
+            return Ok(new { success = true, message = $"「{p.Name}」已指派給客戶", printerId = p.Id, printerCode = p.Code });
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// 退機：關閉使用紀錄、機器回庫存
+    /// </summary>
+    [HttpPost("{id}/return")]
+    public async Task<ActionResult> Return(int id, [FromBody] Models.ReturnPrinterRequest? request)
+    {
+        try
+        {
+            var p = await _lifecycleService.ReturnAsync(id, request ?? new Models.ReturnPrinterRequest());
+            return Ok(new { success = true, message = $"退機完成：「{p.Name}」已回庫存", printerId = p.Id });
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// 取得事務機的客戶使用紀錄與已工作時長（天）
+    /// </summary>
+    [HttpGet("{id}/usage-records")]
+    public async Task<ActionResult> GetUsageRecords(int id)
+    {
+        var printer = await _context.Printers.FindAsync(id);
+        if (printer == null)
+            return NotFound();
+
+        var (records, totalDays) = await _lifecycleService.GetUsageAsync(id);
+        return Ok(new
+        {
+            printerId = id,
+            totalWorkedDays = totalDays,
+            records = records.Select(u => new
+            {
+                u.Id,
+                u.PartnerId,
+                partnerName = u.Partner?.Name,
+                startDate = u.StartDate.ToString("yyyy-MM-dd"),
+                endDate = u.EndDate?.ToString("yyyy-MM-dd"),
+                durationDays = u.DurationDays,
+                endReason = u.EndReason,
+                endReasonDisplay = u.EndReasonDisplay,
+                replacementPrinterId = u.ReplacementPrinterId,
+                replacementPrinterName = u.ReplacementPrinter?.Name,
+                u.Note
+            })
+        });
+    }
+
+    #endregion
 }

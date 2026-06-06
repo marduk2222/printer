@@ -199,6 +199,15 @@ public class PrinterDbContext : DbContext
 
     #endregion
 
+    #region 機器生命週期
+
+    /// <summary>
+    /// 事務機客戶使用紀錄（換機/退機/客戶異動歷程）
+    /// </summary>
+    public DbSet<PrinterUsageRecord> PrinterUsageRecords { get; set; }
+
+    #endregion
+
     #region 派工系統
 
     /// <summary>
@@ -299,6 +308,34 @@ public class PrinterDbContext : DbContext
                 .WithMany(g => g.Members)
                 .HasForeignKey(e => e.BillingGroupId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // 換機鏈（自我參照，不可 cascade）
+            entity.HasOne(e => e.ReplacedFromPrinter)
+                .WithMany()
+                .HasForeignKey(e => e.ReplacedFromPrinterId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // PrinterUsageRecord（客戶使用紀錄）
+        modelBuilder.Entity<PrinterUsageRecord>(entity =>
+        {
+            entity.HasIndex(e => e.PrinterId);
+            entity.HasIndex(e => new { e.PartnerId, e.StartDate });
+
+            entity.HasOne(e => e.Printer)
+                .WithMany(p => p.UsageRecords)
+                .HasForeignKey(e => e.PrinterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Partner)
+                .WithMany()
+                .HasForeignKey(e => e.PartnerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.ReplacementPrinter)
+                .WithMany()
+                .HasForeignKey(e => e.ReplacementPrinterId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         // PrintRecord

@@ -42,6 +42,7 @@ builder.Services.AddScoped<IModuleService, ModuleService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IWorkOrderService, WorkOrderService>();
+builder.Services.AddScoped<IPrinterLifecycleService, PrinterLifecycleService>();
 
 // 發票平台 providers
 builder.Services.AddHttpClient();
