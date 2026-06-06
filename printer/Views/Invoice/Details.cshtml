@@ -18,6 +18,15 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4>帳單詳情</h4>
     <div class="d-flex gap-2">
+        @{
+            var navPrev = ViewBag.NavPrev as dynamic;
+            var navNext = ViewBag.NavNext as dynamic;
+            ViewData["PrevUrl"] = navPrev != null ? Url.Action("Details", new { id = (int)navPrev.Id }) : null;
+            ViewData["PrevTitle"] = navPrev != null ? (string)navPrev.Name : null;
+            ViewData["NextUrl"] = navNext != null ? Url.Action("Details", new { id = (int)navNext.Id }) : null;
+            ViewData["NextTitle"] = navNext != null ? (string)navNext.Name : null;
+        }
+        <partial name="_PrevNextNav" />
         @if (canEdit)
         {
             <div id="viewActions" class="gap-2" style="display:flex;">
@@ -56,7 +65,7 @@
         <form asp-action="Edit" asp-route-id="@Model.Id" method="post" id="editForm">
 
             @* 帳單資訊 *@
-            <div class="card mb-3">
+            <div class="card mb-3" data-no-collapse>
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>帳單資訊</span>
                     <span class="badge @status.Item2">@status.Item1</span>
@@ -100,9 +109,24 @@
                 </div>
             </div>
 
+            @* 說明 *@
+            <div class="card mb-3">
+                <div class="card-header">說明</div>
+                <div class="card-body">
+                    <span class="view-mode">@(string.IsNullOrEmpty(Model.Note) ? "（無）" : Model.Note)</span>
+                    <textarea name="note" class="form-control edit-mode" rows="3" style="display:none">@Model.Note</textarea>
+                </div>
+            </div>
+
             @* 帳單明細 *@
             <div class="card mb-3">
-                <div class="card-header">帳單明細</div>
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span>帳單明細（@Model.Items.Count）</span>
+                    @* 縮排時仍可見總計（收合按鈕由 card-collapse.js 附加在最右） *@
+                    <span class="ms-auto me-2 small text-muted">
+                        總計 <strong class="text-dark">$@Model.GrandTotal.ToString("N0")</strong>
+                    </span>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-sm mb-0">
@@ -177,20 +201,11 @@
                 </div>
             </div>
 
-            @* 備註 *@
-            <div class="card mb-3">
-                <div class="card-header">備註</div>
-                <div class="card-body">
-                    <span class="view-mode">@(string.IsNullOrEmpty(Model.Note) ? "（無）" : Model.Note)</span>
-                    <textarea name="note" class="form-control edit-mode" rows="3" style="display:none">@Model.Note</textarea>
-                </div>
-            </div>
-
         </form>
     </div>
 
     <div class="col-md-4">
-        <div class="card">
+        <div class="card" data-no-collapse>
             <div class="card-header fw-bold">列印帳單</div>
             <div class="card-body">
                 <a href="@Url.Action("Print", new { id = Model.Id })" target="_blank"
@@ -268,7 +283,7 @@
             </div>
         }
 
-        <div class="card mt-3">
+        <div class="card mt-3" data-no-collapse>
             <div class="card-header">金額摘要</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -294,6 +309,7 @@
 </div>
 
 @section Scripts {
+<script src="~/js/card-collapse.js" asp-append-version="true"></script>
 <script>
     function toggleEdit(editing) {
         document.querySelectorAll('.view-mode').forEach(el => el.style.display = editing ? 'none' : '');

@@ -249,6 +249,15 @@ public class EinvoiceController : Controller
             .Where(a => a.EinvoiceId == id)
             .OrderByDescending(a => a.Id)
             .ToListAsync();
+
+        // 上一筆 / 下一筆（發票間切換，依 Id 由大到小）
+        ViewBag.NavPrev = await _context.Einvoices.Where(e => e.Id > id).OrderBy(e => e.Id)
+            .Select(e => new { e.Id, Name = e.InvoiceNumber }).FirstOrDefaultAsync();
+        ViewBag.NavNext = await _context.Einvoices.Where(e => e.Id < id).OrderByDescending(e => e.Id)
+            .Select(e => new { e.Id, Name = e.InvoiceNumber }).FirstOrDefaultAsync();
+        ViewBag.NavPosition = await _context.Einvoices.CountAsync(e => e.Id > id) + 1;
+        ViewBag.NavTotal = await _context.Einvoices.CountAsync();
+
         return View(einvoice);
     }
 

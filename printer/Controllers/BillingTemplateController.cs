@@ -35,6 +35,15 @@ public class BillingTemplateController : Controller
         var template = await _billingService.GetTemplateAsync(id);
         if (template == null) return NotFound();
         await LoadViewBagData(id);
+
+        // 上一筆 / 下一筆（模板間切換，依 Id 由大到小）
+        ViewBag.NavPrev = await _context.BillingTemplates.Where(t => t.Id > id).OrderBy(t => t.Id)
+            .Select(t => new { t.Id, t.Name }).FirstOrDefaultAsync();
+        ViewBag.NavNext = await _context.BillingTemplates.Where(t => t.Id < id).OrderByDescending(t => t.Id)
+            .Select(t => new { t.Id, t.Name }).FirstOrDefaultAsync();
+        ViewBag.NavPosition = await _context.BillingTemplates.CountAsync(t => t.Id > id) + 1;
+        ViewBag.NavTotal = await _context.BillingTemplates.CountAsync();
+
         return View(template);
     }
 

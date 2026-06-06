@@ -116,6 +116,14 @@ public class BillingGroupController : Controller
             .ToListAsync();
         ViewBag.MemberConfigs = configs.ToDictionary(c => c.PrinterId, c => c.MonthlyFee);
 
+        // 上一筆 / 下一筆（群組間切換，依 Id 由大到小）
+        ViewBag.NavPrev = await _context.PrinterBillingGroups.Where(g => g.Id > id).OrderBy(g => g.Id)
+            .Select(g => new { g.Id, g.Name }).FirstOrDefaultAsync();
+        ViewBag.NavNext = await _context.PrinterBillingGroups.Where(g => g.Id < id).OrderByDescending(g => g.Id)
+            .Select(g => new { g.Id, g.Name }).FirstOrDefaultAsync();
+        ViewBag.NavPosition = await _context.PrinterBillingGroups.CountAsync(g => g.Id > id) + 1;
+        ViewBag.NavTotal = await _context.PrinterBillingGroups.CountAsync();
+
         return View(group);
     }
 

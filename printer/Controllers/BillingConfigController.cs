@@ -123,6 +123,16 @@ public class BillingConfigController : Controller
         ViewBag.SheetTiersJson = System.Text.Json.JsonSerializer.Serialize(
             sheetTiers.Select(t => new { sheetTypeId = t.SheetTypeId, fromPages = t.FromPages, toPages = t.ToPages, price = t.Price }));
 
+        // 上一筆 / 下一筆（在「已有計費設定」的事務機之間切換，依 PrinterId 由大到小）
+        ViewBag.NavPrev = await _context.PrinterBillingConfigs.Where(c => c.PrinterId > printerId)
+            .OrderBy(c => c.PrinterId)
+            .Select(c => new { Id = c.PrinterId, Name = c.Printer!.Name }).FirstOrDefaultAsync();
+        ViewBag.NavNext = await _context.PrinterBillingConfigs.Where(c => c.PrinterId < printerId)
+            .OrderByDescending(c => c.PrinterId)
+            .Select(c => new { Id = c.PrinterId, Name = c.Printer!.Name }).FirstOrDefaultAsync();
+        ViewBag.NavPosition = await _context.PrinterBillingConfigs.CountAsync(c => c.PrinterId > printerId) + 1;
+        ViewBag.NavTotal = await _context.PrinterBillingConfigs.CountAsync();
+
         return View(config);
     }
 

@@ -43,6 +43,15 @@
         </div>
     </div>
     <div id="viewActions" class="gap-2" style="display:flex;">
+        @{
+            var navPrev = ViewBag.NavPrev as dynamic;
+            var navNext = ViewBag.NavNext as dynamic;
+            ViewData["PrevUrl"] = navPrev != null ? Url.Action("Details", new { id = (int)navPrev.Id }) : null;
+            ViewData["PrevTitle"] = navPrev != null ? (string)navPrev.Name : null;
+            ViewData["NextUrl"] = navNext != null ? Url.Action("Details", new { id = (int)navNext.Id }) : null;
+            ViewData["NextTitle"] = navNext != null ? (string)navNext.Name : null;
+        }
+        <partial name="_PrevNextNav" />
         <button type="button" class="btn btn-warning btn-sm" onclick="toggleEdit(true)">編輯</button>
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回列表</a>
     </div>
@@ -58,7 +67,7 @@
 
     <div class="row">
         <div class="col-md-6">
-            <div class="card mb-3">
+            <div class="card mb-3" data-no-collapse>
                 <div class="card-header">基本資料</div>
                 <div class="card-body">
                     <dl class="row mb-0">
@@ -99,7 +108,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card mb-3">
+            <div class="card mb-3" data-no-collapse>
                 <div class="card-header">聯絡資訊</div>
                 <div class="card-body">
                     <dl class="row mb-0">
@@ -134,8 +143,8 @@
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header">備註</div>
+    <div class="card mb-3" data-no-collapse>
+        <div class="card-header">說明</div>
         <div class="card-body">
             <span class="view-mode">@(string.IsNullOrEmpty(Model.Note) ? "無" : Model.Note)</span>
             <textarea asp-for="Note" class="form-control edit-mode" rows="3" style="display:none"></textarea>
@@ -159,10 +168,10 @@
         };
     }
 
-    <div class="card mb-3">
+    <div class="card mb-3" data-collapsed>
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>發票資訊</span>
-            <button type="button" id="toggleInvoiceAdvancedBtn" class="btn btn-sm btn-outline-secondary"
+            <button type="button" id="toggleInvoiceAdvancedBtn" class="btn btn-sm btn-outline-secondary ms-auto"
                     onclick="toggleInvoiceAdvanced()" title="顯示/隱藏進階條件">+ 進階</button>
         </div>
         <div class="card-body">
@@ -242,10 +251,10 @@
     </div>
 </form>
 
-<div class="card mb-3">
+<div class="card mb-3" data-collapsed>
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>公司連絡人 (@Model.Contacts.Count)</span>
-        <button type="button" class="btn btn-sm btn-primary" onclick="showAddContactModal()">新增連絡人</button>
+        <button type="button" class="btn btn-sm btn-primary ms-auto" onclick="showAddContactModal()">新增連絡人</button>
     </div>
     <div class="card-body p-0">
         @if (Model.Contacts.Any())
@@ -295,10 +304,10 @@
     </div>
 </div>
 
-<div class="card mb-3">
+<div class="card mb-3" data-collapsed>
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>帳單資訊 (@Model.BillingInfos.Count)</span>
-        <button type="button" class="btn btn-sm btn-primary" onclick="showAddBillingInfoModal()">新增帳單資訊</button>
+        <button type="button" class="btn btn-sm btn-primary ms-auto" onclick="showAddBillingInfoModal()">新增帳單資訊</button>
     </div>
     <div class="card-body p-0">
         @if (Model.BillingInfos.Any())
@@ -339,7 +348,7 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card" data-collapsed>
     <div class="card-header">事務機列表 (@Model.Printers.Count)</div>
     <div class="card-body">
         @if (Model.Printers.Any())
@@ -630,3 +639,4 @@
             .catch(function(err) { alert('刪除失敗：' + err.message); });
     }
 </script>
+<script src="~/js/card-collapse.js" asp-append-version="true"></script>

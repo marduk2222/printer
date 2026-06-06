@@ -76,6 +76,14 @@ public class PartnerController : Controller
         partner.BillingInfos = partner.BillingInfos.OrderBy(b => b.SortOrder).ThenBy(b => b.Id).ToList();
         partner.Printers = partner.Printers.OrderBy(pr => pr.SortOrder).ThenBy(pr => pr.Id).ToList();
 
+        // 上一筆 / 下一筆（依客戶列表排序：Id 由大到小）
+        ViewBag.NavPrev = await _context.Partners.Where(p => p.Id > id).OrderBy(p => p.Id)
+            .Select(p => new { p.Id, p.Name }).FirstOrDefaultAsync();
+        ViewBag.NavNext = await _context.Partners.Where(p => p.Id < id).OrderByDescending(p => p.Id)
+            .Select(p => new { p.Id, p.Name }).FirstOrDefaultAsync();
+        ViewBag.NavPosition = await _context.Partners.CountAsync(p => p.Id > id) + 1;
+        ViewBag.NavTotal = await _context.Partners.CountAsync();
+
         return View(partner);
     }
 

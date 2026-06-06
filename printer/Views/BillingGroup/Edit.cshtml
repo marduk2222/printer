@@ -15,6 +15,15 @@
         <small class="text-muted">@Model.Name</small>
     </div>
     <div class="d-flex gap-2">
+        @{
+            var navPrev = ViewBag.NavPrev as dynamic;
+            var navNext = ViewBag.NavNext as dynamic;
+            ViewData["PrevUrl"] = navPrev != null ? Url.Action("Edit", new { id = (int)navPrev.Id }) : null;
+            ViewData["PrevTitle"] = navPrev != null ? (string)navPrev.Name : null;
+            ViewData["NextUrl"] = navNext != null ? Url.Action("Edit", new { id = (int)navNext.Id }) : null;
+            ViewData["NextTitle"] = navNext != null ? (string)navNext.Name : null;
+        }
+        <partial name="_PrevNextNav" />
         <button type="submit" form="groupForm" class="btn btn-success btn-sm">儲存變更</button>
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">返回</a>
         <button type="submit" form="deleteGroupForm" class="btn btn-outline-danger btn-sm"
@@ -81,10 +90,62 @@
                 </div>
             </div>
 
+            <!-- 群組成員（位於 groupForm 內，內部操作以 form 屬性繫結至表單外的 addMemberForm / removeMemberForm，避免巢狀表單） -->
+            <div class="card mb-3">
+                <div class="card-header"><span class="badge bg-primary me-2">2</span>群組成員 (@Model.Members.Count)</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px"></th>
+                                <th>事務機</th>
+                                <th>客戶</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersBody">
+                            @foreach (var m in Model.Members)
+                            {
+                                <tr data-id="@m.Id">
+                                    <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
+                                    <td>
+                                        <strong>@m.Name</strong><br />
+                                        <small class="text-muted">@m.Code</small>
+                                    </td>
+                                    <td><small>@m.Partner?.Name</small></td>
+                                    <td>
+                                        <button type="submit" form="removeMemberForm" name="printerId" value="@m.Id"
+                                                class="btn btn-sm btn-outline-danger py-0"
+                                                onclick="return confirm('確定移出？')">×</button>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Members.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted small">尚無成員</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-body border-top">
+                    <div class="d-flex gap-2">
+                        <select name="printerId" form="addMemberForm" class="form-select form-select-sm ts-select" required>
+                            <option value="">選擇要加入的事務機...</option>
+                            @foreach (var p in nonMembers)
+                            {
+                                <option value="@p.Id">@p.Name (@p.Partner?.Name)</option>
+                            }
+                        </select>
+                        <button type="submit" form="addMemberForm" class="btn btn-sm btn-primary">加入</button>
+                    </div>
+                    <small class="text-muted d-block mt-1">支援跨客戶選擇。是否同步調整贈送張數共用池由上方「群組設定」旗標控制。</small>
+                </div>
+            </div>
+
             <!-- 成員月租明細 -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <span class="badge bg-primary me-2">2</span>成員月租明細
+                    <span class="badge bg-primary me-2">3</span>成員月租明細
                 </div>
                 <div class="card-body">
                     <small class="text-muted d-block mb-2">
@@ -143,7 +204,7 @@
             <!-- 張數計費（群組層級） -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <span class="badge bg-primary me-2">3</span>張數計費（群組合併）
+                    <span class="badge bg-primary me-2">4</span>張數計費（群組合併）
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
@@ -190,6 +251,14 @@
                 </div>
             </div>
         </form>
+
+        @* 群組成員操作的實體表單（在 groupForm 外，供卡片內按鈕以 form 屬性繫結） *@
+        <form asp-action="RemoveMember" asp-route-id="@Model.Id" method="post" id="removeMemberForm" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+        <form asp-action="AddMember" asp-route-id="@Model.Id" method="post" id="addMemberForm" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
     </div>
 
 <div class="col-md-4">
@@ -210,62 +279,6 @@
                 <small class="text-muted d-block mt-2">
                     模板的張數類型計費會匯入；月租欄位忽略（群組無月租）。
                 </small>
-            </div>
-        </div>
-
-        <!-- 群組成員 -->
-        <div class="card mb-3">
-            <div class="card-header"><span class="badge bg-primary me-2">4</span>群組成員 (@Model.Members.Count)</div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:30px"></th>
-                            <th>事務機</th>
-                            <th>客戶</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="membersBody">
-                        @foreach (var m in Model.Members)
-                        {
-                            <tr data-id="@m.Id">
-                                <td class="drag-handle text-muted text-center" style="cursor:grab" title="拖曳調整順序">≡</td>
-                                <td>
-                                    <strong>@m.Name</strong><br />
-                                    <small class="text-muted">@m.Code</small>
-                                </td>
-                                <td><small>@m.Partner?.Name</small></td>
-                                <td>
-                                    <form asp-action="RemoveMember" asp-route-id="@Model.Id" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="printerId" value="@m.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0"
-                                                onclick="return confirm('確定移出？')">×</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                        @if (!Model.Members.Any())
-                        {
-                            <tr><td colspan="4" class="text-center text-muted small">尚無成員</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-body border-top">
-                <form asp-action="AddMember" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
-                    @Html.AntiForgeryToken()
-                    <select name="printerId" class="form-select form-select-sm ts-select" required>
-                        <option value="">選擇要加入的事務機...</option>
-                        @foreach (var p in nonMembers)
-                        {
-                            <option value="@p.Id">@p.Name (@p.Partner?.Name)</option>
-                        }
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary">加入</button>
-                </form>
-                <small class="text-muted d-block mt-1">支援跨客戶選擇。是否同步調整贈送張數共用池由上方「群組設定」旗標控制。</small>
             </div>
         </div>
 

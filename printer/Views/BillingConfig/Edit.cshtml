@@ -10,6 +10,15 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4>編輯計費設定</h4>
     <div class="d-flex gap-2">
+        @{
+            var navPrev = ViewBag.NavPrev as dynamic;
+            var navNext = ViewBag.NavNext as dynamic;
+            ViewData["PrevUrl"] = navPrev != null ? Url.Action("Edit", new { printerId = (int)navPrev.Id }) : null;
+            ViewData["PrevTitle"] = navPrev != null ? (string)navPrev.Name : null;
+            ViewData["NextUrl"] = navNext != null ? Url.Action("Edit", new { printerId = (int)navNext.Id }) : null;
+            ViewData["NextTitle"] = navNext != null ? (string)navNext.Name : null;
+        }
+        <partial name="_PrevNextNav" />
         <button type="submit" form="billingConfigForm" class="btn btn-success btn-sm">儲存變更</button>
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">取消</a>
         @if (Model.Id > 0)
@@ -60,7 +69,7 @@
         }
 
         <!-- 事務機資訊 -->
-        <div class="card mb-3">
+        <div class="card mb-3" data-no-collapse>
             <div class="card-header">事務機資訊</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -87,17 +96,25 @@
             </div>
         </div>
 
+        <!-- 說明（textarea 以 form 屬性繫結至 billingConfigForm，可放在 form 外） -->
+        <div class="card mb-3" data-no-collapse>
+            <div class="card-header">說明</div>
+            <div class="card-body">
+                <textarea asp-for="Note" form="billingConfigForm" class="form-control" rows="2" placeholder="計費相關說明..."></textarea>
+            </div>
+        </div>
+
         <!-- ===== 主要計費設定 form ===== -->
         <form asp-action="Edit" method="post" id="billingConfigForm">
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="PrinterId" />
             <input type="hidden" asp-for="CreatedAt" />
 
-            <!-- 啟用 -->
-            <div class="card mb-3">
-                <div class="card-header"><span class="badge bg-primary me-2">1</span>啟用設定</div>
-                <div class="card-body">
-                    <div class="form-check form-switch">
+            <!-- 啟用：標題靠左、開關靠右（無收合） -->
+            <div class="card mb-3" data-no-collapse>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><span class="badge bg-primary me-2">1</span>啟用設定</span>
+                    <div class="form-check form-switch mb-0 ms-auto">
                         <input asp-for="IsEnabled" class="form-check-input" type="checkbox" id="isEnabled" />
                         <label class="form-check-label fw-bold" for="isEnabled">啟用計費</label>
                     </div>
@@ -105,10 +122,10 @@
             </div>
 
             <!-- 月租費 -->
-            <div class="card mb-3">
+            <div class="card mb-3" data-no-collapse>
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><span class="badge bg-primary me-2">2</span>月租費</span>
-                    <div class="form-check form-switch mb-0">
+                    <div class="form-check form-switch mb-0 ms-auto">
                         <input class="form-check-input" type="checkbox" id="monthlyToggle" />
                         <label class="form-check-label" for="monthlyToggle">啟用</label>
                     </div>
@@ -144,10 +161,10 @@
             </div>
 
             <!-- 張數計費 -->
-            <div class="card mb-3">
+            <div class="card mb-3" data-no-collapse>
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><span class="badge bg-primary me-2">3</span>張數計費</span>
-                    <div class="form-check form-switch mb-0">
+                    <div class="form-check form-switch mb-0 ms-auto">
                         <input class="form-check-input" type="checkbox" id="pageToggle" />
                         <label class="form-check-label" for="pageToggle">啟用</label>
                     </div>
@@ -207,14 +224,6 @@
                 </div>
             </div>
 
-            <!-- 備註 -->
-            <div class="card mb-3">
-                <div class="card-header"><span class="badge bg-primary me-2">4</span>備註</div>
-                <div class="card-body">
-                    <textarea asp-for="Note" class="form-control" rows="2" placeholder="計費相關備註..."></textarea>
-                </div>
-            </div>
-
         </form>
 
 
@@ -222,7 +231,7 @@
 
     <div class="col-md-4">
         <!-- 計費群組設定 -->
-        <div class="card mb-3">
+        <div class="card mb-3" data-no-collapse>
             <div class="card-header">計費群組</div>
             <div class="card-body">
                 @{
@@ -277,7 +286,7 @@
             </div>
         </div>
 
-        <div class="card mb-3">
+        <div class="card mb-3" data-no-collapse>
             <div class="card-header">快速套用模板</div>
             <div class="card-body">
                 <form asp-action="ApplyTemplate" method="post">
@@ -292,7 +301,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-no-collapse>
             <div class="card-header">計費方式說明</div>
             <div class="card-body small">
                 <div class="alert alert-success py-2 mb-2">
@@ -316,6 +325,7 @@
 </div>
 
 @section Scripts {
+<script src="~/js/card-collapse.js" asp-append-version="true"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
     // ─── 資料初始化 ───────────────────────────────────────────

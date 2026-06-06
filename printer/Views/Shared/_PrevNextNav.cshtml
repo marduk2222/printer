@@ -1,0 +1,60 @@
+@*
+    上一筆 / 下一筆 導覽（含位置指示與 ← → 快捷鍵）。
+    使用方式：呼叫端先設定 ViewData：
+      PrevUrl / NextUrl   — 前後筆連結（null = 反灰）
+      PrevTitle / NextTitle — tooltip 顯示名稱（選填）
+      NavPosition / NavTotal — 目前位次 / 總筆數
+*@
+@{
+    var prevUrl = ViewData["PrevUrl"] as string;
+    var nextUrl = ViewData["NextUrl"] as string;
+    var prevTitle = ViewData["PrevTitle"] as string;
+    var nextTitle = ViewData["NextTitle"] as string;
+}
+<div class="btn-group" role="group">
+    @if (!string.IsNullOrEmpty(prevUrl))
+    {
+        <a id="prevNavLink" href="@prevUrl" class="btn btn-outline-secondary btn-sm"
+           title="上一筆@(string.IsNullOrEmpty(prevTitle) ? "" : $"：{prevTitle}")　快捷鍵 ←">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+    }
+    else
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="已是第一筆">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+    }
+    <span class="btn btn-outline-secondary btn-sm pe-none" title="目前位置／總筆數">
+        第 @ViewData["NavPosition"] / @ViewData["NavTotal"] 筆
+    </span>
+    @if (!string.IsNullOrEmpty(nextUrl))
+    {
+        <a id="nextNavLink" href="@nextUrl" class="btn btn-outline-secondary btn-sm"
+           title="下一筆@(string.IsNullOrEmpty(nextTitle) ? "" : $"：{nextTitle}")　快捷鍵 →">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    }
+    else
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="已是最後一筆">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    }
+</div>
+<script>
+    // ← / → 切換上一筆/下一筆；輸入框聚焦、編輯模式（editActions 顯示中）或 modal 開啟時不觸發
+    if (!window.__prevNextNavBound) {
+        window.__prevNextNavBound = true;
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            var tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+            var editActions = document.getElementById('editActions');
+            if (editActions && editActions.style.display !== 'none') return;
+            if (document.querySelector('.modal.show')) return;
+            var link = document.getElementById(e.key === 'ArrowLeft' ? 'prevNavLink' : 'nextNavLink');
+            if (link) link.click();
+        });
+    }
+</script>

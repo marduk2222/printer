@@ -47,10 +47,11 @@
         </div>
     }
 
+    @{ var step = 1; }
     @if (billing != null)
     {
         <div class="card mb-3">
-            <div class="card-header">來源帳單</div>
+            <div class="card-header"><span class="badge bg-primary me-2">@(step++)</span>來源帳單</div>
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-2">帳單編號</dt>
@@ -67,7 +68,7 @@
     }
 
     <div class="card mb-3">
-        <div class="card-header">發票資訊</div>
+        <div class="card-header"><span class="badge bg-primary me-2">@(step++)</span>發票資訊</div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3 mb-3">
@@ -153,7 +154,7 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header">買方資訊</div>
+        <div class="card-header"><span class="badge bg-primary me-2">@(step++)</span>買方資訊</div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-4 mb-3">
@@ -196,7 +197,7 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span>發票明細</span>
+            <span><span class="badge bg-primary me-2">@(step++)</span>發票明細</span>
             <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">新增明細</button>
         </div>
         <div class="card-body p-0">

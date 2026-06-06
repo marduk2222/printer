@@ -20,3 +20,15 @@ html {
 body {
   margin-bottom: 60px;
 }
+/* ───── 卡片收合（collapse-toggle 圖示按鈕） ───── */
+.collapse-toggle .bi {
+  display: inline-block;
+  transition: transform .2s;
+}
+.collapse-toggle[aria-expanded="true"] .bi {
+  transform: rotate(180deg);
+}
+/* card-collapse.js 自動收合：隱藏 header 以外的所有區塊 */
+.card.card-collapsed > :not(.card-header) {
+  display: none !important;
+}
